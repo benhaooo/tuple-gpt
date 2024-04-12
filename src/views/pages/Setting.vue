@@ -1,8 +1,18 @@
 <script setup>
+import { watchEffect } from 'vue'
 import useConfigStore from '@/stores/modules/config'
 import { storeToRefs } from 'pinia'
 const configStore = useConfigStore()
 const { userConfig, moduleConfig } = storeToRefs(configStore)
+
+
+watchEffect(() => {
+    const theme = userConfig.value.theme
+    const html = document.querySelector('html')
+    html.className = theme
+})
+
+
 
 </script>
 
@@ -91,7 +101,7 @@ const { userConfig, moduleConfig } = storeToRefs(configStore)
 
 
 <style lang="less" scoped>
-::v-deep .el-radio__input {
+:deep(.el-radio__input) {
     display: none;
 }
 </style>

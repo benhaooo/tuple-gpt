@@ -17,6 +17,21 @@ export const completions = (data) => {
         body: JSON.stringify(data),
     })
 }
+export const analysisCompletions = (data) => {
+    return fetch(`${apiHostUrl}/api/v1/chatgpt/analysis/chart`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    })
+}
+
+// 上传文件
+export const uploadFile = (formData) => {
+    return fetch(`${apiHostUrl}/api/v1/file/upload`, {
+        method: 'POST',
+        body: formData,
+    })
+}
+
 export const userLogin = (code) => {
     return fetch(`${apiHostUrl}/api/v1/auth/login`, {
         method: 'POST',

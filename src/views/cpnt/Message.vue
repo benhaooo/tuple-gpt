@@ -2,30 +2,37 @@
   <div class="message" :class="{ self: message.role == 'user' }">
     <div class="user-info" v-if="message.role == 'user'">
       <div class="avater-wrapper">
-        <i class="iconfont center edit" @click="handleEditMessage(message)">&#xeabd;</i>
+        <el-tooltip content="编辑" placement="top">
+          <i class="iconfont center edit" @click="handleEditMessage(message)">&#xeabd;</i>
+        </el-tooltip>
         <img :src="configStore.getAvatar" alt="" />
       </div>
       <span class="name">{{ userConfig.name }}</span>
     </div>
     <div class="user-info" v-else>
       <div class="avater-wrapper">
-        <i class="iconfont center edit" @click="handleEditMessage(message)">&#xeabd;</i>
+        <el-tooltip content="编辑" placement="top" :show-after="500">
+          <i class="iconfont center edit" @click="handleEditMessage(message)">&#xeabd;</i>
+        </el-tooltip>
+
         <img src="@/assets/imgs/gpt.png" alt="" />
       </div>
       <span class="name">{{ model }} </span>
     </div>
-    <div class="content text-sm" ref="contentRef">
+    <div class="content text-sm bg-light-hard dark:bg-dark-base" ref="contentRef">
       <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
       <div class="typer"></div>
       <div class="handle">
-        <i class="iconfont delete" @click="handleDeleteMessage(message.id)">&#xec7b;</i>
+        <el-tooltip content="删除" placement="bottom" :show-after="500">
+          <i class="iconfont delete" @click="handleDeleteMessage(message.id)">&#xec7b;</i>
+        </el-tooltip>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, ref, reactive, onMounted, onUpdated } from "vue";
+import {computed, ref, reactive, onMounted, onUpdated } from "vue";
 import useUserStore from "@/stores/modules/user";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
@@ -128,7 +135,6 @@ onUpdated(updateCursor)
     }
 
     .name {
-      color: #fff;
       margin: 0 10px;
     }
   }
@@ -136,8 +142,6 @@ onUpdated(updateCursor)
   .content {
     padding: 6px 12px;
     margin-top: 8px;
-    background-color: rgb(56, 60, 75);
-    color: #fff;
     border-radius: 5px 20px 20px 20px;
     position: relative;
 
@@ -201,7 +205,6 @@ onUpdated(updateCursor)
   }
 
   .content {
-    background-color: #1d90f5;
     border-radius: 20px 5px 20px 20px;
   }
 }

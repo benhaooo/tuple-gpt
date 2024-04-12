@@ -19,7 +19,6 @@ const showConfigModal = ref(false);
 const editMessage = ref({});
 const editText = ref("");
 const configForm = ref({});
-const panelShow = ref(true)
 
 
 const scroll = ref(null);
@@ -93,13 +92,12 @@ const handleSendMessage = async () => {
   const systemMessage = {
     id: generateUniqueId(),
     role: "system",
-
     content: currentSession.value.system
   }
   const data = {
     model: currentSession.value.model,
     message_id: msgId,
-    messages: currentSession.value.messages.concat(systemMessage),
+    messages: [systemMessage, ...currentSession.value.messages],
   }
   currentSession.value.messages.push({
     id: msgId,
@@ -178,6 +176,7 @@ const handelOkConfig = () => {
   currentSession.value.model = configForm.value.model;
   currentSession.value.ctxLimit = configForm.value.ctxLimit;
   currentSession.value.maxTokens = configForm.value.maxTokens;
+  currentSession.value.system = configForm.value.system;
   currentSession.value.temperature = configForm.value.temperature;
   currentSession.value.top_p = configForm.value.top_p;
   currentSession.value.presence_penalty = configForm.value.presence_penalty;
@@ -243,7 +242,7 @@ const smoothScrollToBottom = () => {
 
 <template>
   <div class="flex h-full">
-    <el-dialog v-model="showEditModal" title="编辑" width="800px">
+    <el-dialog v-model="showEditModal" title="编辑">
       <textarea class="input" v-model="editText" style="height: 300px"></textarea>
 
       <template #footer>
@@ -252,13 +251,13 @@ const smoothScrollToBottom = () => {
       </template>
     </el-dialog>
     <!-- 会话配置 -->
-    <el-dialog v-model="showConfigModal" title="会话配置" width="800px">
+    <el-dialog v-model="showConfigModal" title="会话配置" class="max-md:w-full">
       <el-form :model="configForm" label-width="auto" label-position="left">
         <el-form-item label="名称">
           <el-input v-model="configForm.name" />
         </el-form-item>
         <el-form-item label="模型">
-          <el-select ref="select" v-model="configForm.model" style="width: 120px">
+          <el-select ref="select" v-model="configForm.model">
             <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
             <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
             <el-option value="gpt-4">gpt-4</el-option>
@@ -299,23 +298,14 @@ const smoothScrollToBottom = () => {
         <el-button type="primary" @click="handelOkConfig">确定</el-button>
       </template>
     </el-dialog>
+        
+    <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
+      @delete="handleDeleteSession" />
 
-    <div class="border-r-2 border-solid -translate-x-full transition-all w-0 duration-300"
-      :class="{ 'translate-x-0 w-56': panelShow }">
-      <div @click="panelShow = !panelShow"
-        class="rounded-full w-6 h-6 bg-gray-500 absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 flex justify-center items-center cursor-pointer">
-        <i :class="panelShow ? 'rotate-0 translate-x-0' : 'rotate-180 translate-x-1'"
-          class="iconfont  transition-transform">&#xe604;</i>
-      </div>
-      <el-button @click="handleNewSession">+</el-button>
-      <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
-        @delete="handleDeleteSession" />
-    </div>
-
-    <div class="relative flex-1 m-8 bg-gray-800 w-full rounded-3xl p-5 flex flex-col">
-      <div class="messages w-full flex-1 overflow-y-scroll" ref="scroll">
+    <div class="flex-1 bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl p-5 flex flex-col md:m-8">
+      <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scroll">
         <div
-          class="absolute top-0 left-1/2 -translate-x-1/2 text-base text-white bg-neutral-950 rounded-b-md py-1 px-4 cursor-pointer z-50 hover:text-blue-500"
+          class="fixed top-0 md:top-8 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500"
           @click="handelShowConfig">
           {{ currentSession.model }}
         </div>
@@ -331,7 +321,7 @@ const smoothScrollToBottom = () => {
           <Message :message="message" @delete="handleDeleteMessage" @edit="handleEditMessage" />
         </template>
       </div>
-      <div class="p-5">
+      <div class="md:p-5">
         <div class="flex mb-5">
           <ExpandableButtom @click="handelClearCtx" :text="'清除上下文'">
             <i class="iconfont" style="font-size: 12px">&#xe62e;</i>
@@ -339,12 +329,15 @@ const smoothScrollToBottom = () => {
         </div>
         <div class="relative">
           <textarea
-            class="p-2 text-sm rounded-xl bg-gray-700 text-white w-full h-auto border-2 border-gray-700 focus:border-blue-500"
+            class="p-2 text-sm rounded-xl dark:bg-dark-input-wrapper w-full h-auto border-2 border-light-border dark:border-dark-border focus:border-dark-blue-base transition-colors duration-700"
             v-model="text" placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage"
             @input="handleInputMessage"></textarea>
-          <button
-            class="text-xs absolute right-2 bottom-2 w-10 h-8 rounded-lg border-0 bg-blue-500 transition-all duration-300 shadow shadow-blue-600 hover:shadow-blue-800 "
-            @click="handleSendMessage()"><i class="iconfont text-gray-400">&#xe888;</i></button>
+          <el-tooltip content="发送" placement="top" :show-after="500">
+            <button
+              class="text-xs absolute right-2 bottom-2 w-10 h-8 rounded-lg border-0 bg-dark-blue-base transition-all duration-300 shadow "
+              @click="handleSendMessage()"><i class="iconfont text-pink-400">&#xe888;</i></button>
+          </el-tooltip>
+
         </div>
       </div>
     </div>
@@ -353,15 +346,5 @@ const smoothScrollToBottom = () => {
 
 
 <style lang="less" scoped>
-.messages {
-  &::-webkit-scrollbar {
-    width: 0;
-    /* Safari,Chrome 隐藏滚动条 */
-    height: 0;
-    /* Safari,Chrome 隐藏滚动条 */
-    display: none;
-    /* 移动端、pad 上Safari，Chrome，隐藏滚动条 */
-  }
 
-}
 </style>

@@ -1,17 +1,11 @@
 <template>
-    <div class="flex flex-wrap m-10">
-        <el-form class="flex-1" :model="analysisData" @submit.prevent="submitForm">
+    <div class="flex max-md:flex-col m-10">
+        <el-form class="flex-1 mb-6" :model="analysisData" @submit.prevent="submitForm">
             <el-form-item label="分析目标" :rules="[{ required: true, message: '请输入分析目标', trigger: 'blur' }]">
                 <el-input v-model="analysisData.target" autosize type="textarea" placeholder="Please input" />
             </el-form-item>
             <el-form-item>
-                <div
-                    class="relative flex flex-col items-center border-2 border-dashed border-gray-500 text-xl cursor-pointer transition-colors duration-300 w-full h-44">
-                    <input type="file" class="absolute w-full h-full opacity-0 top-0 left-0 cursor-pointer" /><el-icon
-                        class="my-auto" :size="66"><upload-filled /></el-icon>
-                    Drop file here or <em>click to upload</em>
-                </div>
-
+                <FileUpload ref="fileUploadRef" />
             </el-form-item>
             <el-form-item label="图表类型" :rules="[{ required: true, message: '请选择图表类型', trigger: 'change' }]">
                 <el-select v-model="analysisData.select">
@@ -19,7 +13,7 @@
                     <el-option value="柱状图">柱状图</el-option>
                 </el-select>
             </el-form-item>
-            <el-button type="primary" @click="submitForm">提交</el-button>
+            <el-button type="primary" @click="processAnalysis">提交</el-button>
         </el-form>
         <div class="flex-1 ml-10">
             <div class="mb-5">
@@ -36,27 +30,25 @@
 
 <script setup>
 import { ref, reactive, toRefs } from 'vue'
-import { UploadFilled } from '@element-plus/icons-vue'
-
+import FileUpload from '../cpnt/FileUpload.vue';
+import { analysisCompletions } from '@/apis'
 
 const analysisData = reactive({
     target: '',
-    file: '',
     select: ''
 })
-const uploadRef = ref(null)
-const handleStart = (file) => {
-    console.log("🚀 ~ handleStart ~ file:", file)
+const fileUploadRef = ref(null)
 
-}
-function submitForm() {
-    console.log("🚀 ~ submitForm ~ uploadRef:", uploadRef)
-
-    // const isValid = Object.values(toRefs(analysisData)).every((val) => val.value)
-    // if (!isValid) {
-    //     alert('请填写完整的信息')
-    //     return
-    // }
-    // 提交表单逻辑...
+function processAnalysis() {
+    const data={
+        'chartType':analysisData.select,
+        'goal':{
+            'role':'user',
+            'content':analysisData.target,
+            'filehash':fileUploadRef.value.fileHash
+        },
+        
+    }
+    analysisCompletions(data)
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
-  <div class="chat-container">
-    <el-container style="height: 100%">
-      <el-aside width="100px"> <ChatNav /> </el-aside>
+  <div class="w-screen h-screen bg-light-base dark:bg-dark-base text-light-text dark:text-dark-text">
+    <div class="h-full flex flex-col-reverse md:flex-row">
+      <ChatNav />
       <el-main style="padding: unset">
           <router-view v-slot="{ Component }">
             <keep-alive>
@@ -9,7 +9,7 @@
             </keep-alive>
           </router-view>
       </el-main>
-    </el-container>
+    </div>
   </div>
 </template>
 
@@ -30,14 +30,4 @@ marked.use(markedHighlight({
     return hljs.highlight(code, { language }).value
   }
 }))
-
-
 </script>
-
-<style lang="less" scoped>
-.chat-container {
-  width: 100vw;
-  height: 100vh;
-  background-color: #131824;
-}
-</style>

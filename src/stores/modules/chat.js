@@ -49,5 +49,6 @@ const useSessionsStore = defineStore('sessions', {
             // this.sessions[index].messages.push(message);
         },
     },
+    persist: true,
 });
 export default useSessionsStore

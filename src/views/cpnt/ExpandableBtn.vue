@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { onMounted, defineProps, ref, onBeforeUnmount } from "vue";
+import { onMounted, ref, onBeforeUnmount } from "vue";
 const props = defineProps({
   text: "",
 });

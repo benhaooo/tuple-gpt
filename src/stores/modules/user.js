@@ -4,11 +4,13 @@ import { userLogin } from "@/apis"
 const useUserStore = defineStore("user", {
   state: () => ({
     userInfo: {
-      token: ""
+      token: "dasdasd"
     }
   }),
   actions: {
     async login(c) {
+      console.log("🚀 ~ login ~ c:", c)
+      
       const res = await userLogin(c)
       const { code, data } = await res.json()
       if (code === "0003") {
@@ -21,8 +23,7 @@ const useUserStore = defineStore("user", {
       return this.userInfo.token||localStorage.getItem("token")
     }
   },
-}, {
-  persist: true
+  persist: true,
 });
 
 export default useUserStore;

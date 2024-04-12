@@ -2,7 +2,7 @@
   <div class="w-11/12 my-0 mx-auto">
     <div class="flex justify-evenly flex-wrap">
       <template v-for="askprompt in askprompts" :key="askprompt.id">
-        <div class="askprompt-card group relative w-72 h-96 bg-gray-700 p-5 rounded-2xl my-5">
+        <div class="askprompt-card group relative w-72 h-96 bg-light-hard dark:bg-dark-wrapper p-5 rounded-2xl my-5 hover:shadow">
           <div class=" text-green-500 text-base text-center font-black mb-5">{{ askprompt.name }}</div>
           <div class="flex flex-col items-center overflow-hidden h-full">
             <div class="text-sm">{{ askprompt.content }}</div>

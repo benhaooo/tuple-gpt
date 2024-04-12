@@ -28,8 +28,11 @@ const useConfigStore = defineStore("config", {
         getAvatar: (state) => state.userConfig.avatar || "/src/assets/imgs/ava.jpg",
     },
     actions: {
-
-    }
+        toggleTheme() {
+            this.userConfig.theme = this.userConfig.theme === "auto" ? "dark" : "auto";
+        },
+    },
+    persist: true,
 })
 
 export default useConfigStore;
