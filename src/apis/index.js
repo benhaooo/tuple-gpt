@@ -20,6 +20,7 @@ export const completions = (data) => {
 export const analysisCompletions = (data) => {
     return fetch(`${apiHostUrl}/api/v1/chatgpt/analysis/chart`, {
         method: 'POST',
+        headers: getHeaders(),
         body: JSON.stringify(data),
     })
 }

@@ -1,7 +1,7 @@
 <template>
   <div class="bg-dark-nav flex md:flex-col justify-center items-center">
     <div
-      class="flex justify-center items-center w-12 h-12 rounded-full border-2 border-light-border overflow-hidden mt-5"
+      class="flex justify-center items-center w-12 h-12 rounded-full border-2 border-light-border overflow-hidden mt-5 cursor-pointer"
       @click="loginModalShow = !loginModalShow">
       <img class=" h-4/5 w-4/5 rounded-full" :src="configStore.getAvatar" alt="用户头像" />
     </div>
@@ -29,6 +29,9 @@ import { ref, computed } from "vue"
 import useUserStore from "@/stores/modules/user"
 import useConfigStore from "@/stores/modules/config"
 import { useRouter, useRoute } from "vue-router"
+import {useToast} from 'vue-toast-notification';
+import 'vue-toast-notification/dist/theme-sugar.css';
+
 const userStore = useUserStore()
 const configStore = useConfigStore()
 
@@ -58,5 +61,6 @@ const code = ref(null)
 const handleLogin = async () => {
   await userStore.login(code.value)
   loginModalShow.value = false
+  useToast().success("登录成功")
 }
 </script>

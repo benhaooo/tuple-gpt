@@ -7,6 +7,10 @@ import { uploadFile } from '@/apis'
 const drag_over = ref(false)
 const file = ref(null)
 const filehash = ref(null)
+
+defineExpose({
+    filehash
+})
 const handleFileChange = async (e) => {
     file.value = e.target.files[0]
     const chunks = createChunks(file.value, 1024)
@@ -17,7 +21,7 @@ const handleFileChange = async (e) => {
     formData.append('hash', filehash.value)
 
     uploadFile(formData).then(res => {
-        console.log(res)
+        console.log("上传成功")
     })
 }
 const handleFileDrop = (e) => {

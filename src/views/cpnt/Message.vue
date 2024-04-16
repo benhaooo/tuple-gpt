@@ -21,7 +21,7 @@
     </div>
     <div class="content text-sm bg-light-hard dark:bg-dark-base" ref="contentRef">
       <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
-      <div class="typer"></div>
+      <div v-if="message.chatting" class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md"/>
       <div class="handle">
         <el-tooltip content="删除" placement="bottom" :show-after="500">
           <i class="iconfont delete" @click="handleDeleteMessage(message.id)">&#xec7b;</i>
@@ -146,13 +146,6 @@ onUpdated(updateCursor)
     position: relative;
 
     .typer {
-      position: absolute;
-      content: "";
-      width: 3px;
-      height: 20px; //line-height
-      background-color: orange;
-      /* 右侧边框模拟打字效果 */
-      animation: blink-caret 0.75s step-end infinite;
       // 动态渲染位置
       left: calc(v-bind('typer_position.x') * 1px);
       top: calc(v-bind('typer_position.y') * 1px);

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onActivated, nextTick } from "vue";
-import { generateUniqueId } from "@/utils/commonUtils";
+import { generateUniqueId, delay } from "@/utils/commonUtils";
 import useSessionsStore from "@/stores/modules/chat";
 import useConfigStoe from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
@@ -28,11 +28,7 @@ const { sessions, currentSessionId, currentSession } =
 const { moduleConfig } = storeToRefs(configStore)
 // 加载
 onMounted(() => {
-  const savedSessions = JSON.parse(localStorage.getItem("sessions"));
-  if (savedSessions) {
-    sessionsStore.initSessions(savedSessions);
-
-  } else {
+  if (!currentSessionId.value) {
     handleNewSession();
   }
 });
@@ -42,8 +38,6 @@ onActivated(() => {
   if (Object.keys(askprompt).length > 0) {
     sessionsStore.addSession(getBaseSession(moduleConfig.value));
     text.value = askprompt.content;
-
-    save();
   }
 });
 
@@ -58,7 +52,6 @@ const handleSelectSession = async (id) => {
 // 新会话
 const handleNewSession = () => {
   sessionsStore.addSession(getBaseSession(moduleConfig.value));
-  save();
 };
 
 const getBaseSession = (config) => {
@@ -77,7 +70,6 @@ const getBaseSession = (config) => {
 // 删除会话
 const handleDeleteSession = (index) => {
   sessionsStore.deleteSession(index);
-  save();
 };
 // 发送消息
 const handleSendMessage = async () => {
@@ -92,7 +84,7 @@ const handleSendMessage = async () => {
   const systemMessage = {
     id: generateUniqueId(),
     role: "system",
-    content: currentSession.value.system
+    content: currentSession.value.system || "你是一名智能AI助手"
   }
   const data = {
     model: currentSession.value.model,
@@ -103,17 +95,20 @@ const handleSendMessage = async () => {
     id: msgId,
     role: "assistant",
     content: "",
+    chatting: true
   });
   const chatting = currentSession.value.messages.filter(
     (msg) => msg.id == msgId
   )[0];
   const response = await completions(data)
+  console.log("接收到消息")
+
   handleStreamMsg(response, chatting)
   await nextTick();
   smoothScrollToBottom();
 };
 
-const handleStreamMsg = (response, message) => {
+const handleStreamMsg = (response, chatting) => {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   new ReadableStream({
@@ -122,26 +117,27 @@ const handleStreamMsg = (response, message) => {
         const { done, value } = await reader.read();
         if (done) {
           controller.close();
-          save()
+          await delay(1000)
+          delete chatting["chatting"]
           return;
         }
-
         controller.enqueue(value);
         const text = decoder.decode(value);
-
         // 权限校验
         if (text === "0003") {
           controller.close();
         }
-        message.content += text;
-        await nextTick()
+        for (let word of text) {
+          chatting.content += word;
+          await delay(4);
+        }
         push();
       }
-
       push();
     },
   });
 }
+
 
 // 删除消息
 const handleDeleteMessage = (id) => {
@@ -157,7 +153,6 @@ const handelClearCtx = () => {
   }
   currentSession.value.clearedCtx.push(...currentSession.value.messages);
   currentSession.value.messages = [];
-  save();
 };
 
 // 编辑消息
@@ -172,32 +167,8 @@ const handelOk = () => {
   showEditModal.value = false;
 };
 const handelOkConfig = () => {
-  currentSession.value.name = configForm.value.name;
-  currentSession.value.model = configForm.value.model;
-  currentSession.value.ctxLimit = configForm.value.ctxLimit;
-  currentSession.value.maxTokens = configForm.value.maxTokens;
-  currentSession.value.system = configForm.value.system;
-  currentSession.value.temperature = configForm.value.temperature;
-  currentSession.value.top_p = configForm.value.top_p;
-  currentSession.value.presence_penalty = configForm.value.presence_penalty;
-  currentSession.value.frequency_penalty = configForm.value.frequency_penalty;
-  // const { name, model, ctxLimit, maxTokens, temperature, top_p, presence_penalty, frequency_penalty } = configForm.value;
-
-  // currentSession.value = {
-  //   ...currentSession.value,
-  //   name,
-  //   model,
-  //   ctxLimit,
-  //   maxTokens,
-  //   temperature,
-  //   top_p,
-  //   presence_penalty,
-  //   frequency_penalty,
-  // };
-
-
+  sessionsStore.updataSession(configForm.value);
   showConfigModal.value = false;
-  save();
 };
 
 const handelShowConfig = () => {
@@ -213,11 +184,6 @@ const handleInputMessage = (e) => {
   textarea.style.height = "auto";
   textarea.style.height = Math.min(textarea.scrollHeight, 100) + "px";
 }
-
-// 保存至本地
-const save = () => {
-  localStorage.setItem("sessions", JSON.stringify(sessions));
-};
 
 // 滚动到底部
 const smoothScrollToBottom = () => {
@@ -273,7 +239,7 @@ const smoothScrollToBottom = () => {
           <el-slider v-model="configForm.maxTokens" :max="4096" show-input />
         </el-form-item>
         <el-form-item label="角色设定">
-          <el-input v-model="moduleConfig.system" type="textarea" :rows="4" aria-placeholder="给你的会话任命一个专属角色设定吧~" />
+          <el-input v-model="configForm.system" type="textarea" :rows="4" aria-placeholder="给你的会话任命一个专属角色设定吧~" />
         </el-form-item>
         <el-collapse>
           <el-collapse-item title="高级配置" name="advanced">
@@ -298,14 +264,14 @@ const smoothScrollToBottom = () => {
         <el-button type="primary" @click="handelOkConfig">确定</el-button>
       </template>
     </el-dialog>
-        
-    <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
-      @delete="handleDeleteSession" />
 
-    <div class="flex-1 bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl p-5 flex flex-col md:m-8">
+    <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
+      @delete="handleDeleteSession" @add="handleNewSession" />
+
+    <div class="relative flex-1 bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl p-5 flex flex-col md:m-8">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scroll">
         <div
-          class="fixed top-0 md:top-8 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500"
+          class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500"
           @click="handelShowConfig">
           {{ currentSession.model }}
         </div>
@@ -345,6 +311,4 @@ const smoothScrollToBottom = () => {
 </template>
 
 
-<style lang="less" scoped>
-
-</style>
+<style lang="less" scoped></style>

@@ -1,6 +1,7 @@
 <template>
   <div class="border-r-2 border-solid transition-all w-0 duration-300 max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark"
     :class="panelShow ? ['translate-x-0', 'w-56'] : '-translate-x-full'">
+
     <el-button @click="handleNewSession">+</el-button>
 
     <div class="hidden-scroll mt-5 h-4/5 overflow-y-scroll text-light-text dark:text-dark-text">
@@ -33,9 +34,9 @@ const props = defineProps({
   currentSessionId: String,
 });
 
-const panelShow = ref(false)
+const panelShow = ref(true)
 
-const emits = defineEmits(["select", "delete"]);
+const emits = defineEmits(["select", "delete","add"]);
 
 const selectSession = (id) => {
   emits("select", id);
@@ -44,8 +45,8 @@ const selectSession = (id) => {
 const deleteSession = (index) => {
   emits("delete", index);
 };
+
+const handleNewSession = () => {
+  emits("add");
+};
 </script>
-
-<style lang="less" scoped>
-
-</style>

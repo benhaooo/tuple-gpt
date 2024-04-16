@@ -1,4 +1,4 @@
 @import "./reset.css";
-@import "./common.css";
+@import "./common.less";
 @import "./tailwind.css";
 @import "./preflight.css"
