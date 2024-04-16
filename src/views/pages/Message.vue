@@ -7,7 +7,6 @@ import { storeToRefs } from "pinia";
 import ExpandableButtom from "../cpnt/ExpandableBtn.vue";
 import Message from "../cpnt/Message.vue";
 import SessionList from "../cpnt/SessionList.vue";
-import { completions } from "@/apis/index.js"
 
 const sessionsStore = useSessionsStore();
 const configStore = useConfigStoe();
@@ -44,7 +43,6 @@ onActivated(() => {
 // 切换会话
 const handleSelectSession = async (id) => {
   sessionsStore.setCurrentSession(id);
-
   await nextTick();
   smoothScrollToBottom();
 };
@@ -74,85 +72,8 @@ const handleDeleteSession = (index) => {
 // 发送消息
 const handleSendMessage = async () => {
   if (!text.value) return;
-  currentSession.value.messages.push({
-    id: generateUniqueId(),
-    role: "user",
-    content: text.value,
-  });
+  sessionsStore.sendMessage(text.value)
   text.value = "";
-  const msgId = generateUniqueId();
-  const systemMessage = {
-    id: generateUniqueId(),
-    role: "system",
-    content: currentSession.value.system || "你是一名智能AI助手"
-  }
-  const data = {
-    model: currentSession.value.model,
-    message_id: msgId,
-    messages: [systemMessage, ...currentSession.value.messages],
-  }
-  currentSession.value.messages.push({
-    id: msgId,
-    role: "assistant",
-    content: "",
-    chatting: true
-  });
-  const chatting = currentSession.value.messages.filter(
-    (msg) => msg.id == msgId
-  )[0];
-  const response = await completions(data)
-  console.log("接收到消息")
-
-  handleStreamMsg(response, chatting)
-  await nextTick();
-  smoothScrollToBottom();
-};
-
-const handleStreamMsg = (response, chatting) => {
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  new ReadableStream({
-    start(controller) {
-      async function push() {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.close();
-          await delay(1000)
-          delete chatting["chatting"]
-          return;
-        }
-        controller.enqueue(value);
-        const text = decoder.decode(value);
-        // 权限校验
-        if (text === "0003") {
-          controller.close();
-        }
-        for (let word of text) {
-          chatting.content += word;
-          await delay(4);
-        }
-        push();
-      }
-      push();
-    },
-  });
-}
-
-
-// 删除消息
-const handleDeleteMessage = (id) => {
-  currentSession.value.messages = currentSession.value.messages.filter(
-    (msg) => msg.id != id
-  );
-};
-
-// // 清楚上下文
-const handelClearCtx = () => {
-  if (!currentSession.value.clearedCtx) {
-    currentSession.value.clearedCtx = [];
-  }
-  currentSession.value.clearedCtx.push(...currentSession.value.messages);
-  currentSession.value.messages = [];
 };
 
 // 编辑消息
@@ -279,18 +200,19 @@ const smoothScrollToBottom = () => {
           <template v-for="message in currentSession.clearedCtx" :key="message.id">
             <Message :message="message" @delete="handleDeleteMessage" @edit="handleEditMessage" />
           </template>
-          <div class="leading-5 text-center border-y border-slate-300 cursor-pointer text-slate-300 text-xs"
+          <div @click="sessionsStore.clearCtx()"
+            class="leading-5 text-center border-y border-slate-300 hover:border-dark-blue-base cursor-pointer text-slate-300 text-xs"
             style="mask-image: linear-gradient(90deg, transparent, #000, transparent);">上下文已清除</div>
         </div>
 
         <template v-for="message in currentSession.messages" :key="message.id">
-          <Message :message="message" @delete="handleDeleteMessage" @edit="handleEditMessage" />
+          <Message :message="message" @edit="handleEditMessage" />
         </template>
       </div>
       <div class="md:p-5">
         <div class="flex mb-5">
-          <ExpandableButtom @click="handelClearCtx" :text="'清除上下文'">
-            <i class="iconfont" style="font-size: 12px">&#xe62e;</i>
+          <ExpandableButtom @click="sessionsStore.clearCtx()" :text="'清除上下文'">
+            <i class="iconfont text-xs">&#xe62e;</i>
           </ExpandableButtom>
         </div>
         <div class="relative">

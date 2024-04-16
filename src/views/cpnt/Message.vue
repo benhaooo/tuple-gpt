@@ -1,66 +1,76 @@
 <template>
-  <div class="message" :class="{ self: message.role == 'user' }">
-    <div class="user-info" v-if="message.role == 'user'">
-      <div class="avater-wrapper">
-        <el-tooltip content="编辑" placement="top">
-          <i class="iconfont center edit" @click="handleEditMessage(message)">&#xeabd;</i>
-        </el-tooltip>
-        <img :src="configStore.getAvatar" alt="" />
+  <div class="message group" :class="{ self: isUser }">
+    <div>
+      <div class="user-info flex items-center gap-x-2">
+        <div class="avater-wrapper">
+          <el-tooltip content="编辑" placement="top">
+            <i class="iconfont center edit" @click="handleEditMessage()">&#xeabd;</i>
+          </el-tooltip>
+          <img :src="isUser ? configStore.getAvatar : '/src/assets/imgs/gpt.png'" alt="" />
+        </div>
+        <span v-if="isUser" class="text-sm font-extrabold">{{ userConfig.name }}</span>
+        <div class="flex gap-x-1 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <ExpandableBtn @click="sessionsStore.deleteMessage(message.id)" text="删除">
+            <i class="iconfont">&#xec7b;</i>
+          </ExpandableBtn>
+          <ExpandableBtn v-if="!isUser" @click="sessionsStore.reChat(message.id)" text="重试">
+            <i class="iconfont">&#xe616;</i>
+          </ExpandableBtn>
+          <ExpandableBtn @click="copy" text="复制">
+            <i class="iconfont">&#xe8b0;</i>
+          </ExpandableBtn>、
+        </div>
       </div>
-      <span class="name">{{ userConfig.name }}</span>
-    </div>
-    <div class="user-info" v-else>
-      <div class="avater-wrapper">
-        <el-tooltip content="编辑" placement="top" :show-after="500">
-          <i class="iconfont center edit" @click="handleEditMessage(message)">&#xeabd;</i>
-        </el-tooltip>
-
-        <img src="@/assets/imgs/gpt.png" alt="" />
-      </div>
-      <span class="name">{{ model }} </span>
     </div>
     <div class="content text-sm bg-light-hard dark:bg-dark-base" ref="contentRef">
       <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
-      <div v-if="message.chatting" class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md"/>
-      <div class="handle">
-        <el-tooltip content="删除" placement="bottom" :show-after="500">
-          <i class="iconfont delete" @click="handleDeleteMessage(message.id)">&#xec7b;</i>
-        </el-tooltip>
-      </div>
+      <span v-if="message.chatting"
+        class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
     </div>
   </div>
 </template>
 
 <script setup>
-import {computed, ref, reactive, onMounted, onUpdated } from "vue";
-import useUserStore from "@/stores/modules/user";
+import { computed, ref, reactive, onMounted, onUpdated } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import { marked } from 'marked'
+import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
+import { useToast } from 'vue-toast-notification';
+import useSessionsStore from "@/stores/modules/chat";
 
-// const userStore = useUserStore();
+
+const sessionsStore = useSessionsStore();
 const configStore = useConfigStore();
-// const { userInfo } = storeToRefs(userStore);
 const { userConfig } = storeToRefs(configStore)
 
 const props = defineProps({
   message: Object,
 });
 
-const emits = defineEmits(["edit", "delete"]);
-const handleEditMessage = (id) => {
-  emits("edit", id);
-};
-const handleDeleteMessage = (id) => {
-  emits("delete", id);
-};
+const isUser = computed(() => {
+  return props.message.role === 'user'
+})
 const parsedContent = computed(() => {
   return marked.parse(props.message.content)
 })
+const emits = defineEmits(["edit"]);
+const handleEditMessage = () => {
+  emits("edit", props.message.id);
+};
+
+const copy = () => {
+  navigator.clipboard.writeText(props.message.content)
+  useToast().success('复制成功')
+}
+
 const typer_position = reactive({ x: 0, y: 0 })
 const contentValueRef = ref(null)
 const contentRef = ref(null)
 
+
+
+// 更新光标位置
 const updateCursor = () => {
   const lastTextNode = getLastTextNode(contentValueRef.value)
   const cursorText = document.createTextNode("\u200b")
@@ -79,6 +89,7 @@ const updateCursor = () => {
   typer_position.y = textRect.top - contentRect.top
   cursorText.remove()
 }
+// 获取最后一个文本节点
 const getLastTextNode = (dom) => {
   const childNodes = dom.childNodes
 
@@ -133,10 +144,6 @@ onUpdated(updateCursor)
         height: 100%;
       }
     }
-
-    .name {
-      margin: 0 10px;
-    }
   }
 
   .content {
@@ -149,21 +156,6 @@ onUpdated(updateCursor)
       // 动态渲染位置
       left: calc(v-bind('typer_position.x') * 1px);
       top: calc(v-bind('typer_position.y') * 1px);
-    }
-
-
-    .handle {
-      position: absolute;
-      right: 10px;
-      bottom: -25px;
-      opacity: 0;
-      transition: 0.3s;
-
-      .iconfont {
-        font-size: 12px;
-        cursor: pointer;
-        color: #999999;
-      }
     }
 
     &:hover {
@@ -199,19 +191,6 @@ onUpdated(updateCursor)
 
   .content {
     border-radius: 20px 5px 20px 20px;
-  }
-}
-
-/* 光标闪烁动画 */
-@keyframes blink-caret {
-
-  from,
-  to {
-    opacity: 0;
-  }
-
-  50% {
-    opacity: 1;
   }
 }
 </style>

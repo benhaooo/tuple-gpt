@@ -9,8 +9,6 @@ const useUserStore = defineStore("user", {
   }),
   actions: {
     async login(c) {
-      console.log("🚀 ~ login ~ c:", c)
-      
       const res = await userLogin(c)
       const { code, data } = await res.json()
       if (code === "0003") {
@@ -20,7 +18,7 @@ const useUserStore = defineStore("user", {
       localStorage.setItem("token", data)
     },
     getToken() {
-      return this.userInfo.token||localStorage.getItem("token")
+      return this.userInfo.token || localStorage.getItem("token")
     }
   },
   persist: true,

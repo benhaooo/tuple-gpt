@@ -1,8 +1,8 @@
 <template>
     <div class="p-5">
-        <ul class="flex justify-evenly">
+        <ul class="flex justify-evenly flex-wrap">
             <li v-for="product in products" :key="product.productId"
-                class="h-72 w-56 flex flex-col bg-gray-200 items-center rounded overflow-hidden">
+                class="h-72 w-56 flex flex-col bg-gray-200 items-center rounded overflow-hidden my-5">
                 <div class=" bg-green-400 w-full h-24 flex flex-col items-center justify-center">
                     <h3 class=" text-2xl mb-3 text-center">{{ product.productName }}</h3>
 

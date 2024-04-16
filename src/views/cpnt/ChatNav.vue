@@ -1,10 +1,15 @@
 <template>
   <div class="bg-dark-nav flex md:flex-col justify-center items-center">
-    <div
-      class="flex justify-center items-center w-12 h-12 rounded-full border-2 border-light-border overflow-hidden mt-5 cursor-pointer"
-      @click="loginModalShow = !loginModalShow">
-      <img class=" h-4/5 w-4/5 rounded-full" :src="configStore.getAvatar" alt="用户头像" />
-    </div>
+    <el-tooltip :content="!!userStore.getToken() ?'已登录':'未登录'" placement="right" :show-after="500">
+      <div
+        class="relative flex justify-center items-center w-12 h-12 rounded-full border-2 border-light-border mt-5 cursor-pointer"
+        @click="loginModalShow = !loginModalShow">
+        <img class=" h-4/5 w-4/5 rounded-full" :src="configStore.getAvatar" alt="用户头像" />
+        <div class="absolute bottom-0 right-0 w-2 h-2 rounded-full"
+          :class="!!userStore.getToken() ? 'bg-green-500' : 'bg-grey-500'"></div>
+      </div>
+    </el-tooltip>
+
     <el-dialog v-model="loginModalShow">
       <h2>请输入访问码</h2>
       <el-input class=" my-4" v-model="code" placeholder="填写访问码" />
@@ -29,7 +34,7 @@ import { ref, computed } from "vue"
 import useUserStore from "@/stores/modules/user"
 import useConfigStore from "@/stores/modules/config"
 import { useRouter, useRoute } from "vue-router"
-import {useToast} from 'vue-toast-notification';
+import { useToast } from 'vue-toast-notification';
 import 'vue-toast-notification/dist/theme-sugar.css';
 
 const userStore = useUserStore()
@@ -44,7 +49,7 @@ const menuItems = [
   { icon: "icon-prompt", route: '/chat/prompt' },
   { icon: "icon-shezhi", route: '/chat/setting' },
   { icon: "icon-store", route: '/chat/store' },
-  { icon: "icon-store", route: '/chat/file' },
+  { icon: "icon-application", route: '/chat/file' },
 ];
 const handleClick = (routePath) => {
   router.push(routePath)

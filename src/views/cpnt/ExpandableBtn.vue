@@ -30,7 +30,7 @@ const handleHover = () => {
     expText.value.style.width = naturalWidth;
     expText.value.style.opacity = "1";
     expText.value.style.transform = "translateX(5px)";
-  }, 1000);
+  }, 800);
 };
 
 const handleLeave = () => {
@@ -51,10 +51,11 @@ onBeforeUnmount(() => {
   align-items: center;
   overflow: hidden;
   cursor: pointer;
-  color: #dedede;
+
   padding: 0 10px;
-  border: 1px solid #dedede;
   border-radius: 12px;
+  border: 1px solid #CDCDCD;
+  color: #303030;
   font-size: 12px;
   height: 22px;
   .exp-text {
