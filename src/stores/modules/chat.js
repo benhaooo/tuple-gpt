@@ -2,6 +2,13 @@ import { defineStore } from "pinia";
 import { generateUniqueId, delay } from "@/utils/commonUtils";
 import { completions } from "@/apis"
 import { reactive } from "vue"
+import useConfigStore from "@/stores/modules/config";
+import useUserStore from "@/stores/modules/user";
+import { storeToRefs } from "pinia";
+
+const configStore = useConfigStore();
+const userStore = useUserStore();
+const { moduleConfig } = storeToRefs(configStore)
 
 const useSessionsStore = defineStore('sessions', {
     state: () => ({
@@ -17,15 +24,20 @@ const useSessionsStore = defineStore('sessions', {
         },
     },
     actions: {
-        initSessions(obj) {
-            this.sessions = obj._object.sessions
-            this.currentSessionId = this.sessions.at(0).id
-        },
-        addSession(session) {
+
+        // 新增会话
+        addSession() {
+            const session = {
+                id: generateUniqueId(),
+                messages: [],
+                ...moduleConfig.value
+
+            };
             this.sessions.unshift(session);
             this.currentSessionId = session.id;
-
         },
+
+        // 删除会话
         deleteSession(index) {
             const curIndex = this.sessions.findIndex(session => session.id === this.currentSessionId);
             if (index == curIndex) {
@@ -46,7 +58,7 @@ const useSessionsStore = defineStore('sessions', {
         setCurrentSession(id) {
             this.currentSessionId = id;
         },
-
+        // 修改会话配置
         updataSession(sessionConfig) {
             const curIndex = this.sessions.findIndex(session => session.id === this.currentSessionId);
             this.sessions[curIndex] = {
@@ -55,11 +67,13 @@ const useSessionsStore = defineStore('sessions', {
             }
         },
 
+        // 删除消息
         deleteMessage(msgId) {
             this.currentSession.messages = this.currentSession.messages.filter(msg => msg.id !== msgId);
         },
+        // 重新交流
         async reChat(msgId) {
-
+            userStore.account.surplusQuota--
             const msgIndex = this.currentSession.messages.findIndex(msg => {
                 return msg.id === msgId
             })
@@ -76,7 +90,9 @@ const useSessionsStore = defineStore('sessions', {
             const response = await completions(data)
             this.handleStreamMsg(response, currentMsg)
         },
+        // 发送消息
         async sendMessage(text) {
+            userStore.account.surplusQuota--
             this.currentSession.messages.push({
                 id: generateUniqueId(),
                 role: "user",
@@ -97,7 +113,7 @@ const useSessionsStore = defineStore('sessions', {
             const response = await completions(data)
             this.handleStreamMsg(response, chattingMsg)
         },
-
+        // 处理流消息
         handleStreamMsg(response, chatting) {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -128,6 +144,8 @@ const useSessionsStore = defineStore('sessions', {
                 },
             });
         },
+
+        // 预设消息
         getSytemMesg() {
             return {
                 id: generateUniqueId(),
@@ -135,6 +153,7 @@ const useSessionsStore = defineStore('sessions', {
                 content: this.currentSession.system || "你是一名智能AI助手"
             }
         },
+
 
         // 清楚上下文
         clearCtx() {

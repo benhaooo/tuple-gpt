@@ -26,12 +26,26 @@
 <script setup>
 import { ref } from 'vue'
 import { queryProductList, createPayOrder } from '@/apis'
+import useUserStore from '@/stores/modules/user'
+import { useToast } from 'vue-toast-notification';
+
+const userStore = useUserStore()
 const products = ref([]);
 
 const getProducts = async () => {
-    const res = await queryProductList()
-    const json = await res.json()
-    products.value = json.data
+    if (!userStore.isLogin) {
+        useToast().info("请先登录")
+        return
+    }
+    queryProductList().then(async (res) => {
+        const { data, code } = await res.json()
+        if (code === '0003') {
+            userStore.clearToken()
+            useToast().error('登录过期，请重新登录')
+        }
+        products.value = data
+    })
+
 }
 getProducts()
 

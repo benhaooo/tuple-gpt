@@ -1,15 +1,17 @@
 <script setup>
-import { ref, onMounted, onActivated, nextTick } from "vue";
-import { generateUniqueId, delay } from "@/utils/commonUtils";
+import { ref, onMounted, onActivated, nextTick, watch } from "vue";
 import useSessionsStore from "@/stores/modules/chat";
-import useConfigStoe from "@/stores/modules/config";
+import useUserStore from "@/stores/modules/user";
 import { storeToRefs } from "pinia";
 import ExpandableButtom from "../cpnt/ExpandableBtn.vue";
 import Message from "../cpnt/Message.vue";
 import SessionList from "../cpnt/SessionList.vue";
+import useAutoScrollToBottom from "@/hooks/scroll";
 
 const sessionsStore = useSessionsStore();
-const configStore = useConfigStoe();
+const userStore = useUserStore();
+const scrollRef = ref(null);
+const { resetAndScrollToBottom } = useAutoScrollToBottom(scrollRef)
 
 
 const text = ref("");
@@ -20,11 +22,10 @@ const editText = ref("");
 const configForm = ref({});
 
 
-const scroll = ref(null);
 
 const { sessions, currentSessionId, currentSession } =
   storeToRefs(sessionsStore);
-const { moduleConfig } = storeToRefs(configStore)
+
 // 加载
 onMounted(() => {
   if (!currentSessionId.value) {
@@ -35,7 +36,7 @@ onActivated(() => {
   const askprompt = sessionsStore.askprompt;
   sessionsStore.askprompt = null;
   if (Object.keys(askprompt).length > 0) {
-    sessionsStore.addSession(getBaseSession(moduleConfig.value));
+    sessionsStore.addSession();
     text.value = askprompt.content;
   }
 });
@@ -43,28 +44,13 @@ onActivated(() => {
 // 切换会话
 const handleSelectSession = async (id) => {
   sessionsStore.setCurrentSession(id);
-  await nextTick();
-  smoothScrollToBottom();
 };
 
 // 新会话
 const handleNewSession = () => {
-  sessionsStore.addSession(getBaseSession(moduleConfig.value));
+  sessionsStore.addSession();
 };
 
-const getBaseSession = (config) => {
-  return {
-    id: generateUniqueId(),
-    messages: [
-      {
-        role: "system",
-        content: "您好，请问有什么可以帮助您的吗？",
-      },
-    ],
-    ...config
-
-  };
-};
 // 删除会话
 const handleDeleteSession = (index) => {
   sessionsStore.deleteSession(index);
@@ -74,6 +60,7 @@ const handleSendMessage = async () => {
   if (!text.value) return;
   sessionsStore.sendMessage(text.value)
   text.value = "";
+  resetAndScrollToBottom()
 };
 
 // 编辑消息
@@ -106,38 +93,20 @@ const handleInputMessage = (e) => {
   textarea.style.height = Math.min(textarea.scrollHeight, 100) + "px";
 }
 
-// 滚动到底部
-const smoothScrollToBottom = () => {
-  const maxScrollTop = scroll.value.scrollHeight - scroll.value.clientHeight;
-  let currentScrollTop = scroll.value.scrollTop;
-
-  const step = () => {
-    currentScrollTop += 20;
-
-    if (currentScrollTop >= maxScrollTop) {
-      scroll.value.scrollTop = maxScrollTop;
-    } else {
-      scroll.value.scrollTop = currentScrollTop;
-      requestAnimationFrame(step);
-    }
-  };
-
-  requestAnimationFrame(step);
-};
 </script>
 
 
 <template>
   <div class="flex h-full">
+    <!-- 编辑窗口 -->
     <el-dialog v-model="showEditModal" title="编辑">
-      <textarea class="input" v-model="editText" style="height: 300px"></textarea>
-
+      <el-input v-model="editText" type="textarea" :rows="10" />
       <template #footer>
         <el-button @click="showEditModal = false">取消</el-button>
         <el-button type="primary" @click="handelOk">确定</el-button>
       </template>
     </el-dialog>
-    <!-- 会话配置 -->
+    <!-- 配置窗口 -->
     <el-dialog v-model="showConfigModal" title="会话配置" class="max-md:w-full">
       <el-form :model="configForm" label-width="auto" label-position="left">
         <el-form-item label="名称">
@@ -147,8 +116,8 @@ const smoothScrollToBottom = () => {
           <el-select ref="select" v-model="configForm.model">
             <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
             <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
-            <el-option value="gpt-4">gpt-4</el-option>
             <el-option value="gpt-4-vision-preview">gpt-4-vision-preview</el-option>
+            <el-option value="dall-e-3">dall-e-3</el-option>
             <el-option value="glm-3-turbo">glm-3-turbo</el-option>
             <el-option value="chatglm_pro">chatglm_pro</el-option>
           </el-select>
@@ -179,7 +148,6 @@ const smoothScrollToBottom = () => {
           </el-collapse-item>
         </el-collapse>
       </el-form>
-
       <template #footer>
         <el-button @click="showConfigModal = false">取消</el-button>
         <el-button type="primary" @click="handelOkConfig">确定</el-button>
@@ -189,8 +157,8 @@ const smoothScrollToBottom = () => {
     <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
       @delete="handleDeleteSession" @add="handleNewSession" />
 
-    <div class="relative flex-1 bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl p-5 flex flex-col md:m-8">
-      <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scroll">
+    <div class="relative flex-1 bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
+      <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">
         <div
           class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500"
           @click="handelShowConfig">
@@ -209,11 +177,17 @@ const smoothScrollToBottom = () => {
           <Message :message="message" @edit="handleEditMessage" />
         </template>
       </div>
-      <div class="md:p-5">
-        <div class="flex mb-5">
+      <div class="p-4">
+        <div class="flex justify-between mb-3">
           <ExpandableButtom @click="sessionsStore.clearCtx()" :text="'清除上下文'">
             <i class="iconfont text-xs">&#xe62e;</i>
           </ExpandableButtom>
+          <el-tooltip content="剩余tokens" placement="top">
+            <div class="text-xs rounded-full bg-[#E4F0FD] px-2 leading-5">
+              <i class="iconfont font-extrabold mr-2 text-green-400">&#xe8c5;</i><span
+                class="text-dark-blue-base cursor-pointer">{{ userStore.getSurplusQuota }}</span>
+            </div>
+          </el-tooltip>
         </div>
         <div class="relative">
           <textarea
@@ -233,4 +207,16 @@ const smoothScrollToBottom = () => {
 </template>
 
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+.fade-leave-active {
+  transition: opacity 2s;
+}
+
+.fade-leave-from {
+  opacity: 1;
+}
+
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

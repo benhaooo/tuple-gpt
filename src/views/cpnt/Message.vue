@@ -18,7 +18,7 @@
           </ExpandableBtn>
           <ExpandableBtn @click="copy" text="复制">
             <i class="iconfont">&#xe8b0;</i>
-          </ExpandableBtn>、
+          </ExpandableBtn>
         </div>
       </div>
     </div>
@@ -56,7 +56,7 @@ const parsedContent = computed(() => {
 })
 const emits = defineEmits(["edit"]);
 const handleEditMessage = () => {
-  emits("edit", props.message.id);
+  emits("edit", props.message);
 };
 
 const copy = () => {
@@ -73,7 +73,7 @@ const contentRef = ref(null)
 // 更新光标位置
 const updateCursor = () => {
   const lastTextNode = getLastTextNode(contentValueRef.value)
-  const cursorText = document.createTextNode("\u200b")
+  const cursorText = document.createTextNode("\u200b")//幽灵字符占位
   if (lastTextNode) {
     lastTextNode.parentElement.appendChild(cursorText)
   } else {

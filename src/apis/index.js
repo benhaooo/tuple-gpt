@@ -43,6 +43,14 @@ export const userLogin = (code) => {
     });
 }
 
+
+export const queryUserAccount = () => {
+    return fetch(`${apiHostUrl}/api/v1/chatgpt/account`, {
+        method: 'GET',
+        headers: getHeaders()
+    });
+}
+
 export const queryProductList = () => {
     return fetch(`${apiHostUrl}/api/v1/sale/query_product_list`, {
         method: "get",
@@ -65,6 +73,5 @@ export const createPayOrder = (productId) => {
 export const queryPromptList = () => {
     return fetch(`${apiHostUrl}/api/v1/prompt/query_prompt_list`, {
         method: "get",
-        headers: getHeaders(),
     });
 }

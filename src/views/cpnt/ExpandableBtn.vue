@@ -58,6 +58,10 @@ onBeforeUnmount(() => {
   color: #303030;
   font-size: 12px;
   height: 22px;
+
+  &:hover {
+    background-color: #E7E7E7;
+  }
   .exp-text {
     white-space: nowrap;
     width: 0;
