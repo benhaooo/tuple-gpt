@@ -58,18 +58,29 @@ const hash = (chunks) => {
         _read(0)//递归
     })
 }
-
+const clearFile=()=>{
+    file.value=null
+    filehash.value=null
+}
 </script>
 
 <template>
     <div @dragenter.prevent="drag_over = true" @dragleave.prevent="drag_over = false" @dragover.prevent
         @drop.prevent="handleFileDrop"
-        :class="drag_over ? ['border-drag-over-border-color', 'bg-drag-over-bg-color'] : 'border-red-700'"
-        class="relative flex flex-col items-center border-2 border-dashed  text-xl cursor-pointer transition-colors duration-300 w-full h-44">
+        :class="drag_over ? ['border-drag-over-border-color', 'bg-drag-over-bg-color'] : 'border-light-border'"
+        class="relative flex justify-center items-center border-2 border-dashed  text-xl cursor-pointer transition-colors duration-300 w-full h-44">
 
         <input @change="handleFileChange" type="file"
-            class="absolute w-full h-full opacity-0 top-0 left-0 cursor-pointer" /><el-icon class="my-auto"
-            :size="66"><upload-filled /></el-icon>
-        Drop file here or <em>click to upload</em>
+            class="absolute w-full h-full opacity-0 top-0 left-0 cursor-pointer" />
+        <div v-if="file" class="w-20 h-20 rounded overflow-hidden relative">
+            <img src="@/assets/imgs/excel.png" alt="" class="w-full h-full">
+            <i class="iconfont absolute right-0 top-0" @click="clearFile">&#xe630;</i>
+        </div>
+
+        <div v-else class="flex flex-col items-center">
+            <el-icon :size="66"><upload-filled /></el-icon>
+            Drop file here or <em>click to upload</em>
+        </div>
+        
     </div>
 </template>

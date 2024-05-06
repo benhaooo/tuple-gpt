@@ -20,7 +20,8 @@ const showConfigModal = ref(false);
 const editMessage = ref({});
 const editText = ref("");
 const configForm = ref({});
-
+const fileUrl = ref("");
+const formRef = ref(null);
 
 
 const { sessions, currentSessionId, currentSession } =
@@ -58,8 +59,9 @@ const handleDeleteSession = (index) => {
 // 发送消息
 const handleSendMessage = async () => {
   if (!text.value) return;
-  sessionsStore.sendMessage(text.value)
+  sessionsStore.sendMessage(text.value, fileUrl.value)
   text.value = "";
+  fileUrl.value = "";
   resetAndScrollToBottom()
 };
 
@@ -92,7 +94,16 @@ const handleInputMessage = (e) => {
   textarea.style.height = "auto";
   textarea.style.height = Math.min(textarea.scrollHeight, 100) + "px";
 }
+const handleImgChange = (e) => {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    fileUrl.value = reader.result;
+    formRef.value.reset()
+  };
+  reader.readAsDataURL(file);
 
+}
 </script>
 
 
@@ -179,9 +190,16 @@ const handleInputMessage = (e) => {
       </div>
       <div class="p-4">
         <div class="flex justify-between mb-3">
-          <ExpandableButtom @click="sessionsStore.clearCtx()" :text="'清除上下文'">
-            <i class="iconfont text-xs">&#xe62e;</i>
-          </ExpandableButtom>
+          <div class="flex gap-4">
+            <ExpandableButtom @click="sessionsStore.clearCtx()" :text="'清除上下文'">
+              <i class="iconfont text-xs">&#xe62e;</i>
+            </ExpandableButtom>
+            <form ref="formRef" class="relative cursor-pointer hover:bg-light-blue-base rounded px-1">
+              <i class="iconfont">&#xe601;</i>
+              <input type="file" @change="handleImgChange" class="absolute w-full h-full top-0 left-0 opacity-0" />
+            </form>
+          </div>
+
           <el-tooltip content="剩余tokens" placement="top">
             <div class="text-xs rounded-full bg-[#E4F0FD] px-2 leading-5">
               <i class="iconfont font-extrabold mr-2 text-green-400">&#xe8c5;</i><span
@@ -190,6 +208,10 @@ const handleInputMessage = (e) => {
           </el-tooltip>
         </div>
         <div class="relative">
+          <div v-if="fileUrl" class="relative w-20 h-20 rounded-md">
+            <img :src="fileUrl" alt="">
+            <i class="iconfont absolute right-0 top-0" @click="clearFile">&#xe630;</i>
+          </div>
           <textarea
             class="p-2 text-sm rounded-xl dark:bg-dark-input-wrapper w-full h-auto border-2 border-light-border dark:border-dark-border focus:border-dark-blue-base transition-colors duration-700"
             v-model="text" placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage"
@@ -199,7 +221,6 @@ const handleInputMessage = (e) => {
               class="text-xs absolute right-2 bottom-2 w-10 h-8 rounded-lg border-0 bg-dark-blue-base transition-all duration-300 shadow "
               @click="handleSendMessage()"><i class="iconfont text-pink-400">&#xe888;</i></button>
           </el-tooltip>
-
         </div>
       </div>
     </div>
@@ -207,16 +228,4 @@ const handleInputMessage = (e) => {
 </template>
 
 
-<style lang="less" scoped>
-.fade-leave-active {
-  transition: opacity 2s;
-}
-
-.fade-leave-from {
-  opacity: 1;
-}
-
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
+<style lang="less" scoped></style>

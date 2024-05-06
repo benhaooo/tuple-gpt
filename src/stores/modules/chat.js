@@ -91,12 +91,13 @@ const useSessionsStore = defineStore('sessions', {
             this.handleStreamMsg(response, currentMsg)
         },
         // 发送消息
-        async sendMessage(text) {
+        async sendMessage(text, imgUrl) {
             userStore.account.surplusQuota--
             this.currentSession.messages.push({
                 id: generateUniqueId(),
                 role: "user",
                 content: text,
+                img: imgUrl ? imgUrl : null
             });
             const systemMessage = this.getSytemMesg()
             const data = {

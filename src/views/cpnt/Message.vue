@@ -23,6 +23,7 @@
       </div>
     </div>
     <div class="content text-sm bg-light-hard dark:bg-dark-base" ref="contentRef">
+      <img v-if="message.img" :src="message.img" alt="">
       <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
       <span v-if="message.chatting"
         class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />

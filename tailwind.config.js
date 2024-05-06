@@ -33,6 +33,8 @@ export default {
         },
         'font-hover': '#0D0D0D',
         'font-normal': '#9B9B9B',
+        'drag-over-border-color': '#409EFF',
+        'drag-over-bg-color':'#ECF5FF',
       }
     },
   },
