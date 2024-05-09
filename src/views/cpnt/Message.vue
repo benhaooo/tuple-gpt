@@ -6,7 +6,7 @@
           <el-tooltip content="编辑" placement="top">
             <i class="iconfont center edit" @click="handleEditMessage()">&#xeabd;</i>
           </el-tooltip>
-          <img :src="isUser ? configStore.getAvatar : '/src/assets/imgs/gpt.png'" alt="" />
+          <img :src="isUser ? configStore.getAvatar : gptUrl" alt="" />
         </div>
         <span v-if="isUser" class="text-sm font-extrabold">{{ userConfig.name }}</span>
         <div class="flex gap-x-1 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -39,6 +39,7 @@ import { marked } from 'marked'
 import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
 import { useToast } from 'vue-toast-notification';
 import useSessionsStore from "@/stores/modules/chat";
+import gptUrl from '@/assets/imgs/gpt.png'
 
 
 const sessionsStore = useSessionsStore();

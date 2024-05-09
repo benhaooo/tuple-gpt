@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import avaUrl from "@/assets/imgs/ava.jpg";
 
 const useConfigStore = defineStore("config", {
     state: () => ({
@@ -25,7 +26,7 @@ const useConfigStore = defineStore("config", {
 
     }),
     getters: {
-        getAvatar: (state) => state.userConfig.avatar || "/src/assets/imgs/ava.jpg",
+        getAvatar: (state) => state.userConfig.avatar || avaUrl,
     },
     actions: {
         toggleTheme() {

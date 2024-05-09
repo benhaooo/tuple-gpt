@@ -19,6 +19,33 @@ export default defineConfig({
       ],
     }),
   ],
+  build: {
+    // 构建结构
+    rollupOptions: {
+      output: {
+        // 分包
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+        // js
+        chunkFileNames: 'js/[name]-[hash].js',
+        entryFileNames: 'js/[name]-[hash].js',
+        assetFileNames(assetInfo) {
+          // css
+          if (assetInfo.name.endsWith('.css')) {
+            return 'css/[name]-[hash].css';
+          }
+          // 图片
+          const imgExts = ['.png', '.jpg', '.jpeg', '.gif', '.svg'];
+          if (imgExts.some(ext => assetInfo.name.endsWith(ext))) {
+            return 'img/[name]-[hash].[ext]';
+          }
+        },
+      },
+    }
+  },
 
   resolve: {
     alias: {

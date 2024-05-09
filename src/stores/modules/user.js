@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 import { userLogin, queryUserAccount } from "@/apis"
-import { useToast } from 'vue-toast-notification';
 
 const useUserStore = defineStore("user", {
   state: () => ({
