@@ -1,8 +1,10 @@
 <script setup>
 import { watchEffect } from 'vue'
 import useConfigStore from '@/stores/modules/config'
+import useChatStore from '@/stores/modules/chat'
 import { storeToRefs } from 'pinia'
 const configStore = useConfigStore()
+const chatStore = useChatStore()
 const { userConfig, moduleConfig } = storeToRefs(configStore)
 
 
@@ -32,9 +34,9 @@ watchEffect(() => {
                         <el-input v-model="userConfig.script" />
                     </el-form-item>
                     <el-form-item label="聊天记录">
-                        <el-button><i class="iconfont mr-1">&#xe641;</i>导入</el-button>
-                        <el-button><i class="iconfont mr-1">&#xe65e;</i>导出</el-button>
-                        <el-button><i class="iconfont mr-1">&#xe672;</i>清空</el-button>
+                        <el-button class="relative overflow-hidden"><input @change="chatStore.importChat($event)" class="absolute w-full h-full top-0 left-0 opacity-0" type="file"></input><i class="iconfont mr-1">&#xe641;</i>导入</el-button>
+                        <el-button @click="chatStore.exportChat"><i class="iconfont mr-1">&#xe65e;</i>导出</el-button>
+                        <el-button @click="chatStore.clearChat"><i class="iconfont mr-1">&#xe672;</i>清空</el-button>
                     </el-form-item>
                     <el-form-item label="主题">
                         <el-radio-group v-model="userConfig.theme">

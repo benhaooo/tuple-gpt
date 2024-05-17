@@ -86,6 +86,11 @@ const useSessionsStore = defineStore('sessions', {
             const data = {
                 model: this.currentSession.model,
                 messages: [systemMessage, ...slicedMessages],
+                maxTokens: this.currentSession.maxTokens,
+                temperature: this.currentSession.temperature,
+                topP: this.currentSession.top_p,
+                presencePenalty: this.currentSession.presence_penalty,
+                frequencyPenalty: this.currentSession.frequency_penalty,
             }
             const response = await completions(data)
             this.handleStreamMsg(response, currentMsg)
@@ -96,13 +101,19 @@ const useSessionsStore = defineStore('sessions', {
             this.currentSession.messages.push({
                 id: generateUniqueId(),
                 role: "user",
-                content: text,
+                content: text.value,
                 img: imgUrl ? imgUrl : null
             });
             const systemMessage = this.getSytemMesg()
             const data = {
                 model: this.currentSession.model,
                 messages: [systemMessage, ...this.currentSession.messages],
+                maxTokens: this.currentSession.maxTokens,
+                temperature: this.currentSession.temperature,
+                topP: this.currentSession.top_p,
+                presencePenalty: this.currentSession.presence_penalty,
+                frequencyPenalty: this.currentSession.frequency_penalty,
+                
             }
             const chattingMsg = reactive({
                 id: generateUniqueId(),
@@ -112,38 +123,43 @@ const useSessionsStore = defineStore('sessions', {
             })
             this.currentSession.messages.push(chattingMsg);
             const response = await completions(data)
-            this.handleStreamMsg(response, chattingMsg)
+            return this.handleStreamMsg(response, chattingMsg)
         },
         // 处理流消息
         handleStreamMsg(response, chatting) {
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            new ReadableStream({
-                start(controller) {
-                    async function push() {
-                        const { done, value } = await reader.read();
-                        if (done) {
-                            controller.close();
-                            await delay(1000)
-                            delete chatting["chatting"]
-                            return;
-                        }
-                        controller.enqueue(value);
-                        const text = decoder.decode(value);
-                        // 权限校验
-                        if (text === "0003") {
-                            delete chatting["chatting"]
-                            controller.close();
-                        }
-                        for (let word of text) {
-                            chatting.content += word;
-                            await delay(4);
+            return new Promise((resolve, reject) => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                new ReadableStream({
+                    start(controller) {
+                        async function push() {
+                            const { done, value } = await reader.read();
+                            if (done) {
+                                controller.close();
+                                await delay(1000)
+                                delete chatting["chatting"]
+                                resolve()
+                                return;
+                            }
+                            controller.enqueue(value);
+                            const text = decoder.decode(value);
+                            // 权限校验
+                            if (text === "0003") {
+                                delete chatting["chatting"]
+                                controller.close();
+                                resolve()
+                            }
+                            for (let word of text) {
+                                chatting.content += word;
+                                await delay(4);
+                            }
+                            push();
                         }
                         push();
-                    }
-                    push();
-                },
-            });
+                    },
+                });
+            })
+
         },
 
         // 预设消息
@@ -168,6 +184,30 @@ const useSessionsStore = defineStore('sessions', {
             this.currentSession.clearedCtx.push(...this.currentSession.messages);
             this.currentSession.messages = [];
         },
+
+        importChat(e) {
+            const file = e.target.files[0]
+            const reader = new FileReader()
+            reader.readAsText(file)
+            reader.onload = (e) => {
+                const data = JSON.parse(e.target.result)
+                this.sessions = data
+                this.currentSession = this.sessions[0]
+            }
+        },
+        exportChat() {
+            const data = JSON.stringify(this.sessions)
+            const blob = new Blob([data], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = 'chat.json'
+            link.click()
+            URL.revokeObjectURL(url)
+        },
+        clearChat() {
+            this.sessions = []
+        }
     },
     persist: true,
 });

@@ -20,7 +20,6 @@ export default defineConfig({
     }),
   ],
   build: {
-    // 构建结构
     rollupOptions: {
       output: {
         // 分包
@@ -29,6 +28,7 @@ export default defineConfig({
             return 'vendor';
           }
         },
+        // 构建结构
         // js
         chunkFileNames: 'js/[name]-[hash].js',
         entryFileNames: 'js/[name]-[hash].js',

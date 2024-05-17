@@ -1,8 +1,8 @@
 import useUserStore from "@/stores/modules/user"
 
 // 环境域名
-// const apiHostUrl = import.meta.env.MODE === 'production' ? "http://1.12.43.224" : "http://127.0.0.1:8091"
-const apiHostUrl = 'http://1.12.43.224'
+const apiHostUrl = import.meta.env.MODE === 'production' ? "http://1.12.43.224" : "http://127.0.0.1:8091"
+// const apiHostUrl = 'http://1.12.43.224'
 
 const getHeaders = () => {
     const userStore = useUserStore()

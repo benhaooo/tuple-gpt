@@ -59,10 +59,12 @@ const handleDeleteSession = (index) => {
 // 发送消息
 const handleSendMessage = async () => {
   if (!text.value) return;
-  sessionsStore.sendMessage(text.value, fileUrl.value)
+  sessionsStore.sendMessage(text.value, fileUrl.value).then(() => {
+    userStore.fetchUserAccount()
+    resetAndScrollToBottom()
+  })
   text.value = "";
   fileUrl.value = "";
-  resetAndScrollToBottom()
 };
 
 // 编辑消息
@@ -129,8 +131,8 @@ const handleImgChange = (e) => {
             <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
             <el-option value="gpt-4-vision-preview">gpt-4-vision-preview</el-option>
             <el-option value="dall-e-3">dall-e-3</el-option>
-            <el-option value="glm-3-turbo">glm-3-turbo</el-option>
-            <el-option value="chatglm_pro">chatglm_pro</el-option>
+            <!-- <el-option value="glm-3-turbo">glm-3-turbo</el-option>
+            <el-option value="chatglm_pro">chatglm_pro</el-option> -->
           </el-select>
         </el-form-item>
         <el-form-item label="上下文数量">
