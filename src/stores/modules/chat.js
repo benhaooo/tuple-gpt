@@ -5,6 +5,7 @@ import { reactive } from "vue"
 import useConfigStore from "@/stores/modules/config";
 import useUserStore from "@/stores/modules/user";
 import { storeToRefs } from "pinia";
+import { el } from "element-plus/es/locales.mjs";
 
 const configStore = useConfigStore();
 const userStore = useUserStore();
@@ -95,8 +96,15 @@ const useSessionsStore = defineStore('sessions', {
                 frequency_penalty: this.currentSession.frequency_penalty,
 
             }
-            const response = await completions(data,this.currentSession.model)
-            return this.handleStreamMsg(response, currentMsg)
+            const response = await completions(data, this.currentSession.model)
+            if (response.status === 200) {
+                return this.handleStreamMsg(response, currentMsg)
+            } else {
+                const res = await response.json()
+                const errContent = `发生错误：\n\`\`\`json\n${JSON.stringify(res, null, 2)}`
+                chattingMsg.content = errContent
+                delete chattingMsg.chatting
+            }
         },
 
         async senImgMessage(text, imgUrl) {
@@ -140,8 +148,17 @@ const useSessionsStore = defineStore('sessions', {
                 chatting: true
             })
             this.currentSession.messages.push(chattingMsg);
-            const response = await completions(data,this.currentSession.model)
-            delete chattingMsg.chatting
+
+
+            const response = await completions(data, this.currentSession.model)
+            if (response.status === 200) {
+                return this.handleStreamMsg(response, chattingMsg)
+            } else {
+                const res = await response.json()
+                const errContent = `发生错误：\n\`\`\`json\n${JSON.stringify(res, null, 2)}`
+                chattingMsg.content = errContent
+                delete chattingMsg.chatting
+            }
         },
         // 发送消息
         async sendMessage(text) {
@@ -174,8 +191,15 @@ const useSessionsStore = defineStore('sessions', {
                 chatting: true
             })
             this.currentSession.messages.push(chattingMsg);
-            const response = await completions(data,this.currentSession.model)
-            return this.handleStreamMsg(response, chattingMsg)
+            const response = await completions(data, this.currentSession.model)
+            if (response.status === 200) {
+                return this.handleStreamMsg(response, chattingMsg)
+            } else {
+                const res = await response.json()
+                const errContent = `发生错误：\n\`\`\`json\n${JSON.stringify(res, null, 2)}`
+                chattingMsg.content = errContent
+                delete chattingMsg.chatting
+            }
         },
         // 处理流消息
         handleStreamMsg(response, chatting) {
