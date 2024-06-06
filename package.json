@@ -1,0 +1,43 @@
+{
+  "name": "tuple-gpt",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "analyzer": "vite-bundle-visualizer"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.2.0",
+    "@microsoft/fetch-event-source": "^2.0.1",
+    "animate.css": "^4.1.1",
+    "dotenv": "^16.4.5",
+    "echarts": "^5.5.0",
+    "element-plus": "^2.6.1",
+    "highlight.js": "^11.9.0",
+    "marked": "^12.0.1",
+    "marked-highlight": "^2.1.1",
+    "openai": "^4.47.3",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.2.1",
+    "spark-md5": "^3.0.2",
+    "vite-bundle-visualizer": "^1.1.0",
+    "vite-plugin-typescript": "^1.0.4",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "vue-toast-notification": "^3.1.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "autoprefixer": "^10.4.19",
+    "less": "^4.1.3",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.5",
+    "unplugin-auto-import": "^0.17.5",
+    "unplugin-vue-components": "^0.26.0",
+    "vite": "^5.1.6"
+  }
+}
