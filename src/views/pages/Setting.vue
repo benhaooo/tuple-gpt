@@ -52,11 +52,12 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
                     </el-form-item>
                     <el-form-item label="模型">
                         <el-select ref="select" v-model="moduleConfig.model" style="width: 120px">
-                            <el-option value="0125-Preview">0125-Preview</el-option>
-                            <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
+                            <el-option value="0125-preview">0125-preview</el-option>
+                            <el-option value="gpt-4o">gpt-4o</el-option>
+                            <!-- <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
                             <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
                             <el-option value="gpt-4-vision-preview">gpt-4-vision-preview</el-option>
-                            <el-option value="dall-e-3">dall-e-3</el-option>
+                            <el-option value="dall-e-3">dall-e-3</el-option> -->
                         </el-select>
                     </el-form-item>
                     <el-form-item label="上下文数量">
@@ -87,9 +88,9 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
 
             </el-tab-pane>
             <el-tab-pane label="服务端">
-                <el-input placeholder="必须包含http(s)://" v-model="serverConfig.apiHost">
+                <!-- <el-input placeholder="必须包含http(s)://" v-model="serverConfig.apiHost">
                     <template #prepend>OpenAI接口地址</template>
-                </el-input>
+                </el-input> -->
                 <el-input placeholder="自定义Open API Key" v-model="serverConfig.apiKey" show-password>
                     <template #prepend>Open API Key</template>
                 </el-input>

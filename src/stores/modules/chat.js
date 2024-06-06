@@ -95,7 +95,7 @@ const useSessionsStore = defineStore('sessions', {
                 frequency_penalty: this.currentSession.frequency_penalty,
 
             }
-            const response = await completions(data)
+            const response = await completions(data,this.currentSession.model)
             return this.handleStreamMsg(response, currentMsg)
         },
 
@@ -140,8 +140,7 @@ const useSessionsStore = defineStore('sessions', {
                 chatting: true
             })
             this.currentSession.messages.push(chattingMsg);
-            const response = await completions(data)
-            console.log("🚀 ~ senImgMessage ~ response:", response)
+            const response = await completions(data,this.currentSession.model)
             delete chattingMsg.chatting
         },
         // 发送消息
@@ -175,7 +174,7 @@ const useSessionsStore = defineStore('sessions', {
                 chatting: true
             })
             this.currentSession.messages.push(chattingMsg);
-            const response = await completions(data)
+            const response = await completions(data,this.currentSession.model)
             return this.handleStreamMsg(response, chattingMsg)
         },
         // 处理流消息

@@ -3,7 +3,6 @@ import useConfigStore from "@/stores/modules/config";
 
 // 环境域名
 const apiHostUrl = import.meta.env.MODE === 'production' ? "http://1.12.43.224" : "http://127.0.0.1:8091"
-// const apiHostUrl = 'http://1.12.43.224'
 
 const getHeaders = () => {
     const configStore = useConfigStore()
@@ -13,14 +12,15 @@ const getHeaders = () => {
     }
     return headers
 }
-const getHost = () => {
-    const configStore = useConfigStore()
-    return configStore.serverConfig.apiHost
+const getHost = (model) => {
+    // const configStore = useConfigStore()
+    // return configStore.serverConfig.apiHost
+    return `https://meiguodongbu.openai.azure.com/openai/deployments/${model}/chat/completions?api-version=2024-04-01-preview`
 }
 
-export const completions = (data) => {
+export const completions = (data,model) => {
     
-    return fetch(`${getHost()}`, {
+    return fetch(`${getHost(model)}`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data),
