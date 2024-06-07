@@ -1,12 +1,12 @@
 <template>
-  <div class="border-r-2 border-solid transition-all w-0 duration-300 max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark"
+  <div class="border-r-2 border-solid transition-all w-0 duration-300 max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark pt-8 px-3"
     :class="panelShow ? ['translate-x-0', 'w-56'] : '-translate-x-full'">
 
-    <el-button @click="handleNewSession">+</el-button>
+    <button @click="handleNewSession" class="flex items-center justify-center w-full bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl">+</button>
 
     <div class="hidden-scroll mt-5 h-4/5 overflow-y-scroll text-light-text dark:text-dark-text">
       <div v-for="(session, index) in sessions" :key="session.id"
-        class="group flex h-20 rounded-2xl transition duration-300 cursor-pointer my-5 mx-3 relative overflow-hidden border-2 border-dark-border hover:border-dark-blue-base shadow-md hover:shadow-lg hover:shadow-blue-500/50"
+        class="group flex h-20 rounded-2xl transition duration-300 cursor-pointer my-5 relative overflow-hidden border-2 border-dark-border hover:border-dark-blue-base shadow-md hover:shadow-lg hover:shadow-blue-500/50"
         :class="currentSessionId === session.id ? 'bg-dark-blue-base' : 'transparent'"
         @click="selectSession(session.id)">
         <div class="flex flex-col justify-between py-3 px-5 ">
