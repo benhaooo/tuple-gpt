@@ -1,7 +1,7 @@
 <template>
   <div class="message group" :class="{ self: isUser }">
     <div>
-      <div class="user-info flex items-center gap-x-2">
+      <div class="user-info flex items-center gap-x-2 font-extrabold">
         <div class="avater-wrapper">
           <el-tooltip content="编辑" placement="top">
             <i class="iconfont center edit" @click="handleEditMessage()">&#xeabd;</i>
@@ -39,7 +39,7 @@ import { marked } from 'marked'
 import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
 import { useToast } from 'vue-toast-notification';
 import useSessionsStore from "@/stores/modules/chat";
-import gptUrl from '@/assets/imgs/gpt.png'
+import gptUrl from '@/assets/imgs/ye.png'
 
 
 const sessionsStore = useSessionsStore();

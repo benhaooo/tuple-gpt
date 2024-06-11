@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onActivated, nextTick, watch } from "vue";
+import { ref, onMounted, onActivated, nextTick, watch, computed } from "vue";
 import useSessionsStore from "@/stores/modules/chat";
 import useUserStore from "@/stores/modules/user";
 import { storeToRefs } from "pinia";
@@ -23,15 +23,26 @@ const configForm = ref({});
 const fileUrl = ref("");
 const formRef = ref(null);
 
+const taRef = ref(null);
+const canSend = computed(() => {
+  return text.value.trim().length > 0;
+});
 
+// 文本框高度自适应
+watch(text, () => {
+  taRef.value.style.height = "auto";
+  taRef.value.style.height = Math.min(taRef.value.scrollHeight, 240) + "px";
+})
 const { sessions, currentSessionId, currentSession } =
   storeToRefs(sessionsStore);
 
 // 加载
 onMounted(() => {
+  //没有回话
   if (!currentSessionId.value) {
     handleNewSession();
   }
+  taInitHeight = taRef.value.offsetHeight
 });
 onActivated(() => {
   const askprompt = sessionsStore.askprompt;
@@ -59,7 +70,7 @@ const handleDeleteSession = (index) => {
 // 发送消息
 const handleSendMessage = async () => {
   if (!text.value) return;
-  if(fileUrl.value){
+  if (fileUrl.value) {
     sessionsStore.senImgMessage(text.value, fileUrl.value)
     return
   }
@@ -94,12 +105,6 @@ const handelShowConfig = () => {
   showConfigModal.value = true;
 };
 
-// 文本框高度自适应
-const handleInputMessage = (e) => {
-  const textarea = e.target;
-  textarea.style.height = "auto";
-  textarea.style.height = Math.min(textarea.scrollHeight, 100) + "px";
-}
 const handleImgChange = (e) => {
   const file = e.target.files[0];
   const reader = new FileReader();
@@ -108,7 +113,6 @@ const handleImgChange = (e) => {
     formRef.value.reset()
   };
   reader.readAsDataURL(file);
-
 }
 </script>
 
@@ -131,7 +135,7 @@ const handleImgChange = (e) => {
         </el-form-item>
         <el-form-item label="模型">
           <el-select ref="select" v-model="configForm.model">
-            
+
             <el-option value="0125-preview">0125-preview</el-option>
             <el-option value="gpt-4o">gpt-4o</el-option>
             <!-- <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
@@ -175,7 +179,8 @@ const handleImgChange = (e) => {
     <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
       @delete="handleDeleteSession" @add="handleNewSession" />
 
-    <div class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
+    <div
+      class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">
         <div
           class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500"
@@ -192,7 +197,7 @@ const handleImgChange = (e) => {
             style="mask-image: linear-gradient(90deg, transparent, #000, transparent);">上下文已清除</div>
         </div>
 
-        <template v-for="(message,index) in currentSession.messages" :key="index">
+        <template v-for="(message, index) in currentSession.messages" :key="index">
           <Message :message="message" @delete="sessionsStore.deleteMessage(index)" @reChat="sessionsStore.reChat(index)"
             @edit="handleEditMessage" />
         </template>
@@ -221,15 +226,21 @@ const handleImgChange = (e) => {
             <img :src="fileUrl" alt="">
             <i class="iconfont absolute right-0 top-0" @click="clearFile">&#xe630;</i>
           </div>
-          <textarea
-            class="p-2 text-sm rounded-xl dark:bg-dark-input-wrapper w-full h-auto border-2 border-light-border dark:border-dark-border focus:border-dark-blue-base transition-colors duration-700"
-            v-model="text" placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage"
-            @input="handleInputMessage"></textarea>
-          <el-tooltip content="发送" placement="top" :show-after="500">
-            <button
-              class="text-xs absolute right-2 bottom-2 w-10 h-8 rounded-lg border-0 bg-dark-blue-base transition-all duration-300 shadow "
-              @click="handleSendMessage()"><i class="iconfont text-pink-400">&#xe888;</i></button>
-          </el-tooltip>
+          <div class=" flex px-2 py-4 rounded-xl bg-white border-2 border-light-border dark:border-dark-border">
+            <textarea
+              class=" text-base dark:bg-dark-input-wrapper w-full  focus:border-dark-blue-base transition-colors duration-700 resize-none"
+              v-model="text" placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage" ref="taRef"
+              rows="1"></textarea>
+            <div class="flex justify-end flex-col">
+              <el-tooltip content="发送" placement="top" :show-after="500">
+                <button
+                  class="text-xs w-10 h-8 rounded-lg border-0  transition-all duration-300 shadow "
+                  :class="canSend?'bg-dark-blue-base':'bg-[#e5e5e5]'"
+                  :disabled="!canSend" @click="handleSendMessage()"><i class="iconfont text-white">&#xe888;</i></button>
+              </el-tooltip>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

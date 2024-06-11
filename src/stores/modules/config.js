@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import avaUrl from "@/assets/imgs/ava.jpg";
+import avaUrl from "@/assets/imgs/xiaoxing.png";
 
 const useConfigStore = defineStore("config", {
     state: () => ({
