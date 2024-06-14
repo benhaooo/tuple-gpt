@@ -5,7 +5,6 @@ import { reactive } from "vue"
 import useConfigStore from "@/stores/modules/config";
 import useUserStore from "@/stores/modules/user";
 import { storeToRefs } from "pinia";
-import { el } from "element-plus/es/locales.mjs";
 
 const configStore = useConfigStore();
 const userStore = useUserStore();
@@ -107,35 +106,41 @@ const useSessionsStore = defineStore('sessions', {
             }
         },
 
+        //发送图片
         async senImgMessage(text, imgUrl) {
+            const session = this.sessions.find(
+                (session) => session.id == this.currentSessionId
+            );
+            session.model = "gpt-4o"
             this.currentSession.messages.push({
                 role: "user",
                 content: text,
                 img: imgUrl,
             });
             const systemMessage = this.getSytemMesg()
-            const combinedMessages = this.currentSession.messages.filter((msg) => msg.role !== "system")
+            const combinedMessages = this.currentSession.messages.filter((msg) => msg.role !== "assistant").map((msg) => {
+                return {
+                    role: msg.role,
+                    content: [
+                        {
+                            type: "text",
+                            text: msg.content,
+                        },
+                        {
+                            type: "image_url",
+                            image_url: {
+                                url: msg.img,
+                            },
+                        }
+
+                    ],
+                };
+            })
             if (systemMessage) combinedMessages.unshift(systemMessage)
             const data = {
                 model: this.currentSession.model,
-                messages: combinedMessages.map((msg) => {
-                    return {
-                        role: msg.role,
-                        content: [
-                            {
-                                type: "text",
-                                text: msg.content,
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: msg.img,
-                                },
-                            }
-
-                        ],
-                    };
-                }),
+                messages: combinedMessages,
+                stream: true,
                 max_tokens: this.currentSession.maxTokens,
                 temperature: this.currentSession.temperature,
                 top_p: this.currentSession.top_p,

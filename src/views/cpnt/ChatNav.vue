@@ -1,21 +1,12 @@
 <template>
   <div class="bg-dark-nav flex md:flex-col justify-center items-center">
-    <el-tooltip :content="userStore.isLogin ? '已登录' : '未登录'" placement="right" :show-after="500">
-      <div
-        class="relative flex justify-center items-center w-12 h-12 rounded-full border-2 border-light-border mt-5 cursor-pointer">
-        <img class=" h-4/5 w-4/5 rounded-full" :src="configStore.getAvatar" alt="用户头像" />
-        <div class="absolute bottom-0 right-0 w-2 h-2 rounded-full"
-          :class="!!userStore.isLogin ? 'bg-green-500' : 'bg-gray-500'"></div>
-      </div>
-    </el-tooltip>
+    <div
+      class="avatar-wrapper group relative flex justify-center items-end w-20 h-20 overflow-hidden mt-5">
+      <div class=" absolute bottom-0  border-2 w-16 h-16 border-light-border rounded-full z-10 translate-y-1"></div> 
+      <img class=" w-12 rounded-full cursor-pointer duration-300 group-hover:scale-150 z-20" :src="configStore.getAvatar" alt="用户头像" />
+      <div class=" absolute bottom-0 border-b-4  w-16 h-16 border-light-border rounded-full z-30 translate-y-1"></div>
+    </div>
 
-    <el-dialog v-model="loginModalShow">
-      <h3 class=" font-extrabold text-blue-500">扫码关注公众号输入“1”获取访问码</h3>
-      <img class="w-40 mb-4" src="@/assets/imgs/qr.jpg" alt="">
-      <h2>请输入访问码:</h2>
-      <el-input class=" my-4" v-model="code" placeholder="填写访问码" />
-      <el-button type="primary" @click="handleLogin">提交</el-button>
-    </el-dialog>
     <div class="center flex md:flex-col w-full flex-1">
       <template v-for="(item, index) in menuItems" :key="index">
         <div class="group flex max-md:flex-col-reverse items-center w-full cursor-pointer my-5">
@@ -35,7 +26,6 @@ import { ref, computed, onMounted, watchEffect } from "vue"
 import useUserStore from "@/stores/modules/user"
 import useConfigStore from "@/stores/modules/config"
 import { useRouter, useRoute } from "vue-router"
-import { useToast } from 'vue-toast-notification';
 import { storeToRefs } from 'pinia'
 
 
@@ -64,16 +54,7 @@ const isSelected = computed(() => {
   };
 });
 
-
-const loginModalShow = ref(false)
-const code = ref(null)
-const handleLogin = async () => {
-  await userStore.login(code.value)
-  loginModalShow.value = false
-  useToast().success("登录成功")
-}
-
-
+//主题切换
 watchEffect(() => {
   const theme = userConfig.value.theme
   const html = document.querySelector('html')
@@ -83,3 +64,9 @@ watchEffect(() => {
 
 
 </script>
+
+<style lang="less" scoped>
+.avatar-wrapper{
+  border-radius: 0 0 50% 50%;
+}
+</style>

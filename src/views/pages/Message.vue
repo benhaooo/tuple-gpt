@@ -27,12 +27,14 @@ const taRef = ref(null);
 const canSend = computed(() => {
   return text.value.trim().length > 0;
 });
+const taFocused = ref(false);
 
 // 文本框高度自适应
-watch(text, () => {
+watch(text, () => autoHeight())
+const autoHeight = () => {
   taRef.value.style.height = "auto";
   taRef.value.style.height = Math.min(taRef.value.scrollHeight, 240) + "px";
-})
+};
 const { sessions, currentSessionId, currentSession } =
   storeToRefs(sessionsStore);
 
@@ -72,6 +74,8 @@ const handleSendMessage = async () => {
   if (!text.value) return;
   if (fileUrl.value) {
     sessionsStore.senImgMessage(text.value, fileUrl.value)
+    text.value = "";
+    fileUrl.value = "";
     return
   }
   sessionsStore.sendMessage(text.value).then(() => {
@@ -80,6 +84,9 @@ const handleSendMessage = async () => {
 
   text.value = "";
   fileUrl.value = "";
+
+  //可能watch那没更新来
+  nextTick(() => autoHeight());
 };
 
 // 编辑消息
@@ -114,6 +121,8 @@ const handleImgChange = (e) => {
   };
   reader.readAsDataURL(file);
 }
+
+
 </script>
 
 
@@ -224,19 +233,18 @@ const handleImgChange = (e) => {
         <div class="relative">
           <div v-if="fileUrl" class="relative w-20 h-20 rounded-md">
             <img :src="fileUrl" alt="">
-            <i class="iconfont absolute right-0 top-0" @click="clearFile">&#xe630;</i>
+            <i class="iconfont absolute right-0 top-0 cursor-pointer" @click="fileUrl = ''">&#xe630;</i>
           </div>
-          <div class=" flex px-2 py-4 rounded-xl bg-white border-2 border-light-border dark:border-dark-border">
-            <textarea
-              class=" text-base dark:bg-dark-input-wrapper w-full  focus:border-dark-blue-base transition-colors duration-700 resize-none"
-              v-model="text" placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage" ref="taRef"
-              rows="1"></textarea>
+          <div class=" flex px-2 py-4 rounded-xl bg-white border-2 transition-colors duration-500"
+            :class="taFocused ? 'border-dark-blue-base' : 'border-light-border dark:border-dark-border'">
+            <textarea class=" text-base dark:bg-dark-input-wrapper w-full  resize-none" v-model="text"
+              placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage" @focus="taFocused = true"
+              @blur="taFocused = false" ref="taRef" rows="1"></textarea>
             <div class="flex justify-end flex-col">
               <el-tooltip content="发送" placement="top" :show-after="500">
-                <button
-                  class="text-xs w-10 h-8 rounded-lg border-0  transition-all duration-300 shadow "
-                  :class="canSend?'bg-dark-blue-base':'bg-[#e5e5e5]'"
-                  :disabled="!canSend" @click="handleSendMessage()"><i class="iconfont text-white">&#xe888;</i></button>
+                <button class="text-xs w-10 h-8 rounded-lg border-0  transition-all duration-300 shadow "
+                  :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5]'" :disabled="!canSend"
+                  @click="handleSendMessage()"><i class="iconfont text-white">&#xe888;</i></button>
               </el-tooltip>
             </div>
           </div>
