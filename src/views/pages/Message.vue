@@ -73,7 +73,7 @@ const handleDeleteSession = (index) => {
 const handleSendMessage = async () => {
   if (!text.value) return;
   if (fileUrl.value) {
-    sessionsStore.senImgMessage(text.value, fileUrl.value)
+    sessionsStore.sendImgMessage(text.value, fileUrl.value)
     text.value = "";
     fileUrl.value = "";
     return
