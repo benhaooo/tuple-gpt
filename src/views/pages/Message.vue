@@ -101,7 +101,7 @@ const handelOk = () => {
   showEditModal.value = false;
 };
 const handelOkConfig = () => {
-  sessionsStore.updataSession(configForm.value);
+  sessionsStore.updateSession(configForm.value);
   showConfigModal.value = false;
 };
 
@@ -248,7 +248,6 @@ const handleImgChange = (e) => {
               </el-tooltip>
             </div>
           </div>
-
         </div>
       </div>
     </div>

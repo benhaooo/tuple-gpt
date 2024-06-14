@@ -85,7 +85,7 @@ const useSessionsStore = defineStore('sessions', {
         async sendMessageInternal(index, { text, imgUrl }) {
             try {
                 const session = this.currentSession;
-                session.model = "gpt-4o";
+                if(imgUrl) session.model = "gpt-4o";
                 if (index === null) {
                     this.currentSession.messages.push({
                         role: "user",
