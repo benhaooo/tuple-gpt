@@ -2,9 +2,9 @@
   <div ref="sessionListRef"
     class="session-list relative flex flex-col first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark px-3">
     <button @click="handleNewSession"
-      class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl">+</button>
-    <div class=" flex w-full bg-white rounded-md mt-2 p-2">
-      <i class="iconfont">&#xe63f;</i>
+      class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl overflow-hidden">+</button>
+    <div class=" flex w-full bg-white rounded-md mt-2 p-2 overflow-hidden">
+      <i class="iconfont overflow-hidden">&#xe63f;</i>
       <input class=" outline-none flex-1 pl-2 w-full" v-model.laze="searchInput" placeholder="搜索历史会话"></input>
     </div>
 
@@ -14,7 +14,7 @@
         :class="currentSessionId === session.id ? 'bg-dark-blue-base' : 'transparent'"
         @click="selectSession(session.id)">
         <div class="flex flex-col justify-between py-3 px-5 ">
-          <div class="font-bold text-lg whitespace-nowrap">{{ session.evaluate || session.name }}</div>
+          <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate || session.name }}</div>
           <div class="text-xs">{{ session.messages.length }}条对话</div>
         </div>
         <i class="iconfont absolute top-1 right-1 hidden group-hover:block hover:text-red-500"
@@ -22,7 +22,9 @@
       </div>
     </div>
     <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
-      class=" hover:cursor-col-resize absolute right-0 h-full w-1" :class="draging?'bg-blue-500':'bg-slate-500'"></div>
+      class=" hover:cursor-col-resize absolute right-0 h-full w-1 border-l-2 border-grey-500"
+      :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
+    </div>
   </div>
 
 </template>
@@ -60,18 +62,12 @@ const handleNewSession = () => {
 const resizeLineRef = ref(null);
 const sessionListRef = ref(null);
 const draging = ref(false);
-let initialWidth;
-
-onMounted(() => {
-  if (sessionListRef.value) {
-    initialWidth = sessionListRef.value.getBoundingClientRect().width;
-  }
-});
+const minWidth = 160
 
 const handleLineMousedown = (e) => {
   e.preventDefault();
   draging.value = true;
-  initialWidth = sessionListRef.value.getBoundingClientRect().width;
+  let accuWidth = sessionListRef.value.getBoundingClientRect().width;
   let lastX = e.clientX;
 
   const lineMouseup = (e) => {
@@ -85,8 +81,13 @@ const handleLineMousedown = (e) => {
     e.preventDefault()
     if (lastX !== null) {
       const deltaX = e.clientX - lastX;
-      initialWidth += deltaX;
-      sessionListRef.value.style.width = `${initialWidth}px`;
+      accuWidth += deltaX;
+      let rectWidth
+      if (accuWidth <= 0) rectWidth = 0
+      if (accuWidth >= minWidth) {
+        rectWidth = accuWidth
+      }
+      sessionListRef.value.style.width = `${rectWidth}px`;
       lastX = e.clientX;
     }
   };
