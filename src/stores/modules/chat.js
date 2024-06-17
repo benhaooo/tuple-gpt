@@ -17,6 +17,15 @@ const useSessionsStore = defineStore('sessions', {
     }),
     getters: {
         currentSession: (state) => state.sessions.find(session => session.id === state.currentSessionId),
+        filterSessions: (state) => {
+            return (text) => {
+                return state.sessions.filter(session => {
+                    return session.messages.some(msg => {
+                        return msg.content.includes(text)
+                    })
+                })
+            }
+        }
     },
     actions: {
         // 新增会话
