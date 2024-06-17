@@ -1,8 +1,10 @@
 <template>
-  <div class="border-r-2 border-solid transition-all w-0 duration-300 max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark pt-8 px-3"
+  <div
+    class="border-r-2 border-solid transition-all w-0 duration-300 max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark pt-8 px-3"
     :class="panelShow ? ['translate-x-0', 'w-56'] : '-translate-x-full'">
 
-    <button @click="handleNewSession" class="flex items-center justify-center w-full bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl">+</button>
+    <button @click="handleNewSession"
+      class="flex items-center justify-center w-full bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl">+</button>
 
     <div class="hidden-scroll mt-5 h-4/5 overflow-y-scroll text-light-text dark:text-dark-text">
       <div v-for="(session, index) in sessions" :key="session.id"
@@ -10,7 +12,7 @@
         :class="currentSessionId === session.id ? 'bg-dark-blue-base' : 'transparent'"
         @click="selectSession(session.id)">
         <div class="flex flex-col justify-between py-3 px-5 ">
-          <div class="font-bold text-lg">{{ session.name }}</div>
+          <div class="font-bold text-lg">{{ session.evaluate || session.name }}</div>
           <div class="text-xs">{{ session.messages.length }}条对话</div>
         </div>
         <i class="iconfont absolute top-1 right-1 hidden group-hover:block hover:text-red-500"
@@ -36,7 +38,7 @@ const props = defineProps({
 
 const panelShow = ref(true)
 
-const emits = defineEmits(["select", "delete","add"]);
+const emits = defineEmits(["select", "delete", "add"]);
 
 const selectSession = (id) => {
   emits("select", id);

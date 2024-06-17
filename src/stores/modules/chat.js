@@ -3,11 +3,10 @@ import { generateUniqueId, delay } from "@/utils/commonUtils";
 import { completions } from "@/apis";
 import { reactive } from "vue";
 import useConfigStore from "@/stores/modules/config";
-import useUserStore from "@/stores/modules/user";
 import { storeToRefs } from "pinia";
+import useStream from '@/hooks/stream'
 
 const configStore = useConfigStore();
-const userStore = useUserStore();
 const { moduleConfig } = storeToRefs(configStore);
 
 const useSessionsStore = defineStore('sessions', {
@@ -39,8 +38,8 @@ const useSessionsStore = defineStore('sessions', {
                     this.sessions[index].messages = [];
                     return;
                 }
-                this.currentSessionId = index === this.sessions.length - 1 
-                    ? this.sessions[index - 1].id 
+                this.currentSessionId = index === this.sessions.length - 1
+                    ? this.sessions[index - 1].id
                     : this.sessions[index + 1].id;
             }
             this.sessions.splice(index, 1);
@@ -85,7 +84,7 @@ const useSessionsStore = defineStore('sessions', {
         async sendMessageInternal(index, { text, imgUrl }) {
             try {
                 const session = this.currentSession;
-                if(imgUrl) session.model = "gpt-4o";
+                if (imgUrl) session.model = "gpt-4o";
                 if (index === null) {
                     this.currentSession.messages.push({
                         role: "user",
@@ -98,7 +97,7 @@ const useSessionsStore = defineStore('sessions', {
                 }
 
                 const systemMessage = this.getSystemMsg();
-                const combinedMessages = this.currentSession.messages.filter(msg => msg.role !== "assistant").map(msg => ({
+                const combinedMessages = this.currentSession.messages.map(msg => ({
                     role: msg.role,
                     content: msg.img ? [
                         { type: "text", text: msg.content },
@@ -134,6 +133,11 @@ const useSessionsStore = defineStore('sessions', {
                     chattingMsg.content = `发生错误：\n\`\`\`json\n${JSON.stringify(res, null, 2)}\n\`\`\``;
                     delete chattingMsg.chatting;
                 }
+                //未评估
+                if (!session.evaluate) {
+                    this.evaluateSession(session)
+                }
+
             } catch (error) {
                 console.error("Error in sendMessageInternal:", error);
                 if (index !== null) {
@@ -145,45 +149,17 @@ const useSessionsStore = defineStore('sessions', {
 
         // 处理流消息
         handleStreamMsg(response, chatting) {
-            return new Promise(async (resolve, reject) => {
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                new ReadableStream({
-                    start(controller) {
-                        async function push() {
-                            const { done, value } = await reader.read();
-                            if (done) {
-                                controller.close();
-                                await delay(800);
-                                delete chatting.chatting;
-                                resolve();
-                                return;
-                            }
-                            controller.enqueue(value);
-                            const chunk = decoder.decode(value);
-                            buffer += chunk;
-                            const lines = buffer.split('\n');
-                            buffer = lines.pop();
-                            for (const line of lines) {
-                                if (line.trim().startsWith('data:')) {
-                                    const jsonStr = line.trim().substring(5).trim();
-                                    if (jsonStr !== '[DONE]') {
-                                        const json = JSON.parse(jsonStr);
-                                        if (json.choices && json.choices[0] && json.choices[0].delta) {
-                                            const content = json.choices[0].delta.content || '';
-                                            chatting.content += content;
-                                            await delay(4);
-                                        }
-                                    }
-                                }
-                            }
-                            push();
-                        }
-                        push();
-                    },
-                });
-            });
+            return new Promise((resolve, reject) => {
+                const { streamController } = useStream()
+                return streamController(response, async (content) => {
+                    chatting.content += content;
+                    await delay(4);
+                }, async () => {
+                    await delay(800);
+                    delete chatting.chatting;
+                    resolve()
+                })
+            })
         },
 
         // 预设消息
@@ -192,6 +168,34 @@ const useSessionsStore = defineStore('sessions', {
                 role: "system",
                 content: this.currentSession.system
             } : null;
+        },
+        async evaluateSession(session) {
+            const evaluatePrompt = `# 角色
+你是一个专业的对话评估专家，能够使用简洁准确的 emoji 表情和 3 到 10 个字对给定的对话进行评估，评估格式为：[emoji][evaluate]。
+
+## 技能
+1. 仔细分析对话的内容、语气和意图。
+2. 选择最能代表对话特点的 emoji 表情。
+3. 用 3 到 10 个字简洁概括评估内容。
+
+## 限制
+1. 严格按照规定的格式进行评估。
+2. 评估内容要客观、准确，符合对话实际。
+3. 只进行对话评估，不做其他无关操作。`
+            const data = {
+                messages: [
+                    {
+                        role: "system",
+                        content: evaluatePrompt
+                    },
+                    ...session.messages
+                ],
+            }
+            const response = await completions(data, "0125-preview")
+            response.json().then(({ choices }) => {
+                const res = choices[0].message.content
+                session.evaluate = res
+            })
         },
 
         // 清除上下文

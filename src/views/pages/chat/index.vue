@@ -3,10 +3,10 @@ import { ref, onMounted, onActivated, nextTick, watch, computed } from "vue";
 import useSessionsStore from "@/stores/modules/chat";
 import useUserStore from "@/stores/modules/user";
 import { storeToRefs } from "pinia";
-import ExpandableButtom from "../cpnt/ExpandableBtn.vue";
-import Message from "../cpnt/Message.vue";
-import SessionList from "../cpnt/SessionList.vue";
+import Message from "@/views/cpnt/Message.vue";
+import SessionList from "@/views/cpnt/SessionList.vue";
 import useAutoScrollToBottom from "@/hooks/scroll";
+import Editor from './cpnt/Editor.vue'
 
 const sessionsStore = useSessionsStore();
 const userStore = useUserStore();
@@ -14,27 +14,13 @@ const scrollRef = ref(null);
 const { resetAndScrollToBottom } = useAutoScrollToBottom(scrollRef)
 
 
-const text = ref("");
 const showEditModal = ref(false);
 const showConfigModal = ref(false);
 const editMessage = ref({});
 const editText = ref("");
 const configForm = ref({});
-const fileUrl = ref("");
-const formRef = ref(null);
 
-const taRef = ref(null);
-const canSend = computed(() => {
-  return text.value.trim().length > 0;
-});
-const taFocused = ref(false);
 
-// 文本框高度自适应
-watch(text, () => autoHeight())
-const autoHeight = () => {
-  taRef.value.style.height = "auto";
-  taRef.value.style.height = Math.min(taRef.value.scrollHeight, 240) + "px";
-};
 const { sessions, currentSessionId, currentSession } =
   storeToRefs(sessionsStore);
 
@@ -69,25 +55,7 @@ const handleNewSession = () => {
 const handleDeleteSession = (index) => {
   sessionsStore.deleteSession(index);
 };
-// 发送消息
-const handleSendMessage = async () => {
-  if (!text.value) return;
-  if (fileUrl.value) {
-    sessionsStore.sendImgMessage(text.value, fileUrl.value)
-    text.value = "";
-    fileUrl.value = "";
-    return
-  }
-  sessionsStore.sendMessage(text.value).then(() => {
-    resetAndScrollToBottom()
-  })
 
-  text.value = "";
-  fileUrl.value = "";
-
-  //可能watch那没更新来
-  nextTick(() => autoHeight());
-};
 
 // 编辑消息
 const handleEditMessage = (message) => {
@@ -112,15 +80,6 @@ const handelShowConfig = () => {
   showConfigModal.value = true;
 };
 
-const handleImgChange = (e) => {
-  const file = e.target.files[0];
-  const reader = new FileReader();
-  reader.onload = () => {
-    fileUrl.value = reader.result;
-    formRef.value.reset()
-  };
-  reader.readAsDataURL(file);
-}
 
 
 </script>
@@ -211,7 +170,9 @@ const handleImgChange = (e) => {
             @edit="handleEditMessage" />
         </template>
       </div>
-      <div class="p-4">
+      <!-- editor -->
+      <Editor></Editor>
+      <!-- <div class="p-4">
         <div class="flex justify-between mb-3">
           <div class="flex gap-4">
             <ExpandableButtom @click="sessionsStore.clearCtx()" :text="'清除上下文'">
@@ -249,7 +210,7 @@ const handleImgChange = (e) => {
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>

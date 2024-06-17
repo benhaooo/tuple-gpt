@@ -10,7 +10,7 @@ const router = createRouter({
     {
       path: '/chat/message',
       name: 'message',
-      component: () => import('@/views/pages/Message.vue'),
+      component: () => import('@/views/pages/chat/index.vue'),
     },
     // {
     //   path: '/chat/prompt',
