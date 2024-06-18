@@ -1,6 +1,6 @@
 <template>
   <div ref="sessionListRef"
-    class="session-list relative flex flex-col first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark px-3">
+    class="relative flex flex-col first-line:border-r-2 border-solid w-50  max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark mx-3 box-border">
     <button @click="handleNewSession"
       class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl overflow-hidden">+</button>
     <div class=" flex w-full bg-white rounded-md mt-2 p-2 overflow-hidden">
@@ -14,7 +14,8 @@
         :class="currentSessionId === session.id ? 'bg-dark-blue-base' : 'transparent'"
         @click="selectSession(session.id)">
         <div class="flex flex-col w-full justify-between py-3 px-5 ">
-          <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate || session.name }}</div>
+          <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate ||
+            session.name }}</div>
           <div class="text-xs">{{ session.messages.length }}条对话</div>
         </div>
         <i class="iconfont absolute top-1 right-1 hidden group-hover:block hover:text-red-500"
@@ -22,8 +23,13 @@
       </div>
     </div>
     <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
-      class=" hover:cursor-col-resize absolute right-0 h-full w-1 border-l-2 border-grey-500"
+      class=" hover:cursor-col-resize absolute -right-4 h-full w-1 border-l-2 border-grey-500"
       :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
+    </div>
+    <div
+      @click="togglePannel"
+      class=" absolute w-8 h-8 bg-white rounded-full shadow-md -right-4 top-1/4 translate-x-1/2 flex justify-center items-center cursor-pointer">
+      <i class="iconfont">&#xe604;</i>
     </div>
   </div>
 
@@ -47,15 +53,21 @@ const emits = defineEmits(["select", "delete", "add"]);
 const selectSession = (id) => {
   emits("select", id);
 };
-
 const deleteSession = (index) => {
   emits("delete", index);
 };
-
 const handleNewSession = () => {
   emits("add");
 };
 
+const togglePannel = () => {
+  const sessionList = sessionListRef.value
+
+  if (sessionList.style.width === '0px') {
+    sessionList.style.width = '200px'
+  } else {
+    sessionList.style.width = '0px'
+}}
 
 
 const resizeLineRef = ref(null);

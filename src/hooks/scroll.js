@@ -54,7 +54,6 @@ export default function useAutoScrollToBottom(elementRef) {
     onMounted(() => {
         // scrollToBottom();
         // startWheelListener();
-
         observer = new MutationObserver((mutations) => {
             const newScrollHeight = elementRef.value.scrollHeight;
             console.log('新的scrollHeight:', newScrollHeight);
@@ -68,20 +67,6 @@ export default function useAutoScrollToBottom(elementRef) {
 
     // 组件卸载时移除滚轮滚动事件监听器
     // onUnmounted(stopWheelListener);
-
-    // 提供一个方法用于重新激活scrollHeight监听并滚动到底部
-    function resetAndScrollToBottom() {
-        smoothScrollToBottom();
-    }
-
-    let lastScrollTop
-    setInterval(() => {
-        // if (isScrolling) return
-        // console.log("🚀 ~ setInterval ~ elementRef.scrollTop:", elementRef.value.scrollTop)
-        // console.log("🚀 ~ setInterval ~ elementRef.scrollTop:", elementRef.value.scrollHeight)
-        // console.log("🚀 ~ setInterval ~ elementRef.scrollTop:", elementRef.value.clientHeight)
-
-    }, 400);
 
 
     return {

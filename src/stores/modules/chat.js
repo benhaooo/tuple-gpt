@@ -43,7 +43,6 @@ const useSessionsStore = defineStore('sessions', {
             };
             this.sessions.unshift(session);
             this.currentSessionId = session.id;
-
         },
 
         // 删除会话
