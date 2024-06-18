@@ -11,7 +11,7 @@ import Editor from './cpnt/Editor.vue'
 const sessionsStore = useSessionsStore();
 const userStore = useUserStore();
 const scrollRef = ref(null);
-const { resetAndScrollToBottom } = useAutoScrollToBottom(scrollRef)
+const { smoothScrollToBottom, scrollToBottom } = useAutoScrollToBottom(scrollRef)
 
 
 const showEditModal = ref(false);
@@ -30,7 +30,7 @@ onMounted(() => {
   if (!currentSessionId.value) {
     handleNewSession();
   }
-  taInitHeight = taRef.value.offsetHeight
+  scrollToBottom()
 });
 onActivated(() => {
   const askprompt = sessionsStore.askprompt;
@@ -44,6 +44,7 @@ onActivated(() => {
 // 切换会话
 const handleSelectSession = async (id) => {
   sessionsStore.setCurrentSession(id);
+  scrollToBottom()
 };
 
 // 新会话
@@ -80,6 +81,9 @@ const handelShowConfig = () => {
   showConfigModal.value = true;
 };
 
+const onSendMessage = () => {
+  smoothScrollToBottom()
+};
 
 
 </script>
@@ -151,7 +155,7 @@ const handelShowConfig = () => {
       class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">
         <div
-          class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500"
+          class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
           @click="handelShowConfig">
           {{ currentSession.model }}
         </div>
@@ -171,46 +175,7 @@ const handelShowConfig = () => {
         </template>
       </div>
       <!-- editor -->
-      <Editor></Editor>
-      <!-- <div class="p-4">
-        <div class="flex justify-between mb-3">
-          <div class="flex gap-4">
-            <ExpandableButtom @click="sessionsStore.clearCtx()" :text="'清除上下文'">
-              <i class="iconfont text-xs">&#xe62e;</i>
-            </ExpandableButtom>
-            <form ref="formRef" class="relative cursor-pointer hover:bg-light-blue-base rounded px-1">
-              <i class="iconfont">&#xe601;</i>
-              <input type="file" @change="handleImgChange" class="absolute w-full h-full top-0 left-0 opacity-0" />
-            </form>
-          </div>
-
-          <el-tooltip content="剩余tokens" placement="top">
-            <div class="text-xs rounded-full bg-[#E4F0FD] px-2 leading-5">
-              <i class="iconfont font-extrabold mr-2 text-green-400">&#xe8c5;</i><span
-                class="text-dark-blue-base cursor-pointer">{{ userStore.getSurplusQuota }}</span>
-            </div>
-          </el-tooltip>
-        </div>
-        <div class="relative">
-          <div v-if="fileUrl" class="relative w-20 h-20 rounded-md">
-            <img :src="fileUrl" alt="">
-            <i class="iconfont absolute right-0 top-0 cursor-pointer" @click="fileUrl = ''">&#xe630;</i>
-          </div>
-          <div class=" flex px-2 py-4 rounded-xl bg-white border-2 transition-colors duration-500"
-            :class="taFocused ? 'border-dark-blue-base' : 'border-light-border dark:border-dark-border'">
-            <textarea class=" text-base dark:bg-dark-input-wrapper w-full  resize-none" v-model="text"
-              placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage" @focus="taFocused = true"
-              @blur="taFocused = false" ref="taRef" rows="1"></textarea>
-            <div class="flex justify-end flex-col">
-              <el-tooltip content="发送" placement="top" :show-after="500">
-                <button class="text-xs w-10 h-8 rounded-lg border-0  transition-all duration-300 shadow "
-                  :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5]'" :disabled="!canSend"
-                  @click="handleSendMessage()"><i class="iconfont text-white">&#xe888;</i></button>
-              </el-tooltip>
-            </div>
-          </div>
-        </div>
-      </div> -->
+      <Editor @send="onSendMessage"></Editor>
     </div>
   </div>
 </template>

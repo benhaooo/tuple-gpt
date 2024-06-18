@@ -94,6 +94,9 @@ const canSend = computed(() => {
 });
 const taFocused = ref(false);
 
+const emits = defineEmits(["send"]);
+
+
 // 文本框高度自适应
 watch(text, () => autoHeight())
 const autoHeight = async () => {
@@ -112,8 +115,10 @@ const handleSendMessage = async () => {
         fileUrl.value = "";
         return
     }
+    emits("send")
     sessionsStore.sendMessage(text.value).then(() => {
         // resetAndScrollToBottom()
+
     })
 
     text.value = "";
@@ -199,4 +204,7 @@ watch(showOptimizedModal, () => {
         document.removeEventListener('click', listenClick)
     }
 })
+
+
+
 </script>

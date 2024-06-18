@@ -13,7 +13,7 @@
         class="group flex h-20 rounded-2xl transition duration-300 cursor-pointer my-5 relative overflow-hidden border-2 border-dark-border hover:border-dark-blue-base shadow-md hover:shadow-lg hover:shadow-blue-500/50"
         :class="currentSessionId === session.id ? 'bg-dark-blue-base' : 'transparent'"
         @click="selectSession(session.id)">
-        <div class="flex flex-col justify-between py-3 px-5 ">
+        <div class="flex flex-col w-full justify-between py-3 px-5 ">
           <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate || session.name }}</div>
           <div class="text-xs">{{ session.messages.length }}条对话</div>
         </div>
@@ -41,7 +41,6 @@ const props = defineProps({
 const searchInput = ref("")
 const sessionsStore = useSessionsStore()
 
-const panelShow = ref(true)
 
 const emits = defineEmits(["select", "delete", "add"]);
 

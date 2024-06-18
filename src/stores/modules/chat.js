@@ -19,6 +19,7 @@ const useSessionsStore = defineStore('sessions', {
         currentSession: (state) => state.sessions.find(session => session.id === state.currentSessionId),
         filterSessions: (state) => {
             return (text) => {
+                if (!text) return state.sessions
                 return state.sessions.filter(session => {
                     return session.messages.some(msg => {
                         return msg.content.includes(text)
@@ -33,10 +34,16 @@ const useSessionsStore = defineStore('sessions', {
             const session = {
                 id: generateUniqueId(),
                 messages: [],
-                ...moduleConfig.value
+                ...moduleConfig.value,
+                chatting: () => {
+                    messages.some(msg => {
+                        return !!msg.chatting
+                    })
+                }
             };
             this.sessions.unshift(session);
             this.currentSessionId = session.id;
+
         },
 
         // 删除会话
