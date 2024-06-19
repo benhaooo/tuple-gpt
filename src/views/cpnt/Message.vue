@@ -22,7 +22,7 @@
         </div>
       </div>
     </div>
-    <div class="content max-w-full overflow-x-scroll text-sm bg-light-hard dark:bg-dark-base" ref="contentRef">
+    <div class="content max-w-full text-sm bg-light-hard dark:bg-dark-base" ref="contentRef">
       <img v-if="message.img" :src="message.img" alt="">
       <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
       <span v-if="message.chatting"
