@@ -30,16 +30,18 @@ const useSessionsStore = defineStore('sessions', {
     },
     actions: {
         // 新增会话
-        addSession() {
+        addSession({ name, prompt }) {
             const session = {
                 id: generateUniqueId(),
                 messages: [],
                 ...moduleConfig.value,
-                chatting: () => {
-                    messages.some(msg => {
-                        return !!msg.chatting
-                    })
-                }
+                name,
+                system: prompt
+                // chatting: () => {
+                //     messages.some(msg => {
+                //         return !!msg.chatting
+                //     })
+                // }
             };
             this.sessions.unshift(session);
             this.currentSessionId = session.id;

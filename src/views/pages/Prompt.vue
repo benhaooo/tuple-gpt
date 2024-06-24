@@ -1,47 +1,48 @@
 <template>
-  <div class="w-11/12 my-0 mx-auto">
-    <div class="flex justify-evenly flex-wrap">
-      <template v-for="askprompt in askprompts" :key="askprompt.id">
-        <div class="askprompt-card group relative w-72 h-96 bg-light-hard dark:bg-dark-wrapper p-5 rounded-2xl my-5 hover:shadow">
-          <div class=" text-green-500 text-base text-center font-black mb-5">{{ askprompt.name }}</div>
-          <div class="flex flex-col items-center overflow-hidden h-full">
-            <div class="text-sm">{{ askprompt.content }}</div>
-            <button class="absolute w-24 h-10 bg-emerald-400 rounded-3xl opacity-0 bottom-2 transition-all duration-500 hover:shadow-sm group-hover:bottom-5 group-hover:opacity-100" @click="handelUse(askprompt)">使用-></button>
+  <div class=" p-16">
+    <div v-for="(categoryData, categoryName) in promptsData" :key="categoryName" class="">
+      <h2 class=" font-extrabold text-3xl text-center mb-8">{{ categoryName }}</h2>
+
+      <div class=" flex flex-wrap gap-10 justify-center">
+        <div v-for="promptData in categoryData" :key="promptData.name" @click="usePrompt(promptData)"
+          :style="{ backgroundImage: getBG() }"
+          class=" flex w-56 h-40 rounded-xl p-4 cursor-pointer hover:shadow-md duration-500">
+          <div></div>
+          <div class="">
+            <div class=" font-extrabold mb-2">
+              {{ promptData.name }}
+            </div>
+            <div class=" text-sm">
+              {{ promptData.scription }}
+            </div>
           </div>
         </div>
-      </template>
+      </div>
     </div>
 
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-const router = useRouter();
+import prompts from '@/script/output/combine.json';
+import { ref, reactive, toRefs } from 'vue';
+import { useRouter, useRoute } from "vue-router"
 import useSessionsStore from "@/stores/modules/chat";
 const sessionsStore = useSessionsStore();
-import { queryPromptList } from "@/apis";
 
-const askprompts = ref([]);
+const router = useRouter()
+const promptsData = reactive(prompts)
 
-onMounted(() => {
-  getList();
-});
+const bg_dist = ['linear-gradient( 90deg, #D2E0FA 0%, #B1CCFF 100%)', 'linear-gradient( 90deg, #C7EBFF 0%, #5FC5FF 100%)', 'linear-gradient( 94deg, #FFEBC1 0%, #FFD98C 100%)', 'linear-gradient( 90deg, #CDF6E8 0%, #8CE7C8 100%)']
+//随机颜色
+const getBG = () => {
+  return bg_dist[Math.floor(Math.random() * bg_dist.length)]
+}
+const usePrompt = (promptData) => {
+  sessionsStore.addSession(promptData)
+  router.push('/chat/message')
+}
 
-const handelUse = (askprompt) => {
-  sessionsStore.askprompt = askprompt;
-  router.push({
-    name: "message",
-  });
-};
-const getList = async () => {
-  const res = await queryPromptList()
-  const { data } = await res.json()
-  askprompts.value = data
-};
 </script>
 
-<style lang="less" scoped>
-
-</style>
+<style lang="less" scoped></style>

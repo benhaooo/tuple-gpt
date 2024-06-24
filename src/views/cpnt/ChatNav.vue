@@ -40,7 +40,7 @@ const route = useRoute()
 
 const menuItems = [
   { icon: "icon-xinxi", route: '/chat/message' },
-  // { icon: "icon-prompt", route: '/chat/prompt' },
+  { icon: "icon-prompt", route: '/chat/prompt' },
   { icon: "icon-shezhi", route: '/chat/setting' },
   // { icon: "icon-store", route: '/chat/store' },
   // { icon: "icon-application", route: '/chat/file' },
