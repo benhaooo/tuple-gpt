@@ -49,7 +49,7 @@ const handleSelectSession = async (id) => {
 
 // 新会话
 const handleNewSession = () => {
-  sessionsStore.addSession();
+  sessionsStore.addSession({ name: "New Chat", prompt: "" });
 };
 
 // 删除会话
@@ -150,7 +150,6 @@ const onSendMessage = () => {
 
     <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
       @delete="handleDeleteSession" @add="handleNewSession" />
-
     <div
       class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">
