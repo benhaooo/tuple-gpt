@@ -28,6 +28,21 @@ export const completions = (data, model) => {
         body: JSON.stringify(data),
     })
 }
+export const onceCompletions = (prompt,sessionId) => {
+    console.log("🚀 ~ onceCompletions ~ prompt:", prompt)
+
+    return fetch(`http://127.0.0.1:3002/apis/gpt/chat/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+        },
+        body: JSON.stringify({
+            prompt,
+            sessionId
+        }),
+    })
+}
 export const analysisCompletions = (data) => {
     return fetch(`${apiHostUrl}/api/v1/chatgpt/analysis/chart`, {
         method: 'POST',
@@ -40,6 +55,7 @@ export const analysisCompletions = (data) => {
 export const uploadFile = (formData) => {
     return fetch(`${apiHostUrl}/api/v1/file/upload`, {
         method: 'POST',
+
         body: formData,
     })
 }

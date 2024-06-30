@@ -1,5 +1,11 @@
+function defalutDataPicker(json, onMessage) {
+    if (json.choices && json.choices[0] && json.choices[0].delta) {
+        const content = json.choices[0].delta.content || '';
+        onMessage && onMessage(content)
+    }
+}
 export default function useStream() {
-    const streamController = (response, onMessage, onEnd) => {
+    const streamController = (response, onMessage, onEnd, dataPicker = defalutDataPicker) => {
         return new Promise(async (resolve, reject) => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -24,12 +30,10 @@ export default function useStream() {
                                 const jsonStr = line.trim().substring(5).trim();
                                 if (jsonStr !== '[DONE]') {
                                     const json = JSON.parse(jsonStr);
-                                    if (json.choices && json.choices[0] && json.choices[0].delta) {
-                                        const content = json.choices[0].delta.content || '';
-                                        onMessage && onMessage(content)
-                                    }
+                                    dataPicker(json, onMessage)
                                 }
                             }
+
                         }
                         push();
                     }

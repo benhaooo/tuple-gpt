@@ -73,7 +73,7 @@ import ExpandableButtom from "@/views/cpnt/ExpandableBtn.vue";
 import useSessionsStore from "@/stores/modules/chat";
 // import useAutoScrollToBottom from "@/hooks/scroll";
 // const { resetAndScrollToBottom } = useAutoScrollToBottom(scrollRef)
-import { completions } from "@/apis";
+import { completions, onceCompletions } from "@/apis";
 import useStream from '@/hooks/stream'
 
 
@@ -251,7 +251,10 @@ const listenClick = (e) => {
         showOptimizedModal.value = false
     }
 }
-
+const dataPicker = (json, onMessage) => {
+    const { content } = json
+    onMessage(content)
+};
 const handleOptimizePrompt = async () => {
     if (optimizing.value || !canSend.value) return
     //防止冒泡直接触发
@@ -273,10 +276,12 @@ const handleOptimizePrompt = async () => {
         stream: true,
     }
     optimizing.value = true
-    const response = await completions(data, "0125-preview")
+    const response = await onceCompletions(text.value, '8dd16c7dea3f43c78e82e58d427dd58a')
     streamController(response, (res) => {
         optimizedPrompt.value += res
-    }).then(() => {
+    }, () => {
+        optimizing.value = false;
+    }, dataPicker).then(() => {
         optimizing.value = false
     })
 }
