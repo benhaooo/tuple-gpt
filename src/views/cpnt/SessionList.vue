@@ -74,7 +74,7 @@ const togglePanel = () => {
   const sessionList = sessionListRef.value
   if (sessionList.style.width === '0px') {
     showPanel.value = true
-    sessionList.style.width = '200px'
+    sessionList.style.width = isMobile()?'100%':'200px'
   } else {
     showPanel.value = false
     sessionList.style.width = '0px'
@@ -122,6 +122,9 @@ const handleLineMousedown = (e) => {
   document.addEventListener('mouseup', lineMouseup);
   document.addEventListener('mousemove', lineMousemove);
 };
+
+
+defineExpose({ togglePanel });
 </script>
 
 <style scoped lang="less"></style>

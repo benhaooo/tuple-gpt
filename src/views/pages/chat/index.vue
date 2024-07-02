@@ -20,6 +20,8 @@ const editMessage = ref({});
 const editText = ref("");
 const configForm = ref({});
 
+const sessionListRef = ref(null);
+
 
 const { sessions, currentSessionId, currentSession } =
   storeToRefs(sessionsStore);
@@ -86,7 +88,7 @@ const onSendMessage = () => {
 };
 // 唤出会话列表面板
 const handleCallSessionList = () => {
-  
+  sessionListRef.value.togglePanel();
 }
 
 
@@ -152,7 +154,7 @@ const handleCallSessionList = () => {
       </template>
     </el-dialog>
 
-    <SessionList :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
+    <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
       @delete="handleDeleteSession" @add="handleNewSession" />
     <div
       class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
