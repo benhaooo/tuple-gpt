@@ -1,6 +1,6 @@
 <template>
   <div ref="sessionListRef"
-    class="relative flex flex-col first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full z-50 bg-light-base dark:bg-dark-hard-dark">
+    class="relative flex flex-col first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
     <div class=" mx-3 h-full">
       <button @click="handleNewSession"
         class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl overflow-hidden">+</button>
@@ -30,7 +30,7 @@
         :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
       </div>
       <div @click="togglePanel" :class="showPanel ? ' translate-x-1/2' : 'translate-x-12 rotate-180'"
-        class=" absolute w-8 h-8 bg-white rounded-full shadow-md right-0 top-1/4 duration-300 flex justify-center items-center cursor-pointer font-extrabold text-base">
+        class=" absolute w-8 h-8 bg-white rounded-full shadow-md right-0 top-1/4 duration-300 flex justify-center items-center cursor-pointer font-extrabold text-base max-md:hidden">
         <i class="iconfont">&#xe604;</i>
       </div>
     </div>
@@ -41,8 +41,9 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
+import { useWindowSize } from '@/hooks/size'
 
-
+const { isMobile } = useWindowSize()
 const props = defineProps({
   sessions: Array,
   currentSessionId: String,
@@ -57,6 +58,9 @@ const showPanel = ref(true);
 const emits = defineEmits(["select", "delete", "add"]);
 
 const selectSession = (id) => {
+  if(isMobile()){
+    togglePanel()
+  }
   emits("select", id);
 };
 const deleteSession = (index) => {

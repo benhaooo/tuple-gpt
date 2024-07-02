@@ -84,6 +84,10 @@ const handelShowConfig = () => {
 const onSendMessage = () => {
   smoothScrollToBottom()
 };
+// 唤出会话列表面板
+const handleCallSessionList = () => {
+  
+}
 
 
 </script>
@@ -108,7 +112,7 @@ const onSendMessage = () => {
         <el-form-item label="模型">
           <el-select ref="select" v-model="configForm.model">
 
-            <el-option value="0125-preview">0125-preview</el-option>
+            <el-option value="0125-preview">gpt-4</el-option>
             <el-option value="gpt-4o">gpt-4o</el-option>
             <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
             <!-- <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
@@ -153,6 +157,9 @@ const onSendMessage = () => {
     <div
       class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">
+        <div @click="handleCallSessionList" class="absolute top-1 left-4 cursor-pointer">
+          <i class="iconfont  text-2xl ">&#xe66b;</i>
+        </div>
         <div
           class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
           @click="handelShowConfig">

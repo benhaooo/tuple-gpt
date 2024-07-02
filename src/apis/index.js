@@ -29,9 +29,7 @@ export const completions = (data, model) => {
     })
 }
 export const onceCompletions = (prompt,sessionId) => {
-    console.log("🚀 ~ onceCompletions ~ prompt:", prompt)
-
-    return fetch(`http://127.0.0.1:3002/apis/gpt/chat/`, {
+    return fetch(`https://swxx.api.wawoai.com/apis/gpt/chat/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -188,7 +188,7 @@ const useSessionsStore = defineStore('sessions', {
         },
         async evaluateSession(session) {
             const evaluatePrompt = `# 角色
-你是一个专业的对话评估专家，能够使用简洁准确的 emoji 表情和 3 到 10 个字对给定的对话进行评估，评估格式为：[emoji][evaluate]。
+你是一个专业的对话评估专家，能够使用简洁准确的 emoji 表情和 3 到 10 个字对给定的对话进行评估，评估格式为：emoji evaluate。
 
 ## 技能
 1. 仔细分析对话的内容、语气和意图。
@@ -200,6 +200,7 @@ const useSessionsStore = defineStore('sessions', {
 2. 评估内容要客观、准确，符合对话实际。
 3. 只进行对话评估，不做其他无关操作。`
             const data = {
+                model: "gpt-3.5-turbo",
                 messages: [
                     {
                         role: "system",
@@ -208,7 +209,7 @@ const useSessionsStore = defineStore('sessions', {
                     ...session.messages
                 ],
             }
-            const response = await completions(data, "0125-preview")
+            const response = await completions(data, "gpt-3.5-turbo")
             response.json().then(({ choices }) => {
                 const res = choices[0].message.content
                 session.evaluate = res

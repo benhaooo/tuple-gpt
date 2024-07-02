@@ -52,7 +52,7 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
                     </el-form-item>
                     <el-form-item label="模型">
                         <el-select ref="select" v-model="moduleConfig.model" style="width: 120px">
-                            <el-option value="0125-preview">0125-preview</el-option>
+                            <el-option value="0125-preview">gpt-4</el-option>
                             <el-option value="gpt-4o">gpt-4o</el-option>
                             <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
                             <!-- <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
