@@ -159,8 +159,8 @@ const handleCallSessionList = () => {
     <div
       class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">
-        <div @click="handleCallSessionList" class="absolute top-1 left-4 cursor-pointer">
-          <i class="iconfont  text-2xl ">&#xe66b;</i>
+        <div @click="handleCallSessionList" class="absolute top-1 left-4 cursor-pointer z-10 ">
+          <i class="iconfont  text-2xl text-blue-500">&#xe66b;</i>
         </div>
         <div
           class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
