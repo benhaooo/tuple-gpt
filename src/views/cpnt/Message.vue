@@ -22,7 +22,9 @@
         </div>
       </div>
     </div>
-    <div class="content max-w-full text-sm group-hover:shadow-md transition-all duration-300 bg-light-hard dark:bg-dark-base" ref="contentRef">
+    <div
+      class="content max-w-full text-sm group-hover:shadow-md transition-all duration-300 bg-light-hard dark:bg-dark-base"
+      ref="contentRef">
       <img v-if="message.img" :src="message.img" alt="">
       <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
       <span v-if="message.chatting"
@@ -32,7 +34,7 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive, onMounted, onUpdated } from "vue";
+import { computed, ref, reactive, onMounted, onUpdated, onUnmounted } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import { marked } from 'marked'
@@ -113,8 +115,56 @@ const getLastTextNode = (dom) => {
   }
 }
 
-onMounted(updateCursor)
-onUpdated(updateCursor)
+const copyEventHandlers = new WeakMap();
+
+//复制代码按钮添加事件
+function addCopyCodeEvents() {
+  if (contentValueRef.value) {
+    const copyBtn = contentValueRef.value.querySelectorAll('.code-copy');
+    copyBtn.forEach((btn) => {
+      const handler = () => {
+        const code = btn.parentElement?.nextElementSibling?.textContent;
+        if (code) {
+          navigator.clipboard.writeText(code);
+          btn.innerHTML = '<i class="iconfont">&#xe664;</i> 成功';
+          setTimeout(() => {
+            btn.innerHTML = '<i class="iconfont">&#xe8b0;</i> 复制';
+          }, 1000);
+        }
+      };
+      btn.addEventListener('click', handler);
+      copyEventHandlers.set(btn, handler);
+    });
+  }
+}
+//移除代码复制事件
+function removeCopyCodeEvents() {
+  if (contentValueRef.value) {
+    const copyBtn = contentValueRef.value.querySelectorAll('.code-copy');
+    copyBtn.forEach((btn) => {
+      const handler = copyEventHandlers.get(btn);
+      if (handler) {
+        btn.removeEventListener('click', handler);
+        copyEventHandlers.delete(btn);
+      }
+    });
+  }
+}
+
+onMounted(() => {
+  updateCursor()
+  addCopyCodeEvents()
+
+})
+onUpdated(() => {
+  updateCursor()
+  addCopyCodeEvents()
+})
+onUnmounted(() => {
+  removeCopyCodeEvents()
+})
+
+
 
 </script>
 
