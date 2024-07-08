@@ -5,11 +5,13 @@
                 <ExpandableButtom @click="sessionsStore.clearCtx()" :text="'清除上下文'">
                     <i class="iconfont text-xs">&#xe62e;</i>
                 </ExpandableButtom>
-                <form ref="formRef" class="relative cursor-pointer hover:bg-light-blue-base rounded px-1">
-                    <i class="iconfont">&#xe601;</i>
-                    <input type="file" @change="handleImgChange"
-                        class="absolute w-full h-full top-0 left-0 opacity-0" />
-                </form>
+                <el-tooltip content="上传图片" placement="top">
+                    <form ref="formRef" class="relative cursor-pointer hover:bg-light-blue-base rounded px-1">
+                        <i class="iconfont">&#xe601;</i>
+                        <input type="file" @change="handleImgChange"
+                            class="absolute w-full h-full top-0 left-0 opacity-0" />
+                    </form>
+                </el-tooltip>
             </div>
 
             <!-- <el-tooltip content="剩余tokens" placement="top">
@@ -57,8 +59,11 @@
                     </div>
                 </div>
                 <div>
-                    <i @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing || !canSend }"
-                        class="iconfont cursor-pointer font-extrabold hover:text-dark-blue-base">&#xe624;</i>
+                    <el-tooltip content="优化" placement="top">
+
+                        <i @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing || !canSend }"
+                            class="iconfont cursor-pointer font-extrabold hover:text-dark-blue-base">&#xe624;</i>
+                    </el-tooltip>
                 </div>
 
             </div>

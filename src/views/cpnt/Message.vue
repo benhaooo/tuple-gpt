@@ -22,7 +22,7 @@
         </div>
       </div>
     </div>
-    <div class="content max-w-full text-sm bg-light-hard dark:bg-dark-base" ref="contentRef">
+    <div class="content max-w-full text-sm group-hover:shadow-md transition-all duration-300 bg-light-hard dark:bg-dark-base" ref="contentRef">
       <img v-if="message.img" :src="message.img" alt="">
       <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
       <span v-if="message.chatting"
@@ -130,10 +130,10 @@ onUpdated(updateCursor)
 
     .avater-wrapper {
       position: relative;
-      height: 26px;
-      width: 26px;
+      height: 40px;
+      width: 40px;
       clip-path: circle();
-      overflow: hidden;
+      // overflow: hidden;
 
       .edit {
         position: absolute;
@@ -150,12 +150,13 @@ onUpdated(updateCursor)
       img {
         width: 100%;
         height: 100%;
+        object-fit: contain;
       }
     }
   }
 
   .content {
-    padding: 6px 12px;
+    padding: 12px 12px;
     margin-top: 8px;
     border-radius: 5px 20px 20px 20px;
     position: relative;
@@ -200,5 +201,10 @@ onUpdated(updateCursor)
   .content {
     border-radius: 20px 5px 20px 20px;
   }
+}
+
+
+:deep(code) {
+  border-radius: 16px;
 }
 </style>

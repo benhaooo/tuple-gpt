@@ -157,9 +157,9 @@ const handleCallSessionList = () => {
     <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
       @delete="handleDeleteSession" @add="handleNewSession" />
     <div
-      class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl md:p-5 flex flex-col md:m-8">
+      class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl p-5 max-md:pb-0 flex flex-col md:m-4">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">
-        <div @click="handleCallSessionList" class="absolute top-1 left-4 cursor-pointer z-10 ">
+        <div @click="handleCallSessionList" class="absolute top-1 left-4 cursor-pointer z-10 md:hidden ">
           <i class="iconfont  text-2xl text-blue-500">&#xe66b;</i>
         </div>
         <div

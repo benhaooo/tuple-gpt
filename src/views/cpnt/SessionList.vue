@@ -1,6 +1,6 @@
 <template>
-  <div ref="sessionListRef"
-    class="relative flex flex-col first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
+  <div ref="sessionListRef" :class="{ 'transition-all duration-300': !draging }"
+    class=" relative flex flex-col first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
     <div class=" mx-3 h-full">
       <button @click="handleNewSession"
         class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl overflow-hidden">+</button>
@@ -58,7 +58,7 @@ const showPanel = ref(true);
 const emits = defineEmits(["select", "delete", "add"]);
 
 const selectSession = (id) => {
-  if(isMobile()){
+  if (isMobile()) {
     togglePanel()
   }
   emits("select", id);
@@ -74,7 +74,7 @@ const togglePanel = () => {
   const sessionList = sessionListRef.value
   if (sessionList.style.width === '0px') {
     showPanel.value = true
-    sessionList.style.width = isMobile()?'100%':'200px'
+    sessionList.style.width = isMobile() ? '100%' : '200px'
   } else {
     showPanel.value = false
     sessionList.style.width = '0px'
@@ -87,12 +87,14 @@ const sessionListRef = ref(null);
 const draging = ref(false);
 const minWidth = 150
 
+//拖动开始
 const handleLineMousedown = (e) => {
   e.preventDefault();
   draging.value = true;
   let accuWidth = sessionListRef.value.getBoundingClientRect().width;
   let lastX = e.clientX;
 
+  //拖动结束
   const lineMouseup = (e) => {
     e.preventDefault()
     draging.value = false;
@@ -100,6 +102,7 @@ const handleLineMousedown = (e) => {
     document.removeEventListener('mouseup', lineMouseup);
   };
 
+  //拖动ing
   const lineMousemove = (e) => {
     e.preventDefault()
     if (lastX !== null) {
