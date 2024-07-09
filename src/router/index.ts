@@ -22,11 +22,11 @@ const router = createRouter({
       name: 'setting',
       component: () => import('@/views/pages/Setting.vue'),
     },
-    // {
-    //   path: '/chat/store',
-    //   name: 'store',
-    //   component: () => import('@/views/pages/Store.vue'),
-    // },
+    {
+      path: '/chat/store',
+      name: 'store',
+      component: () => import('@/views/pages/Store.vue'),
+    },
     // {
     //   path: '/chat/file',
     //   name: 'file',

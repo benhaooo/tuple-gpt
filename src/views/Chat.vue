@@ -21,17 +21,19 @@ import hljs from 'highlight.js'
 // 注意引入样式，你可以前往 node_module 下查看更多的样式主题
 import 'highlight.js/styles/an-old-hope.css'
 import HighlightBlock from "./cpnt/HighlightBlock.vue";
+import katex from "marked-katex-extension";
+import myKatex from "@/extensions/marked-katex"
 
 import { createSSRApp, h, onMounted, onUpdated, onUnmounted } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 
-
-
+//数学公式
+marked.use(myKatex())
 // 高亮拓展
 marked.use(markedHighlight({
   langPrefix: 'hljs language-',
   highlight(code, language) {
-    const validLang = !!(language && hljs.getLanguage(language))
+    const validLang = language && hljs.getLanguage(language)
     if (validLang) {
       const lang = language ?? ''
       return highlightBlock(hljs.highlight(code, { language: lang }).value, lang)
@@ -39,6 +41,7 @@ marked.use(markedHighlight({
     return highlightBlock(hljs.highlightAuto(code).value, '')
   }
 }))
+
 
 function highlightBlock(str, lang) {
   // 只能返回字符串
