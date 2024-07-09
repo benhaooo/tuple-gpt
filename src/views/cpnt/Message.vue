@@ -70,7 +70,7 @@ const handleReChat = () => {
 }
 
 const copy = () => {
-  navigator.clipboard.writeText(props.message.content)
+  window.navigator.clipboard.writeText(props.message.content)
   useToast().success('复制成功')
 }
 
@@ -125,7 +125,7 @@ function addCopyCodeEvents() {
       const handler = () => {
         const code = btn.parentElement?.nextElementSibling?.textContent;
         if (code) {
-          navigator.clipboard.writeText(code);
+          window.navigator.clipboard.writeText(code);
           btn.innerHTML = '<i class="iconfont">&#xe664;</i> 成功';
           setTimeout(() => {
             btn.innerHTML = '<i class="iconfont">&#xe8b0;</i> 复制';

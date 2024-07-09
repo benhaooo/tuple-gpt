@@ -29,8 +29,6 @@ function inlineKatex(options, renderer) {
         if (index === -1) {
           return;
         }
-        console.log("🚀 ~ start ~ index:", index)
-        
         if (index === 0 || indexSrc.charAt(index - 1) === ' ') {
           const possibleKatex = indexSrc.substring(index);
 
