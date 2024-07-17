@@ -1,6 +1,7 @@
-import { onMounted, onUnmounted, nextTick } from 'vue';
+import { onMounted, onUnmounted, nextTick, ref } from 'vue';
 
-export default function useAutoScrollToBottom(elementRef) {
+export default function useAutoScrollToBottom() {
+    const elementRef = ref(null)
     let isScrolling = false;
     // 平滑滚动
     async function smoothScrollToBottom(duration = 500) {
@@ -33,44 +34,22 @@ export default function useAutoScrollToBottom(elementRef) {
         scrollElement.scrollTop = scrollElement.scrollHeight - scrollElement.clientHeight;
     }
 
-    // 初始化全局滚轮滚动事件监听
-    // let wheelListener;
-    // function startWheelListener() {
-    //     wheelListener = (e) => {
-    //         // scrollListenerActive = false;
-    //     };
-    //     window.addEventListener('wheel', wheelListener, { passive: true });
-    // }
-    // let observer;
+    async function scrollToButtomNearBottom() {
+        await nextTick()
+        const scrollElement = elementRef.value;
+        const { scrollTop, scrollHeight, clientHeight } = scrollElement
+        const scrollBottom = scrollTop + clientHeight;
+        const scrollHold = 100; // 距离底部多少距离开始滚动
+        if (scrollBottom + scrollHold >= scrollHeight) {
+            scrollElement.scrollTop = scrollHeight - clientHeight;
+        }
+    }
 
-    // function stopWheelListener() {
-    //     observer.disconnect();
-    //     if (wheelListener) {
-    //         window.removeEventListener('wheel', wheelListener);
-    //     }
-    // }
-
-    // 组件挂载时初始化滚动到底部并开始滚轮滚动事件监听
-    onMounted(() => {
-        // scrollToBottom();
-        // startWheelListener();
-        observer = new MutationObserver((mutations) => {
-            const newScrollHeight = elementRef.value.scrollHeight;
-            console.log('新的scrollHeight:', newScrollHeight);
-            // scrollToBottom()
-        });
-
-        observer.observe(elementRef.value, {
-            attributeFilter: ['scrollHeight']
-        });
-    });
-
-    // 组件卸载时移除滚轮滚动事件监听器
-    // onUnmounted(stopWheelListener);
 
 
     return {
         smoothScrollToBottom,
-        scrollToBottom
+        scrollToBottom,
+        scrollToButtomNearBottom
     };
 }

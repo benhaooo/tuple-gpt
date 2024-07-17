@@ -152,7 +152,7 @@ const useSessionsStore = defineStore('sessions', {
                 }
                 //未评估
                 if (!session.evaluate) {
-                    this.evaluateSession(session)
+                    // this.evaluateSession(session)
                 }
 
             } catch (error) {

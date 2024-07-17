@@ -1,53 +1,41 @@
 <template>
-    <h2>test</h2>
+    <div class="flex flex-col h-full w-full box-border p-4">
+        <el-input class=" flex-shrink-0 my-4" v-model="rawData" @focus="selectAllText"></el-input>
+        <div class=" flex-grow overflow-scroll" v-html="htmlData"></div>
+    </div>
+
 </template>
 
 <script setup>
-// const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-// recognition.lang = 'zh-CN'; // 设置识别语言
-// recognition.interimResults = false;
+import { ref, watch } from 'vue'
+import { marked } from 'marked'
 
-// recognition.continuous = true; // 连续识别
-// recognition.interimResults = false; // 显示临时结果
+const rawData = ref("")
+const htmlData = ref("")
 
-// recognition.onstart = () => {
-//     console.log('语音识别已启动');
-// };
+watch(rawData, (newVal, oldVal) => {
+    try {
+        const jsonStr = newVal
+            .replace(/""/g, '"')
 
-// recognition.start();
+        // 解析JSON字符串
+        const jsonObj = JSON.parse(jsonStr);
 
-// recognition.onresult = (event) => {
-//     let interimTranscript = '';
-//     let finalTranscript = '';
+        // 格式化JSON字符串
+        const formattedVal = `
+\`\`\`json
+${JSON.stringify(jsonObj, null, 2)}
+\`\`\`
+`;
 
-//     for (let i = 0; i < event.results.length; i++) {
-//         const transcript = event.results[i][0].transcript;
-//         if (event.results[i].isFinal) {
-//             finalTranscript += transcript;
-//         } else {
-//             interimTranscript += transcript;
-//         }
-//     }
-//     console.log("🚀 ~ finalTranscript:", finalTranscript)
-
-//     console.log("🚀 ~ interimTranscript:", interimTranscript)
-
-// };
-// recognition.onresult = (event) => {
-//     for (let i = event.resultIndex; i < event.results.length; ++i) {
-//         if (event.results[i].isFinal) {
-//             const transcript = event.results[i][0].transcript.trim();
-//             console.log('Transcript:', transcript);
-//             if (transcript.toLowerCase() === 'your wake word') {
-//                 console.log('Wake word detected!');
-//                 // 执行唤醒后的操作
-//             }
-//         }
-//     }
-// };
-
-// recognition.onerror = (event) => {
-//     console.error('Speech recognition error:', event.error);
-// };
-
+        // 使用marked将Markdown格式的字符串转换为HTML
+        htmlData.value = marked.parse(formattedVal);
+    } catch (error) {
+        console.log("🚀 ~ watch ~ error:", error);
+        console.log("🚀 ~ watch ~ jsonStr:", jsonStr);
+    }
+});
+const selectAllText = (event) => {
+    event.target.select();
+};
 </script>

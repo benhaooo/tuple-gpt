@@ -10,8 +10,7 @@ import Editor from './cpnt/Editor.vue'
 
 const sessionsStore = useSessionsStore();
 const userStore = useUserStore();
-const scrollRef = ref(null);
-const { smoothScrollToBottom, scrollToBottom } = useAutoScrollToBottom(scrollRef)
+const { smoothScrollToBottom, scrollToBottom, scrollToButtomNearBottom } = useAutoScrollToBottom()
 
 
 const showEditModal = ref(false);
@@ -154,8 +153,8 @@ const handleCallSessionList = () => {
       </template>
     </el-dialog>
 
-    <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId" @select="handleSelectSession"
-      @delete="handleDeleteSession" @add="handleNewSession" />
+    <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId"
+      @select="handleSelectSession" @delete="handleDeleteSession" @add="handleNewSession" />
     <div
       class="relative flex-1 overflow-hidden max-w-full bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl p-5 max-md:pb-0 flex flex-col md:m-4">
       <div class="hidden-scroll w-full flex-1 overflow-y-scroll" ref="scrollRef">

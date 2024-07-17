@@ -13,7 +13,7 @@
 
       <div class="hidden-scroll mt-5 h-4/5 overflow-y-scroll text-light-text dark:text-dark-text">
         <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id"
-          class="group flex h-20 rounded-2xl transition duration-300 cursor-pointer my-5 relative overflow-hidden border-2 border-dark-border hover:border-dark-blue-base shadow-md hover:shadow-lg hover:shadow-blue-500/50"
+          class="group flex h-20 rounded-2xl transition duration-300 cursor-pointer my-5 relative overflow-hidden border-2 border-dark-border hover:border-dark-blue-base hover:bg-[#f3f3f3] shadow-md·"
           :class="currentSessionId === session.id ? 'bg-dark-blue-base' : 'transparent'"
           @click="selectSession(session.id)">
           <div class="flex flex-col w-full justify-between py-3 px-5 ">

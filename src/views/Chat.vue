@@ -27,8 +27,7 @@ import myKatex from "@/extensions/marked-katex"
 import { createSSRApp, h, onMounted, onUpdated, onUnmounted } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 
-//数学公式
-marked.use(myKatex())
+
 // 高亮拓展
 marked.use(markedHighlight({
   langPrefix: 'hljs language-',
@@ -41,7 +40,10 @@ marked.use(markedHighlight({
     return highlightBlock(hljs.highlightAuto(code).value, '')
   }
 }))
-
+//数学公式
+marked.use(myKatex({
+  displayMode: true,
+}))
 
 function highlightBlock(str, lang) {
   // 只能返回字符串
