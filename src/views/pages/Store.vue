@@ -16,7 +16,7 @@ const htmlData = ref("")
 watch(rawData, (newVal, oldVal) => {
     try {
         const jsonStr = newVal
-            .replace(/""/g, '"')
+            // .replace(/""/g, '"')
 
         // 解析JSON字符串
         const jsonObj = JSON.parse(jsonStr);
