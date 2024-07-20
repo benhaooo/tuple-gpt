@@ -19,7 +19,7 @@
           <div class="flex flex-col w-full justify-between py-3 px-5 ">
             <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate ||
               session.name }}</div>
-            <div class="text-xs">{{ session.messages.length }}条对话</div>
+            <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
           </div>
           <i class="iconfont absolute top-1 right-1 hidden group-hover:block hover:text-red-500"
             @click.stop="deleteSession(index)">&#xe630;</i>

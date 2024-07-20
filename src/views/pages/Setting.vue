@@ -61,10 +61,13 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
                         </el-select>
                     </el-form-item>
                     <el-form-item label="上下文数量">
-                        <el-slider v-model="moduleConfig.ctxLimit" :max="50" show-input />
+                        <el-slider v-model="moduleConfig.ctxLimit" :max="10" show-input />
+                    </el-form-item>
+                    <el-form-item label="回复长度">
+                        <el-slider v-model="moduleConfig.maxTokens" :max="4096" show-input />
                     </el-form-item>
                     <el-form-item label="回复数">
-                        <el-slider v-model="moduleConfig.maxTokens" :max="4096" show-input />
+                        <el-slider v-model="moduleConfig.replyCount" :max="10" show-input />
                     </el-form-item>
                     <el-collapse>
                         <el-collapse-item title="高级配置" name="advanced">

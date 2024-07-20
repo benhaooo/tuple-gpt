@@ -1,5 +1,13 @@
 <template>
   <div class="message group" :class="{ self: isUser }">
+    <!-- 编辑窗口 -->
+    <el-dialog v-model="showEditModal" title="编辑">
+      <el-input v-model="editText" type="textarea" :rows="10" />
+      <template #footer>
+        <el-button @click="showEditModal = false">取消</el-button>
+        <el-button type="primary" @click="handelEditOk">确定</el-button>
+      </template>
+    </el-dialog>
     <div>
       <div class="user-info flex items-center gap-x-2 font-extrabold">
         <div class="avater-wrapper">
@@ -13,7 +21,7 @@
           <ExpandableBtn @click="handleDeleteMessage" text="删除">
             <i class="iconfont">&#xec7b;</i>
           </ExpandableBtn>
-          <ExpandableBtn v-if="!isUser" @click="handleReChat" text="重试">
+          <ExpandableBtn v-if="isUser" @click="handleReChat" text="重试">
             <i class="iconfont">&#xe616;</i>
           </ExpandableBtn>
           <ExpandableBtn @click="copy" text="复制">
@@ -22,15 +30,25 @@
         </div>
       </div>
     </div>
-    <div
-      class="content max-w-full text-sm group-hover:shadow-md transition-all duration-300 bg-light-hard dark:bg-dark-base"
-      ref="contentRef">
-      <img v-if="message.img" :src="message.img" alt="">
-      <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>
-      <span v-if="message.chatting"
-        class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
+    <div v-if="message.multiContent" class=" flex gap-2 w-full overflow-x-scroll p-4">
+      <template v-for="(oneOf, index) in message.multiContent" :key="index">
+        <Content @click="message.selectedContent = index" :contentObj="oneOf"
+          :selected="index === message.selectedContent" />
+      </template>
+
+    </div>
+    <div v-else>
+      <div
+        class="content max-w-full text-sm hover:border-blue-500 border-4  transition-all duration-300 bg-light-hard dark:bg-dark-base"
+        ref="contentRef">
+        <img v-if="message.img" :src="message.img" alt="">
+        <div class="contentValue" v-html="message.content" ref="contentValueRef"></div>
+        <span v-if="message.chatting"
+          class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
+      </div>
     </div>
   </div>
+
 </template>
 
 <script setup>
@@ -42,7 +60,7 @@ import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
 import { useToast } from 'vue-toast-notification';
 import useSessionsStore from "@/stores/modules/chat";
 import gptUrl from '@/assets/imgs/ye.png'
-
+import Content from "./Content.vue"
 
 const sessionsStore = useSessionsStore();
 const configStore = useConfigStore();
@@ -52,16 +70,39 @@ const props = defineProps({
   message: Object,
 });
 
+const showEditModal = ref(false);
+const editText = ref("");
+
+const handelEditOk = () => {
+  setContent(props.message, editText.value)
+  showEditModal.value = false;
+};
+const handleEditMessage = () => {
+  showEditModal.value = true;
+  editText.value = getContent(props.message)
+};
+
+const getContent = (message) => {
+  if (props.message.multiContent) {
+    return props.message.multiContent[props.message.selectedContent].content
+  } else {
+    return props.message.content
+  }
+}
+const setContent = (message, content) => {
+  if (message.multiContent) {
+    message.multiContent[message.selectedContent].content = content
+  } else {
+    message.content = content
+  }
+}
 const isUser = computed(() => {
   return props.message.role === 'user'
 })
-const parsedContent = computed(() => {
-  return marked.parse(props.message.content)
-})
-const emits = defineEmits(["edit", "delete", "re"]);
-const handleEditMessage = () => {
-  emits("edit", props.message);
-};
+
+
+const emits = defineEmits(["delete", "re"]);
+
 const handleDeleteMessage = () => {
   emits("delete");
 }
@@ -70,102 +111,9 @@ const handleReChat = () => {
 }
 
 const copy = () => {
-  window.navigator.clipboard.writeText(props.message.content)
+  window.navigator.clipboard.writeText(getContent(props.message))
   useToast().success('复制成功')
 }
-
-const typer_position = reactive({ x: 0, y: 0 })
-const contentValueRef = ref(null)
-const contentRef = ref(null)
-
-
-
-// 更新光标位置
-const updateCursor = () => {
-  const lastTextNode = getLastTextNode(contentValueRef.value)
-  const cursorText = document.createTextNode("\u200b")//幽灵字符占位
-  if (lastTextNode) {
-    lastTextNode.parentElement.appendChild(cursorText)
-  } else {
-    contentValueRef.value.appendChild(cursorText)
-  }
-
-  const contentRect = contentRef.value.getBoundingClientRect()
-  const range = document.createRange()
-  range.setStart(cursorText, 0)
-  range.setEnd(cursorText, 0)
-  const textRect = range.getBoundingClientRect()
-  typer_position.x = textRect.left - contentRect.left
-  typer_position.y = textRect.top - contentRect.top
-  cursorText.remove()
-}
-// 获取最后一个文本节点
-const getLastTextNode = (dom) => {
-  const childNodes = dom.childNodes
-
-  for (let i = childNodes.length - 1; i >= 0; i--) {
-    const childNode = childNodes[i]
-    if (childNode.nodeType === Node.TEXT_NODE && /\S/.test(childNode.nodeValue)) {
-      childNode.nodeValue = childNode.nodeValue.replace(/(\s*$)/, '')
-      return childNode
-    }
-    if (childNode.nodeType === Node.ELEMENT_NODE) {
-      return getLastTextNode(childNode)
-    }
-  }
-}
-
-const copyEventHandlers = new WeakMap();
-
-//复制代码按钮添加事件
-function addCopyCodeEvents() {
-  if (contentValueRef.value) {
-    const copyBtn = contentValueRef.value.querySelectorAll('.code-copy');
-    copyBtn.forEach((btn) => {
-      const handler = () => {
-        const code = btn.parentElement?.nextElementSibling?.textContent;
-        if (code) {
-          window.navigator.clipboard.writeText(code);
-          btn.innerHTML = '<i class="iconfont">&#xe664;</i> 成功';
-          setTimeout(() => {
-            btn.innerHTML = '<i class="iconfont">&#xe8b0;</i> 复制';
-          }, 1000);
-        }
-      };
-      btn.addEventListener('click', handler);
-      copyEventHandlers.set(btn, handler);
-    });
-  }
-}
-//移除代码复制事件
-function removeCopyCodeEvents() {
-  if (contentValueRef.value) {
-    const copyBtn = contentValueRef.value.querySelectorAll('.code-copy');
-    copyBtn.forEach((btn) => {
-      const handler = copyEventHandlers.get(btn);
-      if (handler) {
-        btn.removeEventListener('click', handler);
-        copyEventHandlers.delete(btn);
-      }
-    });
-  }
-}
-
-onMounted(() => {
-  updateCursor()
-  addCopyCodeEvents()
-
-})
-onUpdated(() => {
-  updateCursor()
-  addCopyCodeEvents()
-})
-onUnmounted(() => {
-  removeCopyCodeEvents()
-})
-
-
-
 </script>
 
 <style scoped lang="less">
@@ -208,7 +156,7 @@ onUnmounted(() => {
   .content {
     padding: 12px 12px;
     margin-top: 8px;
-    border-radius: 5px 20px 20px 20px;
+    border-radius: 20px;
     position: relative;
 
     .typer {

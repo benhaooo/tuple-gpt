@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { generateUniqueId, delay } from "@/utils/commonUtils";
 import { completions } from "@/apis";
-import { reactive } from "vue";
+import { computed, reactive } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import useStream from '@/hooks/stream'
@@ -37,11 +37,6 @@ const useSessionsStore = defineStore('sessions', {
                 ...moduleConfig.value,
                 name,
                 system: prompt
-                // chatting: () => {
-                //     messages.some(msg => {
-                //         return !!msg.chatting
-                //     })
-                // }
             };
             this.sessions.unshift(session);
             this.currentSessionId = session.id;
@@ -82,85 +77,117 @@ const useSessionsStore = defineStore('sessions', {
 
         // 重新交流
         async reChat(index) {
-            const currentMsg = this.currentSession.messages[index];
-            currentMsg.content = '';
-            currentMsg.chatting = true;
-            await this.sendMessageInternal(index, currentMsg.img ? { text: currentMsg.content, imgUrl: currentMsg.img } : { text: currentMsg.content });
+            const { img: imgUrl, content: text } = this.currentSession.messages[index];
+            const nextMsg = this.currentSession.messages[index + 1];
+            await this.sendMessageInternal(index, { text, imgUrl }, nextMsg);
         },
 
         // 发送图片消息
-        async sendImgMessage(text, imgUrl, index = null) {
+        async sendImgMessage(text, imgUrl) {
+            const index = this.currentSession.messages.push({
+                role: "user",
+                content: text,
+                img: imgUrl,
+            });
             await this.sendMessageInternal(index, { text, imgUrl });
         },
 
+        // 获取上下文
+        getHistoryMsgs(index) {
+            const session = this.currentSession;
+            const historyMessages = session.messages.slice(0, index);
+            return historyMessages.map(msg => ({
+                role: msg.role,
+                content: msg.multiContent ? msg.multiContent[msg.selectedContent].content : msg.content,
+            }));
+        },
+
         // 发送消息
-        async sendMessage(text, index = null) {
+        async sendMessage(text) {
+            const index = this.currentSession.messages.push({
+                role: "user",
+                content: text,
+            });
             await this.sendMessageInternal(index, { text });
         },
 
-        async sendMessageInternal(index, { text, imgUrl }) {
+        async sendMessageInternal(index, { text, imgUrl }, nextMsg = null) {
+            const session = this.currentSession;
+            if (!session.model) session.model = "gpt-3.5-turbo";
+            if (imgUrl) session.model = "gpt-4o";
+
+            const systemMessage = this.getSystemMsg();
+            const historyMessages = this.getHistoryMsgs(index)
+            const indexMsg = {
+                role: "user",
+                content: imgUrl ? [
+                    { type: "text", text: msg.content },
+                    { type: "image_url", image_url: { url: msg.img } }
+                ] : text
+            }
+            const combinedMessages = [indexMsg];
+            if (systemMessage) combinedMessages.unshift(systemMessage);
+            if (historyMessages) combinedMessages.unshift(...historyMessages)
+
+            const data = {
+                model: session.model,
+                messages: combinedMessages,
+                stream: true,
+                max_tokens: session.maxTokens,
+                temperature: session.temperature,
+                top_p: session.top_p,
+                presence_penalty: session.presence_penalty,
+                frequency_penalty: session.frequency_penalty,
+            };
+            const chattingMsg = (() => {
+                const initMultiContent = () => Array.from({ length: session.replyCount }, () => ({ content: "", chatting: true }));
+                if (nextMsg && nextMsg.role === "assistant") {
+                    nextMsg.chatting = true;
+                    nextMsg.selectedContent = nextMsg.selectedContent <= session.replyCount - 1 ? nextMsg.selectedContent : session.replyCount - 1
+                    nextMsg.multiContent = initMultiContent()
+                    return nextMsg
+                } else {
+                    const newMsg = reactive({
+                        role: "assistant",
+                        selectedContent: 0,
+                        multiContent: initMultiContent(),
+                        chatting: true
+                    })
+                    this.currentSession.messages.splice(index + 1, 0, newMsg);
+                    return newMsg
+                }
+            })()
+            //多回复
+            const responses = [];
+            for (let i = 0; i < this.currentSession.replyCount; i++) {
+                try {
+                    responses.push(completions(data, session.model).then(response => {
+                        if (response.status === 200) {
+                            return this.handleStreamMsg(response, chattingMsg.multiContent[i])
+                        } else {
+                            chattingMsg.multiContent[i].content = `发生错误：\n\`\`\`json\n${JSON.stringify(response, null, 2)}\n\`\`\``;
+                            return null
+                        }
+                    }))
+                } catch (error) {
+                    chattingMsg.multiContent[i].content = `发生错误：\n\`\`\`json\n${JSON.stringify(error, null, 2)}\n\`\`\``;
+                } finally {
+                    delete chattingMsg.multiContent[i].chatting;
+                }
+            }
+            //所有回复完成
             try {
-                const session = this.currentSession;
-                if (imgUrl) session.model = "gpt-4o";
-                if (index === null) {
-                    this.currentSession.messages.push({
-                        role: "user",
-                        content: text,
-                        img: imgUrl,
-                    });
-                } else {
-                    this.currentSession.messages[index].content = text;
-                    if (imgUrl) this.currentSession.messages[index].img = imgUrl;
-                }
-
-                const systemMessage = this.getSystemMsg();
-                const combinedMessages = this.currentSession.messages.map(msg => ({
-                    role: msg.role,
-                    content: msg.img ? [
-                        { type: "text", text: msg.content },
-                        { type: "image_url", image_url: { url: msg.img } }
-                    ] : msg.content,
-                }));
-                if (systemMessage) combinedMessages.unshift(systemMessage);
-
-                const data = {
-                    model: session.model,
-                    messages: combinedMessages,
-                    stream: true,
-                    max_tokens: session.maxTokens,
-                    temperature: session.temperature,
-                    top_p: session.top_p,
-                    presence_penalty: session.presence_penalty,
-                    frequency_penalty: session.frequency_penalty,
-                };
-
-                const chattingMsg = index === null ? reactive({
-                    role: "assistant",
-                    content: "",
-                    chatting: true
-                }) : this.currentSession.messages[index];
-
-                if (index === null) this.currentSession.messages.push(chattingMsg);
-
-                const response = await completions(data, session.model);
-                if (response.status === 200) {
-                    await this.handleStreamMsg(response, chattingMsg);
-                } else {
-                    const res = await response.json();
-                    chattingMsg.content = `发生错误：\n\`\`\`json\n${JSON.stringify(res, null, 2)}\n\`\`\``;
+                Promise.all(responses).then(() => {
                     delete chattingMsg.chatting;
-                }
-                //未评估
-                if (!session.evaluate) {
-                    // this.evaluateSession(session)
-                }
+                })
+            } finally {
+                delete chattingMsg.chatting;
+            }
 
-            } catch (error) {
-                console.error("Error in sendMessageInternal:", error);
-                if (index !== null) {
-                    this.currentSession.messages[index].content = `发生错误：\n\`\`\`json\n${error.message}\n\`\`\``;
-                    delete this.currentSession.messages[index].chatting;
-                }
+
+            //未评估
+            if (!session.evaluate) {
+                // this.evaluateSession(session)
             }
         },
 

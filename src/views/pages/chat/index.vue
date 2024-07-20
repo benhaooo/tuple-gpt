@@ -13,10 +13,8 @@ const userStore = useUserStore();
 const { smoothScrollToBottom, scrollToBottom, scrollToButtomNearBottom } = useAutoScrollToBottom()
 
 
-const showEditModal = ref(false);
 const showConfigModal = ref(false);
-const editMessage = ref({});
-const editText = ref("");
+
 const configForm = ref({});
 
 const sessionListRef = ref(null);
@@ -59,17 +57,6 @@ const handleDeleteSession = (index) => {
 };
 
 
-// 编辑消息
-const handleEditMessage = (message) => {
-  showEditModal.value = true;
-  editMessage.value = message;
-  editText.value = message.content;
-};
-//确定编辑
-const handelOk = () => {
-  editMessage.value.content = editText.value;
-  showEditModal.value = false;
-};
 const handelOkConfig = () => {
   sessionsStore.updateSession(configForm.value);
   showConfigModal.value = false;
@@ -96,14 +83,6 @@ const handleCallSessionList = () => {
 
 <template>
   <div class="flex h-full">
-    <!-- 编辑窗口 -->
-    <el-dialog v-model="showEditModal" title="编辑">
-      <el-input v-model="editText" type="textarea" :rows="10" />
-      <template #footer>
-        <el-button @click="showEditModal = false">取消</el-button>
-        <el-button type="primary" @click="handelOk">确定</el-button>
-      </template>
-    </el-dialog>
     <!-- 配置窗口 -->
     <el-dialog v-model="showConfigModal" title="会话配置" class="max-md:w-full">
       <el-form :model="configForm" label-width="auto" label-position="left">
@@ -124,8 +103,11 @@ const handleCallSessionList = () => {
         <el-form-item label="上下文数量">
           <el-slider v-model="configForm.ctxLimit" :max="50" show-input />
         </el-form-item>
-        <el-form-item label="回复数">
+        <el-form-item label="回复长度">
           <el-slider v-model="configForm.maxTokens" :max="4096" show-input />
+        </el-form-item>
+        <el-form-item label="回复数">
+          <el-slider v-model="configForm.replyCount" :max="10" show-input />
         </el-form-item>
         <el-form-item label="角色设定">
           <el-input v-model="configForm.system" type="textarea" :rows="4" aria-placeholder="给你的会话任命一个专属角色设定吧~" />
@@ -169,7 +151,7 @@ const handleCallSessionList = () => {
         <div v-if="currentSession.clearedCtx">
           <template v-for="(message, index) in currentSession.clearedCtx" :key="index">
             <Message :message="message" @delete="sessionsStore.deleteMessage(index)"
-              @reChat="sessionsStore.reChat(index)" @edit="handleEditMessage" />
+              @reChat="sessionsStore.reChat(index)" />
           </template>
           <div @click="sessionsStore.clearCtx()"
             class="leading-5 text-center border-y border-slate-300 hover:border-dark-blue-base cursor-pointer text-slate-300 text-xs"
