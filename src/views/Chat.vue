@@ -61,3 +61,13 @@ function highlightBlock(str, lang) {
   return `<pre class=""><div class=" flex items-center justify-between px-4 py-2"><span class="">${lang}</span><span class="code-copy cursor-pointer"><i class="iconfont">&#xe8b0;</i> 复制</span></div><code class="hljs code-block-body ${lang}">${str}</code></pre>`
 }
 </script>
+
+<style lang="less" scoped>
+:deep(.el-dialog) {
+  border-radius: 16px;
+}
+:deep(.el-dialog__body){
+  max-height: 60vh;
+  overflow: scroll;
+}
+</style>

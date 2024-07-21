@@ -100,7 +100,6 @@ const isUser = computed(() => {
   return props.message.role === 'user'
 })
 
-
 const emits = defineEmits(["delete", "re"]);
 
 const handleDeleteMessage = () => {
@@ -114,6 +113,16 @@ const copy = () => {
   window.navigator.clipboard.writeText(getContent(props.message))
   useToast().success('复制成功')
 }
+
+//将选中的内容置首位
+onMounted(() => {
+  console.log("mounted")
+  if (props.message.selectedContent && props.message.selectedContent > 0) {
+    const { multiContent, selectedContent } = props.message;
+    [multiContent[0], multiContent[selectedContent]] = [multiContent[selectedContent], multiContent[0]];
+    props.message.selectedContent = 0;
+  }
+});
 </script>
 
 <style scoped lang="less">
@@ -159,12 +168,6 @@ const copy = () => {
     border-radius: 20px;
     position: relative;
 
-    .typer {
-      // 动态渲染位置
-      left: calc(v-bind('typer_position.x') * 1px);
-      top: calc(v-bind('typer_position.y') * 1px);
-    }
-
     &:hover {
       .handle {
         opacity: 1;
@@ -204,5 +207,7 @@ const copy = () => {
 
 :deep(code) {
   border-radius: 16px;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-    <div :class="selected ? 'border-green-500 hover:border-green-500 min-w-[80%]' : 'border-transparent min-w-[30%]'"
+    <div :class="selected ? 'border-green-500 hover:border-green-500 min-w-[90%]' : 'border-transparent min-w-[30%]'"
         class="content max-w-full text-sm hover:border-blue-500 border-4  transition-all duration-300 bg-light-hard dark:bg-dark-base"
         ref="contentRef">
         <div class="contentValue" v-html="parsedContent" ref="contentValueRef"></div>

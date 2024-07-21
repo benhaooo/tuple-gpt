@@ -1,12 +1,12 @@
 import { onMounted, onUnmounted, nextTick, ref } from 'vue';
 
 export default function useAutoScrollToBottom() {
-    const elementRef = ref(null)
+    const scrollRef = ref(null)
     let isScrolling = false;
     // 平滑滚动
     async function smoothScrollToBottom(duration = 500) {
         await nextTick()
-        const target = elementRef.value
+        const target = scrollRef.value
         isScrolling = true
         let targetY = target.scrollHeight;
         const startingY = target.scrollTop;
@@ -30,13 +30,13 @@ export default function useAutoScrollToBottom() {
     //直接滚动到底部
     async function scrollToBottom() {
         await nextTick()
-        const scrollElement = elementRef.value;
+        const scrollElement = scrollRef.value;
         scrollElement.scrollTop = scrollElement.scrollHeight - scrollElement.clientHeight;
     }
 
     async function scrollToButtomNearBottom() {
         await nextTick()
-        const scrollElement = elementRef.value;
+        const scrollElement = scrollRef.value;
         const { scrollTop, scrollHeight, clientHeight } = scrollElement
         const scrollBottom = scrollTop + clientHeight;
         const scrollHold = 100; // 距离底部多少距离开始滚动
@@ -48,6 +48,7 @@ export default function useAutoScrollToBottom() {
 
 
     return {
+        scrollRef,
         smoothScrollToBottom,
         scrollToBottom,
         scrollToButtomNearBottom

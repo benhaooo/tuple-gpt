@@ -85,6 +85,7 @@ const useSessionsStore = defineStore('sessions', {
         // 发送图片消息
         async sendImgMessage(text, imgUrl) {
             const index = this.currentSession.messages.push({
+                id: generateUniqueId(),
                 role: "user",
                 content: text,
                 img: imgUrl,
@@ -105,6 +106,7 @@ const useSessionsStore = defineStore('sessions', {
         // 发送消息
         async sendMessage(text) {
             const index = this.currentSession.messages.push({
+                id: generateUniqueId(),
                 role: "user",
                 content: text,
             });
@@ -148,6 +150,7 @@ const useSessionsStore = defineStore('sessions', {
                     return nextMsg
                 } else {
                     const newMsg = reactive({
+                        id: generateUniqueId(),
                         role: "assistant",
                         selectedContent: 0,
                         multiContent: initMultiContent(),

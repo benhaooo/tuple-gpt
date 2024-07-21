@@ -67,7 +67,7 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
                         <el-slider v-model="moduleConfig.maxTokens" :max="4096" show-input />
                     </el-form-item>
                     <el-form-item label="回复数">
-                        <el-slider v-model="moduleConfig.replyCount" :max="10" show-input />
+                        <el-slider v-model="moduleConfig.replyCount" :min="1" :max="10" show-input />
                     </el-form-item>
                     <el-collapse>
                         <el-collapse-item title="高级配置" name="advanced">
@@ -93,7 +93,7 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
             <el-tab-pane label="服务端">
                 <!-- <el-input placeholder="必须包含http(s)://" v-model="serverConfig.apiHost">
                     <template #prepend>OpenAI接口地址</template>
-                </el-input> -->
+</el-input> -->
                 <el-input placeholder="自定义Open API Key" v-model="serverConfig.apiKey" show-password>
                     <template #prepend>Open API Key</template>
                 </el-input>

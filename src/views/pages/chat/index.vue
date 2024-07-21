@@ -7,16 +7,21 @@ import Message from "@/views/cpnt/Message.vue";
 import SessionList from "@/views/cpnt/SessionList.vue";
 import useAutoScrollToBottom from "@/hooks/scroll";
 import Editor from './cpnt/Editor.vue'
+import useListener from "@/hooks/listener";
 
 const sessionsStore = useSessionsStore();
 const userStore = useUserStore();
-const { smoothScrollToBottom, scrollToBottom, scrollToButtomNearBottom } = useAutoScrollToBottom()
+const { scrollRef, smoothScrollToBottom, scrollToBottom, scrollToButtomNearBottom } = useAutoScrollToBottom()
+
+// 监听会话变化
+const onSessionChange = (id) => {
+
+}
+useListener(onSessionChange)
 
 
 const showConfigModal = ref(false);
-
 const configForm = ref({});
-
 const sessionListRef = ref(null);
 
 
@@ -29,16 +34,16 @@ onMounted(() => {
   if (!currentSessionId.value) {
     handleNewSession();
   }
-  scrollToBottom()
+  nextTick().then(() => {
+    scrollToBottom()
+
+  })
 });
 onActivated(() => {
-  const askprompt = sessionsStore.askprompt;
-  sessionsStore.askprompt = null;
-  if (Object.keys(askprompt).length > 0) {
-    sessionsStore.addSession();
-    text.value = askprompt.content;
-  }
+
 });
+
+
 
 // 切换会话
 const handleSelectSession = async (id) => {
@@ -107,7 +112,7 @@ const handleCallSessionList = () => {
           <el-slider v-model="configForm.maxTokens" :max="4096" show-input />
         </el-form-item>
         <el-form-item label="回复数">
-          <el-slider v-model="configForm.replyCount" :max="10" show-input />
+          <el-slider v-model="configForm.replyCount" :min="1" :max="10" show-input />
         </el-form-item>
         <el-form-item label="角色设定">
           <el-input v-model="configForm.system" type="textarea" :rows="4" aria-placeholder="给你的会话任命一个专属角色设定吧~" />
@@ -158,9 +163,9 @@ const handleCallSessionList = () => {
             style="mask-image: linear-gradient(90deg, transparent, #000, transparent);">上下文已清除</div>
         </div>
 
-        <template v-for="(message, index) in currentSession.messages" :key="index">
+        <template v-for="(message, index) in currentSession.messages" :key="message.id">
           <Message :message="message" @delete="sessionsStore.deleteMessage(index)" @reChat="sessionsStore.reChat(index)"
-            @edit="handleEditMessage" />
+            @edit="handleEditMessage" class="animate__animated animate__fadeIn" />
         </template>
       </div>
       <!-- editor -->
