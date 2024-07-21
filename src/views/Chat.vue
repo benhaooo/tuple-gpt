@@ -63,11 +63,12 @@ function highlightBlock(str, lang) {
 </script>
 
 <style lang="less" scoped>
-:deep(.el-dialog) {
-  border-radius: 16px;
+::v-deep(.el-dialog) {
+  border-radius: 16px !important;
 }
-:deep(.el-dialog__body){
-  max-height: 60vh;
-  overflow: scroll;
+
+::v-deep(.el-dialog__body) {
+  max-height: 60vh !important;
+  overflow: scroll !important;
 }
 </style>

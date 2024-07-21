@@ -1,10 +1,12 @@
 /* 在线链接服务仅供平台体验和调试使用，平台不承诺服务的稳定性，企业客户需下载字体包自行发布使用并做好备份。 */
 @font-face {
-    font-family: 'iconfont';  /* Project id 4480913 */
+    font-family: 'iconfont';
+    /* Project id 4480913 */
     src: url('//at.alicdn.com/t/c/font_4480913_orp1d6xz2rj.woff2?t=1720430571383') format('woff2'),
-         url('//at.alicdn.com/t/c/font_4480913_orp1d6xz2rj.woff?t=1720430571383') format('woff'),
-         url('//at.alicdn.com/t/c/font_4480913_orp1d6xz2rj.ttf?t=1720430571383') format('truetype');
-  }
+        url('//at.alicdn.com/t/c/font_4480913_orp1d6xz2rj.woff?t=1720430571383') format('woff'),
+        url('//at.alicdn.com/t/c/font_4480913_orp1d6xz2rj.ttf?t=1720430571383') format('truetype');
+}
+
 /* 使用：class="icon-xinxi" */
 .icon-xinxi::before {
     content: '\e762';
@@ -21,6 +23,7 @@
 .icon-store::before {
     content: '\e86a';
 }
+
 .icon-application::before {
     content: '\e600';
 }
@@ -88,4 +91,13 @@ body {
         display: none;
         /* 移动端、pad 上Safari，Chrome，隐藏滚动条 */
     }
+}
+
+body .el-dialog {
+    border-radius: 16px;
+}
+
+body .el-dialog .el-dialog__body {
+    max-height: 60vh;
+    overflow: scroll;
 }

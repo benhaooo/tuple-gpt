@@ -1,7 +1,7 @@
 <template>
   <div class="message group" :class="{ self: isUser }">
     <!-- 编辑窗口 -->
-    <el-dialog v-model="showEditModal" title="编辑">
+    <el-dialog v-model="showEditModal" title="编辑" append-to-body>
       <el-input v-model="editText" type="textarea" :rows="10" />
       <template #footer>
         <el-button @click="showEditModal = false">取消</el-button>

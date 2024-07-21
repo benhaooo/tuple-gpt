@@ -89,7 +89,7 @@ const handleCallSessionList = () => {
 <template>
   <div class="flex h-full">
     <!-- 配置窗口 -->
-    <el-dialog v-model="showConfigModal" title="会话配置" class="max-md:w-full">
+    <el-dialog v-model="showConfigModal" title="会话配置" class="max-md:w-full" append-to-body>
       <el-form :model="configForm" label-width="auto" label-position="left">
         <el-form-item label="名称">
           <el-input v-model="configForm.name" />
