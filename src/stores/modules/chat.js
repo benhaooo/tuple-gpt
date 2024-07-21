@@ -174,19 +174,16 @@ const useSessionsStore = defineStore('sessions', {
                     }))
                 } catch (error) {
                     chattingMsg.multiContent[i].content = `发生错误：\n\`\`\`json\n${JSON.stringify(error, null, 2)}\n\`\`\``;
-                } finally {
-                    delete chattingMsg.multiContent[i].chatting;
                 }
             }
             //所有回复完成
-            try {
-                Promise.all(responses).then(() => {
-                    delete chattingMsg.chatting;
-                })
-            } finally {
+            Promise.all(responses).finally(() => {
+                // 统一处理清理操作
+                chattingMsg.multiContent.forEach(content => {
+                    delete content.chatting;
+                });
                 delete chattingMsg.chatting;
-            }
-
+            });
 
             //未评估
             if (!session.evaluate) {
