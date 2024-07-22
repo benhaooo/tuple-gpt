@@ -18,10 +18,10 @@
         </div>
         <span v-if="isUser" class="text-sm font-extrabold">{{ userConfig.name }}</span>
         <div class="flex gap-x-1 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          <ExpandableBtn @click="handleDeleteMessage" text="删除">
+          <ExpandableBtn @click="sessionsStore.deleteMessage(message.id)" text="删除">
             <i class="iconfont">&#xec7b;</i>
           </ExpandableBtn>
-          <ExpandableBtn v-if="isUser" @click="handleReChat" text="重试">
+          <ExpandableBtn v-if="isUser" @click="sessionsStore.reChat(message.id)" text="重试">
             <i class="iconfont">&#xe616;</i>
           </ExpandableBtn>
           <ExpandableBtn @click="copy" text="复制">
@@ -100,15 +100,6 @@ const isUser = computed(() => {
   return props.message.role === 'user'
 })
 
-const emits = defineEmits(["delete", "re"]);
-
-const handleDeleteMessage = () => {
-  emits("delete");
-}
-const handleReChat = () => {
-  emits("reChat");
-}
-
 const copy = () => {
   window.navigator.clipboard.writeText(getContent(props.message))
   useToast().success('复制成功')
@@ -116,7 +107,6 @@ const copy = () => {
 
 //将选中的内容置首位
 onMounted(() => {
-  console.log("mounted")
   if (props.message.selectedContent && props.message.selectedContent > 0) {
     const { multiContent, selectedContent } = props.message;
     [multiContent[0], multiContent[selectedContent]] = [multiContent[selectedContent], multiContent[0]];
@@ -200,7 +190,7 @@ onMounted(() => {
   }
 
   .content {
-    border-radius: 20px 5px 20px 20px;
+    border-radius: 20px;
   }
 }
 

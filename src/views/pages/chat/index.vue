@@ -39,11 +39,6 @@ onMounted(() => {
 
   })
 });
-onActivated(() => {
-
-});
-
-
 
 // 切换会话
 const handleSelectSession = async (id) => {
@@ -155,8 +150,7 @@ const handleCallSessionList = () => {
         </div>
         <div v-if="currentSession.clearedCtx">
           <template v-for="(message, index) in currentSession.clearedCtx" :key="index">
-            <Message :message="message" @delete="sessionsStore.deleteMessage(index)"
-              @reChat="sessionsStore.reChat(index)" />
+            <Message :message="message"/>
           </template>
           <div @click="sessionsStore.clearCtx()"
             class="leading-5 text-center border-y border-slate-300 hover:border-dark-blue-base cursor-pointer text-slate-300 text-xs"
@@ -165,7 +159,7 @@ const handleCallSessionList = () => {
 
         <template v-for="(message, index) in currentSession.messages" :key="message.id">
           <Message :message="message" @delete="sessionsStore.deleteMessage(index)" @reChat="sessionsStore.reChat(index)"
-            @edit="handleEditMessage" class="animate__animated animate__fadeIn" />
+            @edit="handleEditMessage" class="animate__animated animate__fadeIn duration-75 animate__delay-0s" />
         </template>
       </div>
       <!-- editor -->

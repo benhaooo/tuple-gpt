@@ -13,9 +13,11 @@
 
       <div class="hidden-scroll mt-5 h-4/5 overflow-y-scroll text-light-text dark:text-dark-text">
         <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id"
-          class="group flex h-20 rounded-2xl transition duration-300 cursor-pointer my-5 relative overflow-hidden border-2 border-dark-border hover:border-dark-blue-base hover:bg-[#f3f3f3] shadow-md·"
-          :class="currentSessionId === session.id ? 'bg-dark-blue-base' : 'transparent'"
-          @click="selectSession(session.id)">
+          class="group flex h-20 rounded-2xl cursor-pointer my-5 relative overflow-hidden border-2 border-dark-border shadow-md·"
+          :class="{
+            'bg-dark-blue-base': currentSessionId === session.id,
+            'hover:bg-[#f3f3f3] hover:border-dark-blue-base': currentSessionId !== session.id
+          }" @click="selectSession(session.id)">
           <div class="flex flex-col w-full justify-between py-3 px-5 ">
             <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate ||
               session.name }}</div>

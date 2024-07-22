@@ -71,12 +71,13 @@ const useSessionsStore = defineStore('sessions', {
         },
 
         // 删除消息
-        deleteMessage(index) {
-            this.currentSession.messages.splice(index, 1);
+        deleteMessage(id) {
+            this.currentSession.messages = this.currentSession.messages.filter(msg => msg.id !== id);
         },
 
         // 重新交流
-        async reChat(index) {
+        async reChat(id) {
+            const index = this.currentSession.messages.findIndex(msg => msg.id === id);
             const { img: imgUrl, content: text } = this.currentSession.messages[index];
             const nextMsg = this.currentSession.messages[index + 1];
             await this.sendMessageInternal(index, { text, imgUrl }, nextMsg);
