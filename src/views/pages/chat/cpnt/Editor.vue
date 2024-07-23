@@ -13,13 +13,6 @@
                     </form>
                 </el-tooltip>
             </div>
-
-            <!-- <el-tooltip content="剩余tokens" placement="top">
-                <div class="text-xs rounded-full bg-[#E4F0FD] px-2 leading-5">
-                    <i class="iconfont font-extrabold mr-2 text-green-400">&#xe8c5;</i><span
-                        class="text-dark-blue-base cursor-pointer">{{ userStore.getSurplusQuota }}</span>
-                </div>
-            </el-tooltip> -->
         </div>
         <div>
             <div v-if="fileUrl" class="relative w-20 h-20 rounded-md">
@@ -48,7 +41,7 @@
 
                 <div class="flex">
                     <textarea class=" text-base dark:bg-dark-input-wrapper w-full  resize-none" v-model="text"
-                        placeholder="ctrl + enter 发送" @keydown.ctrl.enter="handleSendMessage" @focus="taFocused = true"
+                        @keydown="handleKeyDown" placeholder="ctrl + 1~9/enter 发送" @focus="taFocused = true"
                         @blur="taFocused = false" ref="taRef" rows="1"></textarea>
                     <div class="flex justify-end flex-col">
                         <el-tooltip content="发送" placement="top" :show-after="500">
@@ -109,19 +102,29 @@ const autoHeight = async () => {
     taRef.value.style.height = "auto";
     taRef.value.style.height = Math.min(taRef.value.scrollHeight, 240) + "px";
 };
+const handleKeyDown = (e) => {
+    if (e.ctrlKey) {
+        e.preventDefault();
+        if (e.key >= '1' && e.key <= '9') {
+            handleSendMessage(Number(e.key))
+        } else if (e.key === 'Enter') {
+            handleSendMessage()
+        }
+    }
 
+}
 
 // 发送消息
-const handleSendMessage = async () => {
+const handleSendMessage = async (num) => {
     if (!text.value) return;
     if (fileUrl.value) {
-        sessionsStore.sendImgMessage(text.value, fileUrl.value)
+        sessionsStore.sendImgMessage(text.value, fileUrl.value, num)
         text.value = "";
         fileUrl.value = "";
         return
     }
     emits("send")
-    sessionsStore.sendMessage(text.value).then(() => {
+    sessionsStore.sendMessage(text.value, num).then(() => {
         // resetAndScrollToBottom()
     })
 

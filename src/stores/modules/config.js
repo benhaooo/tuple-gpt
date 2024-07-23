@@ -19,7 +19,7 @@ const useConfigStore = defineStore("config", {
             model: "0125-preview",
             ctxLimit: 10,
             maxTokens: 4096,
-            replyCount: 5,
+            replyCount: 1,
             temperature: 0.5,
             top_p: 1,
             presence_penalty: 0,

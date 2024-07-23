@@ -82,18 +82,6 @@ const useSessionsStore = defineStore('sessions', {
             const nextMsg = this.currentSession.messages[index + 1];
             await this.sendMessageInternal(index, { text, imgUrl }, nextMsg);
         },
-
-        // 发送图片消息
-        async sendImgMessage(text, imgUrl) {
-            const index = this.currentSession.messages.push({
-                id: generateUniqueId(),
-                role: "user",
-                content: text,
-                img: imgUrl,
-            });
-            await this.sendMessageInternal(index, { text, imgUrl });
-        },
-
         // 获取上下文
         getHistoryMsgs(index) {
             const session = this.currentSession;
@@ -105,16 +93,28 @@ const useSessionsStore = defineStore('sessions', {
         },
 
         // 发送消息
-        async sendMessage(text) {
+        async sendMessage(text, num) {
             const index = this.currentSession.messages.push({
                 id: generateUniqueId(),
                 role: "user",
                 content: text,
             });
-            await this.sendMessageInternal(index, { text });
+            await this.sendMessageInternal(index, { text, num });
+        },
+        // 发送图片消息
+        async sendImgMessage(text, imgUrl, num) {
+            const index = this.currentSession.messages.push({
+                id: generateUniqueId(),
+                role: "user",
+                content: text,
+                img: imgUrl,
+            });
+            await this.sendMessageInternal(index, { text, imgUrl, num });
         },
 
-        async sendMessageInternal(index, { text, imgUrl }, nextMsg = null) {
+
+        async sendMessageInternal(index, { text, imgUrl, num }, nextMsg = null) {
+            const replyCount = num || this.currentSession.replyCount;
             const session = this.currentSession;
             if (!session.model) session.model = "gpt-3.5-turbo";
             if (imgUrl) session.model = "gpt-4o";
@@ -143,10 +143,10 @@ const useSessionsStore = defineStore('sessions', {
                 frequency_penalty: session.frequency_penalty,
             };
             const chattingMsg = (() => {
-                const initMultiContent = () => Array.from({ length: session.replyCount }, () => ({ content: "", chatting: true }));
+                const initMultiContent = () => Array.from({ length: replyCount }, () => ({ content: "", chatting: true }));
                 if (nextMsg && nextMsg.role === "assistant") {
                     nextMsg.chatting = true;
-                    nextMsg.selectedContent = nextMsg.selectedContent <= session.replyCount - 1 ? nextMsg.selectedContent : session.replyCount - 1
+                    nextMsg.selectedContent = nextMsg.selectedContent <= replyCount - 1 ? nextMsg.selectedContent : replyCount - 1
                     nextMsg.multiContent = initMultiContent()
                     return nextMsg
                 } else {
@@ -163,7 +163,7 @@ const useSessionsStore = defineStore('sessions', {
             })()
             //多回复
             const responses = [];
-            for (let i = 0; i < this.currentSession.replyCount; i++) {
+            for (let i = 0; i < replyCount; i++) {
                 try {
                     responses.push(completions(data, session.model).then(response => {
                         if (response.status === 200) {
