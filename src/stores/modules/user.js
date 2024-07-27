@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { userLogin, queryUserAccount } from "@/apis"
 
 
 const useUserStore = defineStore("user", {
@@ -23,24 +22,24 @@ const useUserStore = defineStore("user", {
   actions: {
     // 登录
     async login(c) {
-      const res = await userLogin(c)
-      const { code, data } = await res.json()
-      if (code === "0003") {
-        return
-      }
-      this.userInfo.token = data
+      // const res = await userLogin(c)
+      // const { code, data } = await res.json()
+      // if (code === "0003") {
+      //   return
+      // }
+      // this.userInfo.token = data
     },
     // 获取账户
     async fetchUserAccount() {
-      if (!this.isLogin) {
-        return
-      }
-      const res = await queryUserAccount()
-      const { code, data } = await res.json()
-      if (code === "0003") {
-        return
-      }
-      this.account = data
+      // if (!this.isLogin) {
+      //   return
+      // }
+      // const res = await queryUserAccount()
+      // const { code, data } = await res.json()
+      // if (code === "0003") {
+      //   return
+      // }
+      // this.account = data
     },
     getToken() {
       return this.userInfo.token

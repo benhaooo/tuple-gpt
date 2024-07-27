@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { generateUniqueId, delay } from "@/utils/commonUtils";
-import { completions } from "@/apis";
+import { completions, retryCompletions } from "@/apis";
 import { computed, reactive } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
@@ -114,7 +114,7 @@ const useSessionsStore = defineStore('sessions', {
 
 
         async sendMessageInternal(index, { text, imgUrl, num }, nextMsg = null) {
-            const replyCount = num || this.currentSession.replyCount;
+            const replyCount = num || (nextMsg && nextMsg.multiContent.length) || this.currentSession.replyCount;
             const session = this.currentSession;
             if (!session.model) session.model = "gpt-3.5-turbo";
             if (imgUrl) session.model = "gpt-4o";
@@ -143,18 +143,19 @@ const useSessionsStore = defineStore('sessions', {
                 frequency_penalty: session.frequency_penalty,
             };
             const chattingMsg = (() => {
-                const initMultiContent = () => Array.from({ length: replyCount }, () => ({ content: "", chatting: true }));
                 if (nextMsg && nextMsg.role === "assistant") {
                     nextMsg.chatting = true;
-                    nextMsg.selectedContent = nextMsg.selectedContent <= replyCount - 1 ? nextMsg.selectedContent : replyCount - 1
-                    nextMsg.multiContent = initMultiContent()
+                    nextMsg.multiContent.forEach(content => {
+                        content.chatting = true;
+                        content.content = ""
+                    });
                     return nextMsg
                 } else {
                     const newMsg = reactive({
                         id: generateUniqueId(),
                         role: "assistant",
                         selectedContent: 0,
-                        multiContent: initMultiContent(),
+                        multiContent: Array.from({ length: replyCount }, () => ({ content: "", chatting: true, id: generateUniqueId() })),
                         chatting: true
                     })
                     this.currentSession.messages.splice(index + 1, 0, newMsg);
@@ -179,7 +180,7 @@ const useSessionsStore = defineStore('sessions', {
                 }
             }
             //所有回复完成
-            Promise.all(responses).finally(() => {
+            await Promise.all(responses).finally(() => {
                 // 统一处理清理操作
                 chattingMsg.multiContent.forEach(content => {
                     delete content.chatting;
@@ -226,7 +227,7 @@ const useSessionsStore = defineStore('sessions', {
                     },
                 ],
             }
-            const response = await completions(data, "gpt-3.5-turbo")
+            const response = await retryCompletions(data, "gpt-3.5-turbo")
             response.json().then(({ choices }) => {
                 const res = choices[0].message.content
                 session.evaluate = res

@@ -1,12 +1,10 @@
 import useConfigStore from "@/stores/modules/config";
-
-// 环境域名
-const apiHostUrl = import.meta.env.MODE === 'production' ? "http://1.12.43.224" : "http://127.0.0.1:8091"
+import { freeAPI, defaultAPI } from "./config"
 
 const isFreeModel = (model) => {
     return model === 'gpt-3.5-turbo'
 }
-const freeHost = ""
+
 const getHeaders = (model) => {
     const configStore = useConfigStore()
     const headers = {
@@ -21,7 +19,6 @@ const getHost = (model) => {
 }
 
 export const completions = (data, model) => {
-
     return fetch(`${getHost(model)}`, {
         method: 'POST',
         headers: getHeaders(model),
@@ -29,20 +26,55 @@ export const completions = (data, model) => {
     })
 }
 
-export const freeCompletions = (data, retry = 3) => {
-
+export const retryCompletions = (data, model) => {
+    const configStore = useConfigStore();
+    const retryList = [...freeAPI, { ...defaultAPI, key: configStore.serverConfig.apiKey }]
+    return freeCompletions(retryList, data, model)
 }
-
-export const onceCompletions = (prompt, sessionId) => {
-    return fetch(`https://swxx.api.wawoai.com/apis/gpt/chat/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream'
-        },
-        body: JSON.stringify({
-            prompt,
-            sessionId
-        }),
-    })
+const freeCompletions = (retryList, data, model, retry = 0) => {
+    return new Promise((resolve, reject) => {
+        const { url, config } = buildCompletionsConfig(retryList[retry], data, model);
+        fetch(url, config)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`请求失败了捏～: ${response.status}`);
+                }
+                resolve(response);
+            })
+            .catch((err) => {
+                if (retry < retryList.length - 1) {
+                    freeCompletions(retryList, data, model, retry + 1).then(resolve).catch(reject);
+                } else {
+                    reject(err);
+                }
+            });
+    });
+};
+const buildCompletionsConfig = ({ host, key, type }, data, model = null) => {
+    switch (type) {
+        case "azure":
+            return {
+                url: `${host}/openai/deployments/${model}/chat/completions?api-version=2024-04-01-preview`,
+                config: {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': key,
+                    },
+                    body: JSON.stringify(data),
+                }
+            }
+        case "openai":
+            return {
+                url: `${host}/v1/chat/completions`,
+                config: {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${key}`,
+                    },
+                    body: JSON.stringify(data),
+                }
+            }
+    }
 }

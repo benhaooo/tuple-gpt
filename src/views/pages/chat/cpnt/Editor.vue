@@ -71,7 +71,7 @@ import ExpandableButtom from "@/views/cpnt/ExpandableBtn.vue";
 import useSessionsStore from "@/stores/modules/chat";
 // import useAutoScrollToBottom from "@/hooks/scroll";
 // const { resetAndScrollToBottom } = useAutoScrollToBottom(scrollRef)
-import { completions, onceCompletions } from "@/apis";
+import { completions } from "@/apis";
 import useStream from '@/hooks/stream'
 
 
