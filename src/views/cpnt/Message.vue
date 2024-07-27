@@ -30,7 +30,7 @@
         </div>
       </div>
     </div>
-    <div v-if="message.multiContent" class=" flex gap-2 w-full overflow-x-scroll p-4">
+    <div v-if="message.multiContent" class=" flex items-start gap-2 w-full overflow-x-scroll p-4">
       <template v-for="(oneOf, index) in message.multiContent" :key="index">
         <Content @click="message.selectedContent = index" :contentObj="oneOf"
           :selected="index === message.selectedContent" />

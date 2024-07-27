@@ -47,7 +47,7 @@
                         <el-tooltip content="发送" placement="top" :show-after="500">
                             <button class="text-xs w-10 h-8 rounded-lg border-0  transition-all duration-300 shadow "
                                 :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5]'" :disabled="!canSend"
-                                @click="handleSendMessage"><i class="iconfont text-white">&#xe888;</i></button>
+                                @click="handleSendMessage()"><i class="iconfont text-white">&#xe888;</i></button>
                         </el-tooltip>
                     </div>
                 </div>
@@ -197,15 +197,6 @@ const handleOptimizePrompt = async () => {
         optimizedPrompt.value += res
         optimizing.value = false
     })
-    // const optimizeSessionId = localStorage.getItem('optimizeSessionId')
-    // const response = await onceCompletions(text.value, optimizeSessionId)
-    // streamController(response, (res) => {
-    //     optimizedPrompt.value += res
-    // }, () => {
-    //     optimizing.value = false;
-    // }, dataPicker).then(() => {
-    //     optimizing.value = false
-    // })
 
 }
 const applyOptimize = () => {

@@ -83,8 +83,8 @@ const useSessionsStore = defineStore('sessions', {
             await this.sendMessageInternal(index, { text, imgUrl }, nextMsg);
         },
         // 获取上下文
-        getHistoryMsgs(index) {
-            const session = this.currentSession;
+        getHistoryMsgs(index, pSession) {
+            const session = pSession || this.currentSession;
             const historyMessages = session.messages.slice(0, index);
             return historyMessages.map(msg => ({
                 role: msg.role,
@@ -120,12 +120,12 @@ const useSessionsStore = defineStore('sessions', {
             if (imgUrl) session.model = "gpt-4o";
 
             const systemMessage = this.getSystemMsg();
-            const historyMessages = this.getHistoryMsgs(index)
+            const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index)
             const indexMsg = {
                 role: "user",
                 content: imgUrl ? [
-                    { type: "text", text: msg.content },
-                    { type: "image_url", image_url: { url: msg.img } }
+                    { type: "text", text: text },
+                    { type: "image_url", image_url: { url: imgUrl } }
                 ] : text
             }
             const combinedMessages = [indexMsg];
@@ -165,6 +165,7 @@ const useSessionsStore = defineStore('sessions', {
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
                 try {
+                    data.temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
                     responses.push(completions(data, session.model).then(response => {
                         if (response.status === 200) {
                             return this.handleStreamMsg(response, chattingMsg.multiContent[i])
@@ -188,7 +189,7 @@ const useSessionsStore = defineStore('sessions', {
 
             //未评估
             if (!session.evaluate) {
-                // this.evaluateSession(session)
+                this.evaluateSession(session)
             }
         },
 
@@ -201,7 +202,6 @@ const useSessionsStore = defineStore('sessions', {
                     await delay(4);
                 }, async () => {
                     await delay(800);
-                    delete chatting.chatting;
                     resolve()
                 })
             })
@@ -215,26 +215,15 @@ const useSessionsStore = defineStore('sessions', {
             } : null;
         },
         async evaluateSession(session) {
-            const evaluatePrompt = `# 角色
-你是一个专业的对话评估专家，能够使用简洁准确的 emoji 表情和 3 到 10 个字对给定的对话进行评估，评估格式为：emoji evaluate。
-
-## 技能
-1. 仔细分析对话的内容、语气和意图。
-2. 选择最能代表对话特点的 emoji 表情。
-3. 用 3 到 10 个字简洁概括评估内容。
-
-## 限制
-1. 严格按照规定的格式进行评估。
-2. 评估内容要客观、准确，符合对话实际。
-3. 只进行对话评估，不做其他无关操作。`
+            const evaluatePrompt = `使用一个emoji和四到六个字直接返回这句话的简要主题，不要解释、不要标点、不要语气词、不要多余文本，不要加粗，如果没有主题，请直接返回“闲聊”`
             const data = {
                 model: "gpt-3.5-turbo",
                 messages: [
+                    ...this.getHistoryMsgs(session.messages.length, session),
                     {
-                        role: "system",
+                        role: "user",
                         content: evaluatePrompt
                     },
-                    ...session.messages
                 ],
             }
             const response = await completions(data, "gpt-3.5-turbo")
