@@ -12,6 +12,9 @@ export const freeAPI = [
 ]
 
 export const defaultAPI = {
-    host: "https://swxx-openai.openai.azure.com",
-    type: "azure"
+    host: "https://meiguodongbu.openai.azure.com",
+    type: "azure",
+    getter(key) {
+        return { host: this.host, type: this.type, key };
+    }
 }
