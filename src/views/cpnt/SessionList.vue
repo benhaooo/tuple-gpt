@@ -12,20 +12,25 @@
       </div>
 
       <div class="hidden-scroll mt-5 h-4/5 overflow-y-scroll text-light-text dark:text-dark-text">
-        <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id"
-          class="group flex h-20 rounded-2xl cursor-pointer my-5 relative overflow-hidden border-2 border-dark-border shadow-md·"
-          :class="{
-            'bg-dark-blue-base': currentSessionId === session.id,
-            'hover:bg-[#f3f3f3] hover:border-dark-blue-base': currentSessionId !== session.id
-          }" @click="selectSession(session.id)">
-          <div class="flex flex-col w-full justify-between py-3 px-5 ">
-            <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate ||
-              session.name }}</div>
-            <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
+        <transition-group name="list">
+          <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
+            @dragstart="onDragStart($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
+            @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
+            class="group flex h-20 rounded-2xl cursor-grab my-5 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
+            :class="{
+              'bg-dark-blue-base': currentSessionId === session.id,
+              'hover:bg-[#f3f3f3] hover:border-dark-blue-base': currentSessionId !== session.id,
+              'opacity-0': index === draggedIndex,
+            }" @click="selectSession(session.id)">
+            <div class="flex flex-col w-full justify-between py-3 px-5 ">
+              <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate ||
+                session.name }}</div>
+              <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
+            </div>
+            <i class="iconfont absolute top-1 right-1 hidden group-hover:block hover:text-red-500"
+              @click.stop="deleteSession(index)">&#xe630;</i>
           </div>
-          <i class="iconfont absolute top-1 right-1 hidden group-hover:block hover:text-red-500"
-            @click.stop="deleteSession(index)">&#xe630;</i>
-        </div>
+        </transition-group>
       </div>
       <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
         class=" hover:cursor-col-resize absolute -right-1 top-0 h-full w-1 border-l-2 border-grey-500"
@@ -41,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watchEffect, onMounted } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
 
@@ -72,6 +77,65 @@ const handleNewSession = () => {
   emits("add");
 };
 
+const draggedIndex = ref(null);
+let cloneElement = null;
+const onDragStart = (e, index) => {
+  draggedIndex.value = index;
+  // 自定义拖拽视图
+  cloneElement = e.target.cloneNode(true);
+  const computedStyle = window.getComputedStyle(e.target);
+  for (let key of computedStyle) {
+    cloneElement.style[key] = computedStyle[key];
+  }
+  cloneElement.style.position = 'absolute';
+  cloneElement.style.top = '-9999px';
+  cloneElement.style.left = '-9999px';
+  document.body.appendChild(cloneElement);
+  const rect = e.target.getBoundingClientRect();
+  const offsetX = e.clientX - rect.left;
+  const offsetY = e.clientY - rect.top;
+  e.dataTransfer.setDragImage(cloneElement, offsetX, offsetY);
+  e.dataTransfer.effectAllowed = "move"
+};
+// 节流
+const throttleMap = new Map();
+const throttle = (func, limit, key) => {
+  if (!throttleMap.has(key)) {
+    throttleMap.set(key, false);
+  }
+  return function () {
+    const args = arguments;
+    const context = this;
+    if (!throttleMap.get(key)) {
+      func.apply(context, args);
+      throttleMap.set(key, true);
+      setTimeout(() => throttleMap.set(key, false), limit);
+    }
+  }
+};
+const onDragEnter = (e, index) => {
+  e.preventDefault();
+  if (draggedIndex.value !== index) {
+    sessionsStore.swapSession(draggedIndex.value, index);
+    draggedIndex.value = index;
+    e.target.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
+}
+const onDragEnterThrottled = (e, index, id) => {
+  throttle(onDragEnter, 150, id).apply(this, [e, index]);
+};
+
+const onDragOver = (e, index) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+const onDragEnd = (e, index) => {
+  e.preventDefault();
+  draggedIndex.value = null;
+  document.body.removeChild(cloneElement);
+}
+
 const togglePanel = () => {
   const sessionList = sessionListRef.value
   if (sessionList.style.width === '0px') {
@@ -82,8 +146,6 @@ const togglePanel = () => {
     sessionList.style.width = '0px'
   }
 }
-
-
 const resizeLineRef = ref(null);
 const sessionListRef = ref(null);
 const draging = ref(false);

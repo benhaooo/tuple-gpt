@@ -61,6 +61,13 @@ const useSessionsStore = defineStore('sessions', {
             this.currentSessionId = id;
         },
 
+        // 交换会话位置
+        swapSession(index1, index2) {
+            // console.log("🚀 ~ swapSession ~ index2:", index2)
+            // console.log("🚀 ~ swapSession ~ index1:", index1)
+            [this.sessions[index1], this.sessions[index2]] = [this.sessions[index2], this.sessions[index1]];
+        },
+
         // 修改会话配置
         updateSession(sessionConfig) {
             const curIndex = this.sessions.findIndex(session => session.id === this.currentSessionId);
@@ -165,19 +172,18 @@ const useSessionsStore = defineStore('sessions', {
             //多回复
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
-                try {
-                    data.temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
-                    responses.push(completions(data, session.model).then(response => {
-                        if (response.status === 200) {
-                            return this.handleStreamMsg(response, chattingMsg.multiContent[i])
-                        } else {
-                            chattingMsg.multiContent[i].content = `发生错误：\n\`\`\`json\n${JSON.stringify(response, null, 2)}\n\`\`\``;
-                            return null
-                        }
-                    }))
-                } catch (error) {
-                    chattingMsg.multiContent[i].content = `发生错误：\n\`\`\`json\n${JSON.stringify(error, null, 2)}\n\`\`\``;
-                }
+                data.temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
+                responses.push(completions(data, session.model).then(response => {
+                    if (response.ok) {
+                        return this.handleStreamMsg(response, chattingMsg.multiContent[i])
+                    } else {
+                        return response.json().then(errorMsg => {
+                            throw new Error(JSON.stringify(errorMsg, null, 2));
+                        });
+                    }
+                }).catch(error => {
+                    chattingMsg.multiContent[i].content = `发生错误了捏～：\n\`\`\`json\n${error.message}\n\`\`\``;
+                }))
             }
             //所有回复完成
             await Promise.all(responses).finally(() => {
