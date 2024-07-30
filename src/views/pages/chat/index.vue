@@ -94,7 +94,7 @@ const handleCallSessionList = () => {
 
             <el-option value="0125-preview">gpt-4</el-option>
             <el-option value="gpt-4o">gpt-4o</el-option>
-            <el-option value="gpt-3.5-turbo">gpt-3.5-turbo</el-option>
+            <el-option value="gpt-35-turbo">gpt-35-turbo</el-option>
             <!-- <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
             <el-option value="gpt-4-vision-preview">gpt-4-vision-preview</el-option>
             <el-option value="dall-e-3">dall-e-3</el-option> -->

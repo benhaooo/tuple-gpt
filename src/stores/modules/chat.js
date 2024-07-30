@@ -63,8 +63,6 @@ const useSessionsStore = defineStore('sessions', {
 
         // 交换会话位置
         swapSession(index1, index2) {
-            // console.log("🚀 ~ swapSession ~ index2:", index2)
-            // console.log("🚀 ~ swapSession ~ index1:", index1)
             [this.sessions[index1], this.sessions[index2]] = [this.sessions[index2], this.sessions[index1]];
         },
 
@@ -75,6 +73,10 @@ const useSessionsStore = defineStore('sessions', {
                 ...this.sessions[curIndex],
                 ...sessionConfig
             };
+        },
+        toggleLockSession(id) {
+            const curIndex = this.sessions.findIndex(session => session.id === id);
+            this.sessions[curIndex].locked = !this.sessions[curIndex].locked;
         },
 
         // 删除消息
@@ -121,7 +123,7 @@ const useSessionsStore = defineStore('sessions', {
 
 
         async sendMessageInternal(index, { text, imgUrl, num }, nextMsg = null) {
-            const replyCount = num || (nextMsg && nextMsg.multiContent.length) || this.currentSession.replyCount;
+            const replyCount = num || (nextMsg && nextMsg.multiContent && nextMsg.multiContent.length) || this.currentSession.replyCount;
             const session = this.currentSession;
             if (!session.model) session.model = "gpt-3.5-turbo";
             if (imgUrl) session.model = "gpt-4o";
@@ -195,7 +197,7 @@ const useSessionsStore = defineStore('sessions', {
             });
 
             //未评估
-            if (!session.evaluate) {
+            if (session.name !== configStore.moduleConfig.name) {
                 this.evaluateSession(session)
             }
         },

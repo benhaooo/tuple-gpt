@@ -1,21 +1,22 @@
 <template>
   <div ref="sessionListRef" :class="{ 'transition-all duration-300': !draging }"
-    class=" relative flex flex-col first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
-    <div class=" mx-3 h-full">
+    class=" relative first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
+    <div class=" mx-3 h-screen flex flex-col">
       <button @click="handleNewSession"
-        class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-10 rounded-3xl overflow-hidden">+</button>
-      <div class="overflow-hidden">
+        class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-48 rounded-3xl overflow-hidden">+</button>
+      <div class="overflow-hidden flex-shrink-0">
         <div class="flex w-full bg-white rounded-md mt-2 p-2">
           <i class="iconfont overflow-hidden">&#xe63f;</i>
           <input class=" outline-none flex-1 pl-2 w-full" v-model.laze="searchInput" placeholder="搜索历史会话"></input>
         </div>
       </div>
 
-      <div class="hidden-scroll mt-5 h-4/5 overflow-y-scroll text-light-text dark:text-dark-text">
+      <div class="hidden-scroll mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text m-4">
         <transition-group name="list">
           <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
-            @dragstart="onDragStart($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
-            @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
+            @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
+            @dragenter="onDragEnterThrottled($event, index, session.id)" @dragover="onDragOver($event, index)"
+            @dragend="onDragEnd($event, index)"
             class="group flex h-20 rounded-2xl cursor-grab my-5 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
             :class="{
               'bg-dark-blue-base': currentSessionId === session.id,
@@ -23,15 +24,35 @@
               'opacity-0': index === draggedIndex,
             }" @click="selectSession(session.id)">
             <div class="flex flex-col w-full justify-between py-3 px-5 ">
-              <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.evaluate ||
-                session.name }}</div>
+              <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.name }}</div>
               <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
             </div>
-            <i class="iconfont absolute top-1 right-1 hidden group-hover:block hover:text-red-500"
-              @click.stop="deleteSession(index)">&#xe630;</i>
+
+
+            <div v-if="session.locked" @click="handleToggleLockSession($event, session.id)"
+              class="absolute bottom-1 right-2 cursor-pointer text-green-500">
+              <el-icon>
+                <Lock />
+              </el-icon>
+            </div>
+            <div v-else>
+              <div @click="handleToggleLockSession($event, session.id)"
+                class="absolute bottom-1 -right-5 group-hover:right-2 transition-all cursor-pointer">
+                <el-icon>
+                  <Unlock />
+                </el-icon>
+              </div>
+              <i class="iconfont absolute top-1 -right-5 group-hover:right-2 transition-all hover:text-red-500 cursor-pointer"
+                @click.stop="deleteSession(index)">&#xe630;</i>
+            </div>
+
           </div>
         </transition-group>
       </div>
+      <div class="h-52 flex items-center justify-center">
+        
+      </div>
+
       <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
         class=" hover:cursor-col-resize absolute -right-1 top-0 h-full w-1 border-l-2 border-grey-500"
         :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
@@ -49,6 +70,7 @@
 import { ref, watchEffect, onMounted } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
+import { nextTick } from "vue";
 
 const { isMobile } = useWindowSize()
 const props = defineProps({
@@ -76,6 +98,10 @@ const deleteSession = (index) => {
 const handleNewSession = () => {
   emits("add");
 };
+const handleToggleLockSession = (e, id) => {
+  e.stopPropagation()
+  sessionsStore.toggleLockSession(id)
+}
 
 const draggedIndex = ref(null);
 let cloneElement = null;
@@ -97,7 +123,7 @@ const onDragStart = (e, index) => {
   e.dataTransfer.setDragImage(cloneElement, offsetX, offsetY);
   e.dataTransfer.effectAllowed = "move"
 };
-// 节流
+// 多节流
 const throttleMap = new Map();
 const throttle = (func, limit, key) => {
   if (!throttleMap.has(key)) {
@@ -113,6 +139,9 @@ const throttle = (func, limit, key) => {
     }
   }
 };
+const onDrag = (e, index) => {
+  e.preventDefault();
+}
 const onDragEnter = (e, index) => {
   e.preventDefault();
   if (draggedIndex.value !== index) {
@@ -122,7 +151,7 @@ const onDragEnter = (e, index) => {
   }
 }
 const onDragEnterThrottled = (e, index, id) => {
-  throttle(onDragEnter, 150, id).apply(this, [e, index]);
+  throttle(onDragEnter, 100, id).apply(this, [e, index]);
 };
 
 const onDragOver = (e, index) => {
