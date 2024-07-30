@@ -20,6 +20,7 @@ const useConfigStore = defineStore("config", {
             ctxLimit: 10,
             maxTokens: 4096,
             replyCount: 1,
+            randomTemperature: true,
             temperature: 0.5,
             top_p: 1,
             presence_penalty: 0,

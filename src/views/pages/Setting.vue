@@ -66,9 +66,19 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
                     <el-form-item label="回复长度">
                         <el-slider v-model="moduleConfig.maxTokens" :max="4096" show-input />
                     </el-form-item>
-                    <el-form-item label="回复数">
-                        <el-slider v-model="moduleConfig.replyCount" :min="1" :max="10" show-input />
-                    </el-form-item>
+                    <el-row>
+                        <el-col :span="5">
+                            <el-form-item label="平均随机度">
+                                <el-switch v-model="moduleConfig.randomTemperature" />
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="19">
+                            <el-form-item label="回复数">
+                                <el-slider v-model="moduleConfig.replyCount" :min="1" :max="10" show-input />
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+
                     <el-collapse>
                         <el-collapse-item title="高级配置" name="advanced">
                             <el-form-item label="随机性">

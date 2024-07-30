@@ -19,10 +19,14 @@ const useSessionsStore = defineStore('sessions', {
         currentSession: (state) => state.sessions.find(session => session.id === state.currentSessionId),
         filterSessions: (state) => {
             return (text) => {
+                console.log("🚀 ~ return ~ text:", text)
+
                 if (!text) return state.sessions
                 return state.sessions.filter(session => {
                     return session.messages.some(msg => {
-                        return msg.content.includes(text)
+                        return (msg.content && msg.content.includes(text)) || (msg.multiContent > 0 && msg.multiContent.some(mc => {
+                            return mc.content.includes(text)
+                        }))
                     })
                 })
             }
@@ -174,7 +178,7 @@ const useSessionsStore = defineStore('sessions', {
             //多回复
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
-                data.temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
+                if (session.randomTemperature) data.temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
                 responses.push(completions(data, session.model).then(response => {
                     if (response.ok) {
                         return this.handleStreamMsg(response, chattingMsg.multiContent[i])

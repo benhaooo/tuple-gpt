@@ -1,17 +1,19 @@
 <template>
   <div ref="sessionListRef" :class="{ 'transition-all duration-300': !draging }"
-    class=" relative first-line:border-r-2 border-solid w-56  max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
+    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
     <div class=" mx-3 h-screen flex flex-col">
       <button @click="handleNewSession"
-        class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-48 rounded-3xl overflow-hidden">+</button>
-      <div class="overflow-hidden flex-shrink-0">
-        <div class="flex w-full bg-white rounded-md mt-2 p-2">
+        class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-12 flex-shrink-0 rounded-3xl overflow-hidden">+</button>
+      <div :class="searchInput || searchFocus ? 'border-blue-500' : 'border-transparent'"
+        class="overflow-hidden flex-shrink-0 rounded-xl border-4 mt-2">
+        <div class="flex w-full bg-white rounded-md p-2">
           <i class="iconfont overflow-hidden">&#xe63f;</i>
-          <input class=" outline-none flex-1 pl-2 w-full" v-model.laze="searchInput" placeholder="搜索历史会话"></input>
+          <input class=" outline-none flex-1 pl-2 w-full" v-model.laze="searchInput" @focus="searchFocus = true"
+            @blur="searchFocus = false" placeholder="搜索历史会话"></input>
         </div>
       </div>
 
-      <div class="hidden-scroll mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text m-4">
+      <div class="hidden-scroll mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text my-4">
         <transition-group name="list">
           <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
             @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
@@ -50,7 +52,7 @@
         </transition-group>
       </div>
       <div class="h-52 flex items-center justify-center">
-        
+
       </div>
 
       <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
@@ -70,15 +72,15 @@
 import { ref, watchEffect, onMounted } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
-import { nextTick } from "vue";
 
 const { isMobile } = useWindowSize()
 const props = defineProps({
   sessions: Array,
   currentSessionId: String,
 });
-const searchInput = ref("")
 const sessionsStore = useSessionsStore()
+const searchInput = ref("")
+const searchFocus = ref(false)
 
 const showPanel = ref(true);
 

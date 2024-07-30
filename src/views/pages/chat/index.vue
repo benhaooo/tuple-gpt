@@ -106,9 +106,19 @@ const handleCallSessionList = () => {
         <el-form-item label="回复长度">
           <el-slider v-model="configForm.maxTokens" :max="4096" show-input />
         </el-form-item>
-        <el-form-item label="回复数">
-          <el-slider v-model="configForm.replyCount" :min="1" :max="10" show-input />
-        </el-form-item>
+        <el-row>
+          <el-col :span="5">
+            <el-form-item label="平均随机度">
+              <el-switch v-model="configForm.randomTemperature" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="19">
+            <el-form-item label="回复数">
+              <el-slider v-model="configForm.replyCount" :min="1" :max="10" show-input />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
         <el-form-item label="角色设定">
           <el-input v-model="configForm.system" type="textarea" :rows="4" aria-placeholder="给你的会话任命一个专属角色设定吧~" />
         </el-form-item>
@@ -150,7 +160,7 @@ const handleCallSessionList = () => {
         </div>
         <div v-if="currentSession.clearedCtx">
           <template v-for="(message, index) in currentSession.clearedCtx" :key="index">
-            <Message :message="message"/>
+            <Message :message="message" />
           </template>
           <div @click="sessionsStore.clearCtx()"
             class="leading-5 text-center border-y border-slate-300 hover:border-dark-blue-base cursor-pointer text-slate-300 text-xs"
