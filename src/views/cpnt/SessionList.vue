@@ -13,12 +13,12 @@
         </div>
       </div>
 
-      <div class="hidden-scroll mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text my-4">
+      <div class="mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
         <transition-group name="list">
           <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
-            @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
-            @dragenter="onDragEnterThrottled($event, index, session.id)" @dragover="onDragOver($event, index)"
-            @dragend="onDragEnd($event, index)"
+            :ref="currentSessionId === session.id ? 'selectedSessionRef' : ''" @dragstart="onDragStart($event, index)"
+            @drag="onDrag($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
+            @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
             class="group flex h-20 rounded-2xl cursor-grab my-5 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
             :class="{
               'bg-dark-blue-base': currentSessionId === session.id,
@@ -51,7 +51,7 @@
           </div>
         </transition-group>
       </div>
-      <div class="h-52 flex items-center justify-center">
+      <div class="h-20 flex-shrink-0 flex items-center justify-center">
 
       </div>
 
@@ -81,6 +81,8 @@ const props = defineProps({
 const sessionsStore = useSessionsStore()
 const searchInput = ref("")
 const searchFocus = ref(false)
+
+const selectedSessionRef = ref(null)
 
 const showPanel = ref(true);
 
@@ -221,6 +223,9 @@ const handleLineMousedown = (e) => {
   document.addEventListener('mousemove', lineMousemove);
 };
 
+onMounted(() => {
+  selectedSessionRef.value[0].scrollIntoView({ block: "center" })
+})
 
 defineExpose({ togglePanel });
 </script>

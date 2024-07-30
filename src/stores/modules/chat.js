@@ -19,8 +19,6 @@ const useSessionsStore = defineStore('sessions', {
         currentSession: (state) => state.sessions.find(session => session.id === state.currentSessionId),
         filterSessions: (state) => {
             return (text) => {
-                console.log("🚀 ~ return ~ text:", text)
-
                 if (!text) return state.sessions
                 return state.sessions.filter(session => {
                     return session.messages.some(msg => {
