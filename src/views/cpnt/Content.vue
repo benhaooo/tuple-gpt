@@ -2,7 +2,7 @@
     <div :class="selected ? 'border-green-500 hover:border-green-500 min-w-[90%]' : 'border-transparent min-w-[30%]'"
         class="content max-w-full text-sm hover:border-blue-500 border-4  transition-all duration-300 bg-light-hard dark:bg-dark-base"
         ref="contentRef">
-        <div class="contentValue" v-html="parsedContent || '&nbsp;'" ref="contentValueRef"></div>
+        <div class="markdown-body" v-html="parsedContent || '&nbsp;'" ref="contentValueRef"></div>
         <span v-if="contentObj.chatting"
             class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
     </div>
@@ -11,6 +11,7 @@
 <script setup>
 import { computed, ref, reactive, onMounted, onUpdated, onUnmounted } from "vue";
 import { marked } from 'marked'
+
 const props = defineProps({
     selected: Boolean,
     contentObj: Object

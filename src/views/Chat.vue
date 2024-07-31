@@ -18,8 +18,6 @@ import ChatNav from "./cpnt/ChatNav.vue";
 import { marked } from 'marked'
 import { markedHighlight } from "marked-highlight"
 import hljs from 'highlight.js'
-// 注意引入样式，你可以前往 node_module 下查看更多的样式主题
-import 'highlight.js/styles/an-old-hope.css'
 import HighlightBlock from "./cpnt/HighlightBlock.vue";
 import katex from "marked-katex-extension";
 import myKatex from "@/extensions/marked-katex"

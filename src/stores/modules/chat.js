@@ -91,6 +91,7 @@ const useSessionsStore = defineStore('sessions', {
             const index = this.currentSession.messages.findIndex(msg => msg.id === id);
             const { img: imgUrl, content: text } = this.currentSession.messages[index];
             const nextMsg = this.currentSession.messages[index + 1];
+            if (nextMsg && nextMsg.role === 'assistant') this.currentSession.messages.splice(index + 1, 1);
             await this.sendMessageInternal(index, { text, imgUrl }, nextMsg);
         },
         // 获取上下文
@@ -153,26 +154,15 @@ const useSessionsStore = defineStore('sessions', {
                 presence_penalty: session.presence_penalty,
                 frequency_penalty: session.frequency_penalty,
             };
-            const chattingMsg = (() => {
-                if (nextMsg && nextMsg.role === "assistant") {
-                    nextMsg.chatting = true;
-                    nextMsg.multiContent.forEach(content => {
-                        content.chatting = true;
-                        content.content = ""
-                    });
-                    return nextMsg
-                } else {
-                    const newMsg = reactive({
-                        id: generateUniqueId(),
-                        role: "assistant",
-                        selectedContent: 0,
-                        multiContent: Array.from({ length: replyCount }, () => ({ content: "", chatting: true, id: generateUniqueId() })),
-                        chatting: true
-                    })
-                    this.currentSession.messages.splice(index + 1, 0, newMsg);
-                    return newMsg
-                }
-            })()
+            const chattingMsg = reactive({
+                id: generateUniqueId(),
+                role: "assistant",
+                selectedContent: 0,
+                multiContent: Array.from({ length: replyCount }, () => ({ content: "", chatting: true, id: generateUniqueId() })),
+                chatting: true
+            })
+            this.currentSession.messages.splice(index + 1, 0, chattingMsg);
+
             //多回复
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
@@ -180,6 +170,7 @@ const useSessionsStore = defineStore('sessions', {
                 responses.push(completions(data, session.model).then(response => {
                     if (response.ok) {
                         return this.handleStreamMsg(response, chattingMsg.multiContent[i])
+
                     } else {
                         return response.json().then(errorMsg => {
                             throw new Error(JSON.stringify(errorMsg, null, 2));
@@ -208,13 +199,14 @@ const useSessionsStore = defineStore('sessions', {
         handleStreamMsg(response, chatting) {
             return new Promise((resolve, reject) => {
                 const { streamController } = useStream()
-                return streamController(response, async (content) => {
+                const controller = streamController(response, async (content) => {
                     chatting.content += content;
                     await delay(4);
                 }, async () => {
                     await delay(800);
                     resolve()
                 })
+                chatting.chatting = controller
             })
         },
 
