@@ -1,6 +1,6 @@
 <template>
     <div :class="selected ? 'border-green-500 hover:border-green-500 min-w-[90%]' : 'border-transparent min-w-[30%]'"
-        class="content max-w-full text-sm hover:border-blue-500 border-4  transition-all duration-300 bg-light-hard dark:bg-dark-base"
+        class="content max-w-full hover:border-blue-500 border-4 transition-all duration-300 bg-light-hard dark:bg-dark-base"
         ref="contentRef">
         <div class="markdown-body" v-html="parsedContent || '&nbsp;'" ref="contentValueRef"></div>
         <span v-if="contentObj.chatting"

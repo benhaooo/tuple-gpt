@@ -190,7 +190,7 @@ const useSessionsStore = defineStore('sessions', {
             });
 
             //未评估
-            if (session.name !== configStore.moduleConfig.name) {
+            if (session.name === configStore.moduleConfig.name) {
                 this.evaluateSession(session)
             }
         },
@@ -232,7 +232,7 @@ const useSessionsStore = defineStore('sessions', {
             const response = await retryCompletions(data, "gpt-3.5-turbo")
             response.json().then(({ choices }) => {
                 const res = choices[0].message.content
-                session.evaluate = res
+                session.name = res
             })
         },
 

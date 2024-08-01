@@ -19,7 +19,7 @@
             :ref="currentSessionId === session.id ? 'selectedSessionRef' : ''" @dragstart="onDragStart($event, index)"
             @drag="onDrag($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
             @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
-            class="group flex h-20 rounded-2xl cursor-grab my-5 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
+            class="group flex h-20 rounded-2xl cursor-grab mb-5 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
             :class="{
               'bg-dark-blue-base': currentSessionId === session.id,
               'hover:bg-[#f3f3f3] hover:border-dark-blue-base': currentSessionId !== session.id,
