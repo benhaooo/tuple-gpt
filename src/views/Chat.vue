@@ -56,7 +56,7 @@ function highlightBlock(str, lang) {
   // const html = await renderToString(app)
   // return html
 
-  return `<pre class=""><div class=" flex items-center justify-between px-4 py-2"><span class="">${lang}</span><span class="code-copy cursor-pointer"><i class="iconfont">&#xe8b0;</i> 复制</span></div><code class="hljs code-block-body ${lang}">${str}</code></pre>`
+  return `<pre class="!bg-[#1c1d21]"><div class=" flex items-center justify-between px-4 py-2"><span class="">${lang}</span><span class="code-copy cursor-pointer"><i class="iconfont">&#xe8b0;</i> 复制</span></div><code class="hljs code-block-body ${lang}">${str}</code></pre>`
 }
 </script>
 
