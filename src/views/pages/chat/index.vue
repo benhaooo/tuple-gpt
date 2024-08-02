@@ -169,7 +169,7 @@ const handleCallSessionList = () => {
 
         <template v-for="(message, index) in currentSession.messages" :key="message.id">
           <Message :message="message" @delete="sessionsStore.deleteMessage(index)" @reChat="sessionsStore.reChat(index)"
-            @edit="handleEditMessage" class="animate__animated animate__fadeIn duration-75" />
+            class="animate__animated animate__fadeIn duration-75" />
         </template>
       </div>
       <!-- editor -->

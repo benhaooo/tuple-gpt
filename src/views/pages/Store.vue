@@ -1,7 +1,7 @@
 <template>
     <div class="flex flex-col h-full w-full box-border p-4">
         <el-input class=" flex-shrink-0 my-4" v-model="rawData" @focus="selectAllText"></el-input>
-        <div class=" flex-grow overflow-scroll" v-html="htmlData"></div>
+        <div class="markdown-body flex-grow overflow-scroll" v-html="htmlData"></div>
     </div>
 
 </template>

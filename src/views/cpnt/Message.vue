@@ -33,7 +33,8 @@
     <div v-if="message.multiContent" class=" flex items-start gap-2 w-full overflow-x-scroll p-4">
       <template v-for="(oneOf, index) in message.multiContent" :key="oneOf.id">
         <Content @click="message.selectedContent = index" :contentObj="oneOf"
-          :selected="index === message.selectedContent" />
+          :selected="index === message.selectedContent" :ref="index === message.selectedContent ? 'contentValueRef' : null"
+          :maxHeight="maxHeight" />
       </template>
 
     </div>
@@ -42,7 +43,8 @@
         class="content max-w-full text-sm hover:border-blue-500 border-4  transition-all duration-300 bg-light-hard dark:bg-dark-base"
         ref="contentRef">
         <img v-if="message.img" :src="message.img" alt="">
-        <div class="contentValue" v-html="message.content" ref="contentValueRef"></div>
+        <div class="contentValue" v-html="message.content">
+        </div>
         <span v-if="message.chatting"
           class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
       </div>
@@ -55,7 +57,6 @@
 import { computed, ref, reactive, onMounted, onUpdated, onUnmounted } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
-import { marked } from 'marked'
 import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
 import { useToast } from 'vue-toast-notification';
 import useSessionsStore from "@/stores/modules/chat";
@@ -69,6 +70,9 @@ const { userConfig } = storeToRefs(configStore)
 const props = defineProps({
   message: Object,
 });
+
+const contentValueRef = ref(null)
+const maxHeight = ref(0)
 
 const showEditModal = ref(false);
 const editText = ref("");
@@ -104,7 +108,6 @@ const copy = () => {
   window.navigator.clipboard.writeText(getContent(props.message))
   useToast().success('复制成功')
 }
-
 //将选中的内容置首位
 onMounted(() => {
   if (props.message.selectedContent && props.message.selectedContent > 0) {

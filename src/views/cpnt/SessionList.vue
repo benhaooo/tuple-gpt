@@ -16,7 +16,7 @@
       <div class="mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
         <transition-group name="list">
           <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
-            :ref="currentSessionId === session.id ? 'selectedSessionRef' : ''" @dragstart="onDragStart($event, index)"
+            :ref="currentSessionId === session.id ? 'selectedSessionRef' : null" @dragstart="onDragStart($event, index)"
             @drag="onDrag($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
             @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
             class="group flex h-20 rounded-2xl cursor-grab mb-5 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"

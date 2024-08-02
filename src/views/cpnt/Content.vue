@@ -14,7 +14,8 @@ import { marked } from 'marked'
 
 const props = defineProps({
     selected: Boolean,
-    contentObj: Object
+    contentObj: Object,
+    maxHeight: Number,
 });
 const parsedContent = computed(() => marked.parse(props.contentObj.content));
 
