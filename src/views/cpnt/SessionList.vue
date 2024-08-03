@@ -1,32 +1,38 @@
 <template>
   <div ref="sessionListRef" :class="{ 'transition-all duration-300': !draging }"
-    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full z-50 bg-light-base dark:bg-dark-hard-dark">
+    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full">
     <div class=" mx-3 h-screen flex flex-col">
-      <button @click="handleNewSession"
-        class="flex items-center justify-center w-full mt-8 bg-[#806fef] hover:bg-[#6757cb] h-12 flex-shrink-0 rounded-3xl overflow-hidden">+</button>
+      <div class="flex items-center h-9 flex-shrink-0  mt-8">
+        <button @click="handleNewSession"
+          class="flex items-center justify-center flex-1 bg-[#806fef] hover:bg-[#6757cb] h-full rounded-3xl overflow-hidden text-xs">+新的聊天</button>
+        <el-tooltip content="清除会话" placement="right">
+          <i @click="handleClearSession" class="iconfont ml-4 w-9 h-9 center rounded-full active:bg-[#eee]">&#xe6c7;</i>
+        </el-tooltip>
+      </div>
+
       <div :class="searchInput || searchFocus ? 'border-blue-500' : 'border-transparent'"
         class="overflow-hidden flex-shrink-0 rounded-xl border-4 mt-2">
-        <div class="flex w-full bg-white rounded-md p-2">
+        <div class="flex w-full bg-white rounded-md py-1 px-2">
           <i class="iconfont overflow-hidden">&#xe63f;</i>
-          <input class=" outline-none flex-1 pl-2 w-full" v-model.laze="searchInput" @focus="searchFocus = true"
+          <input class=" outline-none flex-1 pl-2 w-full text-sm" v-model.laze="searchInput" @focus="searchFocus = true"
             @blur="searchFocus = false" placeholder="搜索历史会话"></input>
         </div>
       </div>
 
-      <div class="mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
+      <div class="mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text overscroll-y-none">
         <transition-group name="list">
           <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
             :ref="currentSessionId === session.id ? 'selectedSessionRef' : null" @dragstart="onDragStart($event, index)"
             @drag="onDrag($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
             @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
-            class="group flex h-20 rounded-2xl cursor-grab mb-5 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
+            class="group flex h-16 rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
             :class="{
               'bg-dark-blue-base': currentSessionId === session.id,
               'hover:bg-[#f3f3f3] hover:border-dark-blue-base': currentSessionId !== session.id,
               'opacity-0': index === draggedIndex,
             }" @click="selectSession(session.id)">
-            <div class="flex flex-col w-full justify-between py-3 px-5 ">
-              <div class="font-bold text-lg whitespace-nowrap text-ellipsis overflow-hidden">{{ session.name }}</div>
+            <div class="flex flex-col w-full justify-between py-2 px-5 ">
+              <div class="font-bold text-base whitespace-nowrap text-ellipsis overflow-hidden">{{ session.name }}</div>
               <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
             </div>
 
@@ -102,6 +108,20 @@ const deleteSession = (index) => {
 const handleNewSession = () => {
   emits("add");
 };
+const handleClearSession = () => {
+  ElMessageBox.confirm(
+    '是否清空所有会话记录（除锁定会话）',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      sessionsStore.clearChat()
+    })
+  // sessionsStore.clearSession()
+}
 const handleToggleLockSession = (e, id) => {
   e.stopPropagation()
   sessionsStore.toggleLockSession(id)

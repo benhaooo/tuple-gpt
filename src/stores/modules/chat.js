@@ -12,7 +12,7 @@ const { moduleConfig } = storeToRefs(configStore);
 const useSessionsStore = defineStore('sessions', {
     state: () => ({
         sessions: [],
-        currentSessionId: "",
+        currentSessionId: "02v16x9y34hhlzcywn2j",
         askprompt: {},
     }),
     getters: {
@@ -275,7 +275,9 @@ const useSessionsStore = defineStore('sessions', {
 
         // 清除聊天记录
         clearChat() {
-            this.sessions = [];
+            this.sessions = this.sessions.filter(session => session.locked)
+            if (this.sessions.some(session => session.id == this.currentSessionId)) return;
+            else this.currentSessionId = this.sessions[0].id
         }
     },
     persist: true,
