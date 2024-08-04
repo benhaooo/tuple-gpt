@@ -97,7 +97,7 @@ const useSessionsStore = defineStore('sessions', {
         // 获取上下文
         getHistoryMsgs(index, pSession) {
             const session = pSession || this.currentSession;
-            const historyMessages = session.messages.slice(0, index);
+            const historyMessages = session.messages.slice(Math.max(0, index - session.ctxLimit), index);
             return historyMessages.map(msg => ({
                 role: msg.role,
                 content: msg.multiContent ? msg.multiContent[msg.selectedContent].content : msg.content,
@@ -111,7 +111,7 @@ const useSessionsStore = defineStore('sessions', {
                 id: generateUniqueId(),
                 role: "user",
                 content: text,
-            });
+            }) - 1;
             await this.sendMessageInternal(index, { text, num });
         },
         // 发送图片消息
@@ -121,7 +121,7 @@ const useSessionsStore = defineStore('sessions', {
                 role: "user",
                 content: text,
                 img: imgUrl,
-            });
+            }) - 1;
             await this.sendMessageInternal(index, { text, imgUrl, num });
         },
 
