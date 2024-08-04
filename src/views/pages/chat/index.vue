@@ -120,7 +120,10 @@ const handleCallSessionList = () => {
         </el-row>
 
         <el-form-item label="角色设定">
-          <el-input v-model="configForm.system" type="textarea" :rows="4" aria-placeholder="给你的会话任命一个专属角色设定吧~" />
+          <el-input v-model="configForm.system" type="textarea" :rows="4" placeholder="给你的会话任命一个专属角色设定吧~" />
+        </el-form-item>
+        <el-form-item label="消息格式">
+          <el-input v-model="configForm.format" type="textarea" :autosize="{ minRows: 1, maxRows: 4 }" placeholder="${text}" />
         </el-form-item>
         <el-collapse>
           <el-collapse-item title="高级配置" name="advanced">

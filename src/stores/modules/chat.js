@@ -106,6 +106,7 @@ const useSessionsStore = defineStore('sessions', {
 
         // 发送消息
         async sendMessage(text, num) {
+            text = this.formatMessage({ text })
             const index = this.currentSession.messages.push({
                 id: generateUniqueId(),
                 role: "user",
@@ -124,6 +125,13 @@ const useSessionsStore = defineStore('sessions', {
             await this.sendMessageInternal(index, { text, imgUrl, num });
         },
 
+        formatMessage({ text }) {
+            let template = this.currentSession.format || ""
+            const placeholderRegEx = /\${(.*?)}/g;
+            if (!template || !placeholderRegEx.test(template)) template += "${text}";
+            // return template.replace(/\${(.*?)}/g, (match, p) => values[p])
+            return template.replace(placeholderRegEx, text)
+        },
 
         async sendMessageInternal(index, { text, imgUrl, num }, nextMsg = null) {
             const replyCount = num || (nextMsg && nextMsg.multiContent && nextMsg.multiContent.length) || this.currentSession.replyCount;

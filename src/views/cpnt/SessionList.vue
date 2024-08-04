@@ -1,10 +1,10 @@
 <template>
   <div ref="sessionListRef" :class="{ 'transition-all duration-300': !draging }"
-    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full">
+    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full bg-white z-50">
     <div class=" mx-3 h-screen flex flex-col">
-      <div class="flex items-center h-9 flex-shrink-0  mt-8">
+      <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
         <button @click="handleNewSession"
-          class="flex items-center justify-center flex-1 bg-[#806fef] hover:bg-[#6757cb] h-full rounded-3xl overflow-hidden text-xs">+新的聊天</button>
+          class="flex items-center justify-center flex-1 bg-[#806fef] hover:bg-[#6757cb] h-full rounded-3xl text-xs whitespace-nowrap">+新的聊天</button>
         <el-tooltip content="清除会话" placement="right">
           <i @click="handleClearSession" class="iconfont ml-4 w-9 h-9 center rounded-full active:bg-[#eee]">&#xe6c7;</i>
         </el-tooltip>
