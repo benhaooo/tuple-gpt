@@ -19,16 +19,16 @@
         </div>
       </div>
 
-      <div class="mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
+      <div class="relative mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
         <transition-group name="list">
           <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
             :ref="currentSessionId === session.id ? 'selectedSessionRef' : null" @dragstart="onDragStart($event, index)"
             @drag="onDrag($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
             @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
-            class="group flex h-16 rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
+            class="group flex h-16 w-full rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
             :class="{
               'bg-dark-blue-base': currentSessionId === session.id,
-              'hover:bg-[#f3f3f3] hover:border-dark-blue-base': currentSessionId !== session.id,
+              'hover:bg-[#f3f3f3] hover:border-dark-blue-base bg-white': currentSessionId !== session.id,
               'opacity-0': index === draggedIndex,
             }" @click="selectSession(session.id)">
             <div class="flex flex-col w-full justify-between py-2 px-5 ">
@@ -250,4 +250,14 @@ onMounted(() => {
 defineExpose({ togglePanel });
 </script>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.list-leave-active {
+  position: absolute;
+}
+</style>

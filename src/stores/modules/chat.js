@@ -56,7 +56,9 @@ const useSessionsStore = defineStore('sessions', {
                     ? this.sessions[index - 1].id
                     : this.sessions[index + 1].id;
             }
-            this.sessions.splice(index, 1);
+            setTimeout(() => {
+                this.sessions.splice(index, 1);
+            }, 0);
         },
 
         setCurrentSession(id) {
