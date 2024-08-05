@@ -6,7 +6,7 @@
         <button @click="handleNewSession"
           class="flex items-center justify-center flex-1 bg-[#806fef] hover:bg-[#6757cb] h-full rounded-3xl text-xs whitespace-nowrap">+新的聊天</button>
         <el-tooltip content="清除会话" placement="right">
-          <i @click="handleClearSession" class="iconfont ml-4 w-9 h-9 center rounded-full active:bg-[#eee]">&#xe6c7;</i>
+          <i @click="handleClearSession" class="iconfont ml-4 w-9 h-9 center rounded-full hover:bg-[#eee]">&#xe6c7;</i>
         </el-tooltip>
       </div>
 
@@ -19,7 +19,7 @@
         </div>
       </div>
 
-      <div class="mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text overscroll-y-none">
+      <div class="mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
         <transition-group name="list">
           <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
             :ref="currentSessionId === session.id ? 'selectedSessionRef' : null" @dragstart="onDragStart($event, index)"

@@ -30,13 +30,12 @@
         </div>
       </div>
     </div>
-    <div v-if="message.multiContent" class=" flex items-start gap-2 w-full overflow-x-scroll p-4">
+    <div v-if="message.multiContent" class=" flex items-start gap-2 w-full overflow-scroll p-4">
       <template v-for="(oneOf, index) in message.multiContent" :key="oneOf.id">
         <Content @click="message.selectedContent = index" :contentObj="oneOf"
-          :selected="index === message.selectedContent" :ref="index === message.selectedContent ? 'contentValueRef' : null"
-          :maxHeight="maxHeight" />
+          :selected="index === message.selectedContent"
+          :ref="index === message.selectedContent ? 'contentValueRef' : null" :maxHeight="maxHeight" />
       </template>
-
     </div>
     <div v-else>
       <div
@@ -62,6 +61,7 @@ import { useToast } from 'vue-toast-notification';
 import useSessionsStore from "@/stores/modules/chat";
 import gptUrl from '@/assets/imgs/ye.png'
 import Content from "./Content.vue"
+import { nextTick } from "vue";
 
 const sessionsStore = useSessionsStore();
 const configStore = useConfigStore();
@@ -72,7 +72,7 @@ const props = defineProps({
 });
 
 const contentValueRef = ref(null)
-const maxHeight = ref(0)
+const maxHeight = ref(100)
 
 const showEditModal = ref(false);
 const editText = ref("");
@@ -85,6 +85,14 @@ const handleEditMessage = () => {
   showEditModal.value = true;
   editText.value = getContent(props.message)
 };
+
+const maxHeightFn = computed(() => {
+  nextTick(() => {
+    if (contentValueRef.value) {
+      return contentValueRef.value.offsetHeight
+    }
+  })
+})
 
 const getContent = (message) => {
   if (props.message.multiContent) {
@@ -105,6 +113,7 @@ const isUser = computed(() => {
 })
 
 const copy = () => {
+  console.log("🚀 ~ copy ~ props.message:", props.message)
   window.navigator.clipboard.writeText(getContent(props.message))
   useToast().success('复制成功')
 }
