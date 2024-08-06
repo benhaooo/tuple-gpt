@@ -56,6 +56,7 @@ const useSessionsStore = defineStore('sessions', {
                     ? this.sessions[index - 1].id
                     : this.sessions[index + 1].id;
             }
+            //删除操作推迟到下一个事件循环。给浏览器一个机会去处理当前的渲染帧，并触发 CSS 动画的开始状态
             setTimeout(() => {
                 this.sessions.splice(index, 1);
             }, 0);

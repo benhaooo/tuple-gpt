@@ -11,6 +11,7 @@
 <script setup>
 import { computed, ref, reactive, onMounted, onUpdated, onUnmounted } from "vue";
 import { marked } from 'marked'
+import { copyToClip } from "@/utils/commonUtils";
 
 const props = defineProps({
     selected: Boolean,
@@ -71,11 +72,12 @@ function addCopyCodeEvents() {
                 e.stopPropagation();
                 const code = btn.parentElement?.nextElementSibling?.textContent;
                 if (code) {
-                    window.navigator.clipboard.writeText(code);
-                    btn.innerHTML = '<i class="iconfont">&#xe664;</i> 成功';
-                    setTimeout(() => {
-                        btn.innerHTML = '<i class="iconfont">&#xe8b0;</i> 复制';
-                    }, 1000);
+                    copyToClip(code).then(() => {
+                        btn.innerHTML = '<i class="iconfont">&#xe664;</i> 成功';
+                        setTimeout(() => {
+                            btn.innerHTML = '<i class="iconfont">&#xe8b0;</i> 复制';
+                        }, 1000);
+                    })
                 }
             };
             btn.addEventListener('click', handler);

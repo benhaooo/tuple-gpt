@@ -120,7 +120,6 @@ const handleClearSession = () => {
     .then(() => {
       sessionsStore.clearChat()
     })
-  // sessionsStore.clearSession()
 }
 const handleToggleLockSession = (e, id) => {
   e.stopPropagation()

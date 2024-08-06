@@ -53,7 +53,7 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive, onMounted, onUpdated, onUnmounted } from "vue";
+import { computed, ref, reactive, onMounted, onUpdated, onUnmounted, nextTick } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
@@ -61,7 +61,8 @@ import { useToast } from 'vue-toast-notification';
 import useSessionsStore from "@/stores/modules/chat";
 import gptUrl from '@/assets/imgs/ye.png'
 import Content from "./Content.vue"
-import { nextTick } from "vue";
+import { copyToClip } from "@/utils/commonUtils";
+
 
 const sessionsStore = useSessionsStore();
 const configStore = useConfigStore();
@@ -113,9 +114,10 @@ const isUser = computed(() => {
 })
 
 const copy = () => {
-  console.log("🚀 ~ copy ~ props.message:", props.message)
-  window.navigator.clipboard.writeText(getContent(props.message))
-  useToast().success('复制成功')
+  // window.navigator.clipboard.writeText(getContent(props.message))
+  copyToClip(getContent(props.message)).then(() => {
+    useToast().success('复制成功')
+  })
 }
 //将选中的内容置首位
 onMounted(() => {
