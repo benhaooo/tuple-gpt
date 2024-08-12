@@ -39,32 +39,19 @@
               @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
               @dragenter="onDragEnterThrottled($event, index, session.id, session.type)"
               @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
-              class="group flex h-16 w-full rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
+              class="group w-full rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
               :class="{
                 'bg-dark-blue-base': currentSessionId === session.id,
                 'hover:bg-[#f3f3f3] hover:border-dark-blue-base bg-white': currentSessionId !== session.id,
                 'opacity-0': index === draggedIndex,
                 'h-32': session.type === 'auto'
               }" @click="selectSession(session.id)">
-              <template v-if="session.type === 'auto'">
-                <div class="flex w-full h-full justify-center items-center gap-2">
-
-                  <template v-for="(ai, jdex) in session.ai" :key="ai?.id">
-                    <div draggable="true" @dragenter="onDragEnterAuto($event, jdex)"
-                      @dragleave="onDragLeaveAuto($event)" @drop="onDropAuto($event, index, jdex)"
-                      class="min-w-20 h-1/2 rounded-md  py-2 px-1" :class="ai ? 'bg-purple-500' : 'bg-[#eee]'">
-                      <div class="font-bold text-xs whitespace-nowrap text-ellipsis overflow-hidden">{{ ai?.name }}
-                      </div>
-                    </div>
-                  </template>
-                </div>
-
-              </template>
-
-              <template v-else>
+              <div class="h-16">
                 <div class="flex flex-col w-full justify-between py-2 px-5 ">
-                  <div class=" font-extrabold text-base group-hover:text-purple-500 whitespace-nowrap text-ellipsis overflow-hidden">{{
-                    session.name }}
+                  <div
+                    class=" font-extrabold text-base group-hover:text-purple-500 whitespace-nowrap text-ellipsis overflow-hidden">
+                    {{
+                      session.name }}
                   </div>
                   <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
                 </div>
@@ -84,7 +71,17 @@
                   <i class="iconfont absolute top-1 -right-5 group-hover:right-2 transition-all hover:text-red-500 cursor-pointer"
                     @click.stop="deleteSession(index)">&#xe630;</i>
                 </div>
-              </template>
+              </div>
+              <div v-if="session.type === 'auto'" class="flex w-full h-16 justify-center items-center gap-2">
+                <template v-for="(ai, jdex) in session.ai" :key="ai?.id">
+                  <div draggable="true" @dragenter="onDragEnterAuto($event, jdex)" @dragleave="onDragLeaveAuto($event)"
+                    @drop="onDropAuto($event, index, jdex)" class="flex-grow h-full rounded-md  py-2 px-1"
+                    :class="ai ? 'bg-purple-500' : 'bg-[#eee]'">
+                    <div class="font-bold text-xs whitespace-nowrap text-ellipsis overflow-hidden">{{ ai?.name }}
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
           </template>
 

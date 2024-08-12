@@ -5,6 +5,7 @@ import { computed, reactive } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import useStream from '@/hooks/stream'
+import { id } from "element-plus/es/locales.mjs";
 
 const configStore = useConfigStore();
 const { moduleConfig } = storeToRefs(configStore);
@@ -114,28 +115,40 @@ const useSessionsStore = defineStore('sessions', {
             const { img: imgUrl, content: text } = this.currentSession.messages[index];
             const nextMsg = this.currentSession.messages[index + 1];
             if (nextMsg && nextMsg.role === 'assistant') this.currentSession.messages.splice(index + 1, 1);
-            await this.sendMessageInternal(index, { text, imgUrl }, nextMsg);
+            await this.sendMessageInternal(index, { text, imgUrl }, null, nextMsg);
         },
         // 获取上下文
-        getHistoryMsgs(index, pSession) {
-            const session = pSession || this.currentSession;
+        getHistoryMsgs(index, session) {
+            const reversed = session.role === "assistant"
             const historyMessages = session.messages.slice(Math.max(0, index - session.ctxLimit), index);
             return historyMessages.map(msg => ({
-                role: msg.role,
+                role: reversed ? (msg.role === "user" ? "assistant" : "user") : msg.role,
                 content: msg.multiContent ? msg.multiContent[msg.selectedContent].content : msg.content,
             }));
         },
 
         // 发送消息
         async sendMessage(text, num) {
+            const session = this.currentSession;
             text = this.formatMessage({ text })
-            const index = this.currentSession.messages.push({
+            const index = session.messages.push({
                 id: generateUniqueId(),
                 role: "user",
                 content: text,
             }) - 1;
-            await this.sendMessageInternal(index, { text, num });
+            await this.sendMessageInternal(index, { text, num }, session.ai && session.ai[1]);
+            if (session.type === "auto") this.autoChat(session, 1)
         },
+        async autoChat(session, no) {
+            const latestIndex = session.messages.length - 1;
+            const latestMsg = session.messages[latestIndex];
+            const text = latestMsg.content || latestMsg.multiContent[latestMsg.selectedContent].content;
+            const qno = 1 - no
+            await this.sendMessageInternal(latestIndex, { text }, session.ai[qno])
+            if (session.messages.length >= 5) return
+            this.autoChat(session, qno)
+        },
+
         // 发送图片消息
         async sendImgMessage(text, imgUrl, num) {
             const index = this.currentSession.messages.push({
@@ -147,17 +160,6 @@ const useSessionsStore = defineStore('sessions', {
             await this.sendMessageInternal(index, { text, imgUrl, num });
         },
 
-        async sendQuquMessage(text, questioner = true) {
-            text = this.formatMessage({ text })
-            const index = this.currentSession.messages.push({
-                id: generateUniqueId(),
-                role: "user",
-                content: text,
-            }) - 1;
-            await this.sendMessageInternal(index, { text, num });
-
-        },
-
         formatMessage({ text }) {
             let template = this.currentSession.format || ""
             const placeholderRegEx = /\${(.*?)}/g;
@@ -166,13 +168,11 @@ const useSessionsStore = defineStore('sessions', {
             return template.replace(placeholderRegEx, text)
         },
 
-        async sendMessageInternal(index, { text, imgUrl, num }, nextMsg = null, qSession) {
-            const ququSession = qSession || this.currentSession;
+        async sendMessageInternal(index, { text, imgUrl, num }, qSession = this.currentSession, nextMsg = null) {
             const session = this.currentSession;
             const replyCount = num || (nextMsg && nextMsg.multiContent && nextMsg.multiContent.length) || this.currentSession.replyCount || 1;
-            if (!ququSession.model) ququSession.model = "gpt-3.5-turbo";
-            if (imgUrl) ququSession.model = "gpt-4o";
-            const systemMessage = this.getSystemMsg(ququSession);
+            if (imgUrl) qSession.model = "gpt-4o";
+            const systemMessage = this.getSystemMsg(qSession);
             const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index, session)
             const indexMsg = {
                 role: "user",
@@ -186,18 +186,18 @@ const useSessionsStore = defineStore('sessions', {
             if (historyMessages) combinedMessages.unshift(...historyMessages)
 
             const data = {
-                model: ququSession.model,
+                model: qSession.model,
                 messages: combinedMessages,
                 stream: true,
-                max_tokens: ququSession.maxTokens,
-                temperature: ququSession.temperature,
-                top_p: ququSession.top_p,
-                presence_penalty: ququSession.presence_penalty,
-                frequency_penalty: ququSession.frequency_penalty,
+                max_tokens: qSession.maxTokens,
+                temperature: qSession.temperature,
+                top_p: qSession.top_p,
+                presence_penalty: qSession.presence_penalty,
+                frequency_penalty: qSession.frequency_penalty,
             };
             const chattingMsg = reactive({
                 id: generateUniqueId(),
-                role: ququSession.role && ququSession.role === "assistant" ? "user" : "assistant",
+                role: qSession.role && qSession.role === "assistant" ? "user" : "assistant",
                 selectedContent: 0,
                 multiContent: Array.from({ length: replyCount }, () => ({ content: "", chatting: true, id: generateUniqueId() })),
                 chatting: true
@@ -208,7 +208,7 @@ const useSessionsStore = defineStore('sessions', {
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
                 if (session.randomTemperature) data.temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
-                responses.push(completions(data, session.model).then(response => {
+                responses.push(completions(data, qSession.model).then(response => {
                     if (response.ok) {
                         return this.handleStreamMsg(response, chattingMsg.multiContent[i])
 
