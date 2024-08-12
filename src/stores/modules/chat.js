@@ -145,7 +145,7 @@ const useSessionsStore = defineStore('sessions', {
             const text = latestMsg.content || latestMsg.multiContent[latestMsg.selectedContent].content;
             const qno = 1 - no
             await this.sendMessageInternal(latestIndex, { text }, session.ai[qno])
-            if (session.messages.length >= 5) return
+            if (session.messages.length > 10) return
             this.autoChat(session, qno)
         },
 
@@ -253,10 +253,9 @@ const useSessionsStore = defineStore('sessions', {
 
         // 预设消息
         getSystemMsg(session) {
-            session = session || this.currentSession
             return session.system ? {
                 role: "system",
-                content: this.currentSession.system
+                content: session.system
             } : null;
         },
         async evaluateSession(session) {
