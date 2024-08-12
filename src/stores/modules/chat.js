@@ -43,7 +43,26 @@ const useSessionsStore = defineStore('sessions', {
             this.sessions.unshift(session);
             this.currentSessionId = session.id;
         },
-
+        // 新增模拟会话
+        addAutoSession() {
+            const session = {
+                name: "模拟对话",
+                id: generateUniqueId(),
+                messages: [],
+                type: "auto",
+                ai: Array.from({ length: 2 }),
+            }
+            this.sessions.unshift(session);
+            this.currentSessionId = session.id;
+        },
+        // 模拟会话添加会话方
+        autoPushSession(index1, index2, no) {
+            const autoSession = this.sessions[index1];
+            const session = this.sessions[index2];
+            session.role = no === 1 ? "user" : "assistant";
+            autoSession.ai[no] = session;
+            this.deleteSession(index2)
+        },
         // 删除会话
         deleteSession(index) {
             const curIndex = this.sessions.findIndex(session => session.id === this.currentSessionId);
@@ -128,6 +147,17 @@ const useSessionsStore = defineStore('sessions', {
             await this.sendMessageInternal(index, { text, imgUrl, num });
         },
 
+        async sendQuquMessage(text, questioner = true) {
+            text = this.formatMessage({ text })
+            const index = this.currentSession.messages.push({
+                id: generateUniqueId(),
+                role: "user",
+                content: text,
+            }) - 1;
+            await this.sendMessageInternal(index, { text, num });
+
+        },
+
         formatMessage({ text }) {
             let template = this.currentSession.format || ""
             const placeholderRegEx = /\${(.*?)}/g;
@@ -136,14 +166,14 @@ const useSessionsStore = defineStore('sessions', {
             return template.replace(placeholderRegEx, text)
         },
 
-        async sendMessageInternal(index, { text, imgUrl, num }, nextMsg = null) {
-            const replyCount = num || (nextMsg && nextMsg.multiContent && nextMsg.multiContent.length) || this.currentSession.replyCount;
+        async sendMessageInternal(index, { text, imgUrl, num }, nextMsg = null, qSession) {
+            const ququSession = qSession || this.currentSession;
             const session = this.currentSession;
-            if (!session.model) session.model = "gpt-3.5-turbo";
-            if (imgUrl) session.model = "gpt-4o";
-
-            const systemMessage = this.getSystemMsg();
-            const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index)
+            const replyCount = num || (nextMsg && nextMsg.multiContent && nextMsg.multiContent.length) || this.currentSession.replyCount || 1;
+            if (!ququSession.model) ququSession.model = "gpt-3.5-turbo";
+            if (imgUrl) ququSession.model = "gpt-4o";
+            const systemMessage = this.getSystemMsg(ququSession);
+            const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index, session)
             const indexMsg = {
                 role: "user",
                 content: imgUrl ? [
@@ -156,23 +186,23 @@ const useSessionsStore = defineStore('sessions', {
             if (historyMessages) combinedMessages.unshift(...historyMessages)
 
             const data = {
-                model: session.model,
+                model: ququSession.model,
                 messages: combinedMessages,
                 stream: true,
-                max_tokens: session.maxTokens,
-                temperature: session.temperature,
-                top_p: session.top_p,
-                presence_penalty: session.presence_penalty,
-                frequency_penalty: session.frequency_penalty,
+                max_tokens: ququSession.maxTokens,
+                temperature: ququSession.temperature,
+                top_p: ququSession.top_p,
+                presence_penalty: ququSession.presence_penalty,
+                frequency_penalty: ququSession.frequency_penalty,
             };
             const chattingMsg = reactive({
                 id: generateUniqueId(),
-                role: "assistant",
+                role: ququSession.role && ququSession.role === "assistant" ? "user" : "assistant",
                 selectedContent: 0,
                 multiContent: Array.from({ length: replyCount }, () => ({ content: "", chatting: true, id: generateUniqueId() })),
                 chatting: true
             })
-            this.currentSession.messages.splice(index + 1, 0, chattingMsg);
+            session.messages.splice(index + 1, 0, chattingMsg);
 
             //多回复
             const responses = [];
@@ -222,8 +252,9 @@ const useSessionsStore = defineStore('sessions', {
         },
 
         // 预设消息
-        getSystemMsg() {
-            return this.currentSession.system ? {
+        getSystemMsg(session) {
+            session = session || this.currentSession
+            return session.system ? {
                 role: "system",
                 content: this.currentSession.system
             } : null;

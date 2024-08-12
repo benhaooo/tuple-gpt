@@ -3,10 +3,23 @@
     class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full bg-white z-50">
     <div class=" mx-3 h-screen flex flex-col">
       <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
+        <!-- <div class="center relative w-32 h-32 bg-dark-blue-base">
+          <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-dark-blue-base rounded-full"></div>
+          <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-dark-blue-base rounded-full"></div>
+
+          <div class=" group flex flex-col justify-center items-center w-12 h-12 bg-[#eee] rounded-full z-10">
+            <div class="w-6 h-1 bg-black rounded transition-all group-hover:rotate-45 group-hover:translate-y-1/2"></div>
+            <div class="w-6 h-1 bg-black rounded transition-all group-hover:-rotate-45 group-hover:-translate-y-1/2"></div>
+          </div>
+        </div> -->
         <button @click="handleNewSession"
           class="flex items-center justify-center flex-1 bg-[#806fef] hover:bg-[#6757cb] h-full rounded-3xl text-xs whitespace-nowrap">+新的聊天</button>
-        <el-tooltip content="清除会话" placement="right">
-          <i @click="handleClearSession" class="iconfont ml-4 w-9 h-9 center rounded-full hover:bg-[#eee]">&#xe6c7;</i>
+        <el-tooltip content="电子斗蛐蛐" placement="top">
+          <i @click="sessionsStore.addAutoSession"
+            class="iconfont ml-4 w-9 h-9 center rounded-full hover:bg-[#eee] text-2xl">&#xeca8;</i>
+        </el-tooltip>
+        <el-tooltip content="清除会话" placement="top">
+          <i @click="handleClearSession" class="iconfont ml-2 w-9 h-9 center rounded-full hover:bg-[#eee]">&#xe6c7;</i>
         </el-tooltip>
       </div>
 
@@ -21,40 +34,60 @@
 
       <div class="relative mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
         <transition-group name="list">
-          <div v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id" draggable="true"
-            :ref="currentSessionId === session.id ? 'selectedSessionRef' : null" @dragstart="onDragStart($event, index)"
-            @drag="onDrag($event, index)" @dragenter="onDragEnterThrottled($event, index, session.id)"
-            @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
-            class="group flex h-16 w-full rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
-            :class="{
-              'bg-dark-blue-base': currentSessionId === session.id,
-              'hover:bg-[#f3f3f3] hover:border-dark-blue-base bg-white': currentSessionId !== session.id,
-              'opacity-0': index === draggedIndex,
-            }" @click="selectSession(session.id)">
-            <div class="flex flex-col w-full justify-between py-2 px-5 ">
-              <div class="font-bold text-base whitespace-nowrap text-ellipsis overflow-hidden">{{ session.name }}</div>
-              <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
-            </div>
+          <template v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id">
+            <div draggable="true" :ref="currentSessionId === session.id ? 'selectedSessionRef' : null"
+              @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
+              @dragenter="onDragEnterThrottled($event, index, session.id, session.type)"
+              @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
+              class="group flex h-16 w-full rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
+              :class="{
+                'bg-dark-blue-base': currentSessionId === session.id,
+                'hover:bg-[#f3f3f3] hover:border-dark-blue-base bg-white': currentSessionId !== session.id,
+                'opacity-0': index === draggedIndex,
+                'h-32': session.type === 'auto'
+              }" @click="selectSession(session.id)">
+              <template v-if="session.type === 'auto'">
+                <div class="flex w-full h-full justify-center items-center gap-2">
 
+                  <template v-for="(ai, jdex) in session.ai" :key="ai?.id">
+                    <div draggable="true" @dragenter="onDragEnterAuto($event, jdex)"
+                      @dragleave="onDragLeaveAuto($event)" @drop="onDropAuto($event, index, jdex)"
+                      class="min-w-20 h-1/2 rounded-md  py-2 px-1" :class="ai ? 'bg-purple-500' : 'bg-[#eee]'">
+                      <div class="font-bold text-xs whitespace-nowrap text-ellipsis overflow-hidden">{{ ai?.name }}
+                      </div>
+                    </div>
+                  </template>
+                </div>
 
-            <div v-if="session.locked" @click="handleToggleLockSession($event, session.id)"
-              class="absolute bottom-1 right-2 cursor-pointer text-green-500">
-              <el-icon>
-                <Lock />
-              </el-icon>
-            </div>
-            <div v-else>
-              <div @click="handleToggleLockSession($event, session.id)"
-                class="absolute bottom-1 -right-5 group-hover:right-2 transition-all cursor-pointer">
-                <el-icon>
-                  <Unlock />
-                </el-icon>
-              </div>
-              <i class="iconfont absolute top-1 -right-5 group-hover:right-2 transition-all hover:text-red-500 cursor-pointer"
-                @click.stop="deleteSession(index)">&#xe630;</i>
-            </div>
+              </template>
 
-          </div>
+              <template v-else>
+                <div class="flex flex-col w-full justify-between py-2 px-5 ">
+                  <div class=" font-extrabold text-base group-hover:text-purple-500 whitespace-nowrap text-ellipsis overflow-hidden">{{
+                    session.name }}
+                  </div>
+                  <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
+                </div>
+                <div v-if="session.locked" @click="handleToggleLockSession($event, session.id)"
+                  class="absolute bottom-1 right-2 cursor-pointer text-green-500">
+                  <el-icon>
+                    <Lock />
+                  </el-icon>
+                </div>
+                <div v-else>
+                  <div @click="handleToggleLockSession($event, session.id)"
+                    class="absolute bottom-1 -right-5 group-hover:right-2 transition-all cursor-pointer">
+                    <el-icon>
+                      <Unlock />
+                    </el-icon>
+                  </div>
+                  <i class="iconfont absolute top-1 -right-5 group-hover:right-2 transition-all hover:text-red-500 cursor-pointer"
+                    @click.stop="deleteSession(index)">&#xe630;</i>
+                </div>
+              </template>
+            </div>
+          </template>
+
         </transition-group>
       </div>
       <div class="h-20 flex-shrink-0 flex items-center justify-center">
@@ -78,6 +111,7 @@
 import { ref, watchEffect, onMounted } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
+import AutoSession from "./AutoSession.vue"
 
 const { isMobile } = useWindowSize()
 const props = defineProps({
@@ -165,16 +199,17 @@ const throttle = (func, limit, key) => {
 const onDrag = (e, index) => {
   e.preventDefault();
 }
-const onDragEnter = (e, index) => {
+const onDragEnter = (e, index, type) => {
   e.preventDefault();
+  if (type === 'auto') return
   if (draggedIndex.value !== index) {
     sessionsStore.swapSession(draggedIndex.value, index);
     draggedIndex.value = index;
     e.target.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 }
-const onDragEnterThrottled = (e, index, id) => {
-  throttle(onDragEnter, 100, id).apply(this, [e, index]);
+const onDragEnterThrottled = (e, index, id, type) => {
+  throttle(onDragEnter, 150, id).apply(this, [e, index, type]);
 };
 
 const onDragOver = (e, index) => {
@@ -187,6 +222,22 @@ const onDragEnd = (e, index) => {
   draggedIndex.value = null;
   document.body.removeChild(cloneElement);
 }
+
+const onDragEnterAuto = (e, index) => {
+  e.preventDefault();
+  e.target.classList.add('border-4', 'border-purple-500')
+}
+
+const onDragLeaveAuto = (e) => {
+  e.target.classList.remove('border-4', 'border-purple-500');
+};
+
+const onDropAuto = (e, index, no) => {
+  e.preventDefault();
+  e.target.classList.remove('border-4', 'border-purple-500');
+  sessionsStore.autoPushSession(index, draggedIndex.value, no)
+};
+
 
 const togglePanel = () => {
   const sessionList = sessionListRef.value

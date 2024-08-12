@@ -2,8 +2,11 @@
 const generateUniqueId = () => {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
 };
+
+// 延迟
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// 复制到剪贴板：解决http下无法复制的问题
 const copyToClip = (text) => {
     return new Promise((resolve, reject) => {
         try {

@@ -40,6 +40,10 @@ onMounted(() => {
   })
 });
 
+const modelList = computed(() => {
+  return currentSession.value.model ? [currentSession.value.model] : currentSession.value.ai.map(ai => ai?.model);
+})
+
 // 切换会话
 const handleSelectSession = async (id) => {
   sessionsStore.setCurrentSession(id);
@@ -93,11 +97,8 @@ const handleCallSessionList = () => {
           <el-select ref="select" v-model="configForm.model">
 
             <el-option value="0125-preview">gpt-4</el-option>
-            <el-option value="gpt-4o">gpt-4o</el-option>
+            <el-option value="swxx-gpt-4o">gpt-4o</el-option>
             <el-option value="gpt-35-turbo">gpt-35-turbo</el-option>
-            <!-- <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
-            <el-option value="gpt-4-vision-preview">gpt-4-vision-preview</el-option>
-            <el-option value="dall-e-3">dall-e-3</el-option> -->
           </el-select>
         </el-form-item>
         <el-form-item label="上下文数量">
@@ -123,7 +124,8 @@ const handleCallSessionList = () => {
           <el-input v-model="configForm.system" type="textarea" :rows="4" placeholder="给你的会话任命一个专属角色设定吧~" />
         </el-form-item>
         <el-form-item label="消息格式">
-          <el-input v-model="configForm.format" type="textarea" :autosize="{ minRows: 1, maxRows: 4 }" placeholder="${text}" />
+          <el-input v-model="configForm.format" type="textarea" :autosize="{ minRows: 1, maxRows: 4 }"
+            placeholder="${text}" />
         </el-form-item>
         <el-collapse>
           <el-collapse-item title="高级配置" name="advanced">
@@ -156,11 +158,14 @@ const handleCallSessionList = () => {
         <div @click="handleCallSessionList" class="absolute top-1 left-4 cursor-pointer z-10 md:hidden ">
           <i class="iconfont  text-2xl text-blue-500">&#xe66b;</i>
         </div>
-        <div
-          class="absolute top-0 left-1/2 -translate-x-1/2 font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
-          @click="handelShowConfig">
-          {{ currentSession.model }}
+        <div class="absolute w-full h-9 top-0 left-1/2 -translate-x-1/2 flex justify-evenly font-black z-10">
+          <div v-for="model in modelList"
+            class="font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
+            @click="handelShowConfig">
+            {{ model }}
+          </div>
         </div>
+
         <div v-if="currentSession.clearedCtx">
           <template v-for="(message, index) in currentSession.clearedCtx" :key="index">
             <Message :message="message" />

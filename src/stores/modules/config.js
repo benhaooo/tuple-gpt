@@ -16,7 +16,7 @@ const useConfigStore = defineStore("config", {
         },
         moduleConfig: {
             name: "New Chat",
-            model: "0125-preview",
+            model: "swxx-gpt-4o",
             ctxLimit: 10,
             maxTokens: 4096,
             replyCount: 1,
