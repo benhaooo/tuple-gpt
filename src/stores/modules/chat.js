@@ -111,11 +111,12 @@ const useSessionsStore = defineStore('sessions', {
 
         // 重新交流
         async reChat(id) {
-            const index = this.currentSession.messages.findIndex(msg => msg.id === id);
-            const { img: imgUrl, content: text } = this.currentSession.messages[index];
-            const nextMsg = this.currentSession.messages[index + 1];
-            if (nextMsg && nextMsg.role === 'assistant') this.currentSession.messages.splice(index + 1, 1);
-            await this.sendMessageInternal(index, { text, imgUrl }, null, nextMsg);
+            const session = this.currentSession
+            const index = session.messages.findIndex(msg => msg.id === id);
+            const { img: imgUrl, content: text } = session.messages[index];
+            const nextMsg = session.messages[index + 1];
+            if (nextMsg && nextMsg.role === 'assistant') session.messages.splice(index + 1, 1);
+            await this.sendMessageInternal(index, { text, imgUrl }, session.ai && session.ai[1], nextMsg);
         },
         // 获取上下文
         getHistoryMsgs(index, session) {
