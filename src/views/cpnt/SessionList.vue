@@ -1,7 +1,9 @@
 <template>
-  <div ref="sessionListRef" :class="{ 'transition-all duration-300': !draging }"
+  <div ref="sessionListRef"
+    :class="{ 'transition-all duration-300': !draging, 'w-52': showPanel && !isMobile, '!w-0': !showPanel }"
     class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full bg-white z-50">
-    <div class=" mx-3 h-screen flex flex-col">
+    <div class=" mx-3 h-screen min-w-40 flex flex-col transition-all duration-300 [perspective:500px]"
+      :style="!showPanel && `transform: translateX(-120%);`">
       <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
         <!-- <div class="center relative w-32 h-32 bg-dark-blue-base">
           <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-dark-blue-base rounded-full"></div>
@@ -90,15 +92,14 @@
       <div class="h-20 flex-shrink-0 flex items-center justify-center">
 
       </div>
-
-      <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
-        class=" hover:cursor-col-resize absolute -right-1 top-0 h-full w-1 border-l-2 border-grey-500"
-        :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
-      </div>
-      <div @click="togglePanel" :class="showPanel ? ' translate-x-1/2' : 'translate-x-12 rotate-180'"
-        class=" absolute w-8 h-8 bg-white rounded-full shadow-md right-0 top-1/4 duration-300 flex justify-center items-center cursor-pointer font-extrabold text-base max-md:hidden">
-        <i class="iconfont">&#xe604;</i>
-      </div>
+    </div>
+    <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
+      class=" hover:cursor-col-resize absolute -right-1 top-0 h-full w-1 border-l-2 border-grey-500"
+      :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
+    </div>
+    <div @click="togglePanel" :class="showPanel ? ' translate-x-1/2' : 'translate-x-12 rotate-180'"
+      class=" absolute w-8 h-8 bg-white rounded-full shadow-md right-0 top-1/4 duration-300 flex justify-center items-center cursor-pointer font-extrabold text-base max-md:hidden">
+      <i class="iconfont">&#xe604;</i>
     </div>
   </div>
 
@@ -237,19 +238,12 @@ const onDropAuto = (e, index, no) => {
 
 
 const togglePanel = () => {
-  const sessionList = sessionListRef.value
-  if (sessionList.style.width === '0px') {
-    showPanel.value = true
-    sessionList.style.width = isMobile() ? '100%' : '200px'
-  } else {
-    showPanel.value = false
-    sessionList.style.width = '0px'
-  }
+  showPanel.value = !showPanel.value
 }
 const resizeLineRef = ref(null);
 const sessionListRef = ref(null);
 const draging = ref(false);
-const minWidth = 150
+const minWidth = 160
 
 //拖动开始
 const handleLineMousedown = (e) => {

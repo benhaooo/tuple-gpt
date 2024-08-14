@@ -5,7 +5,6 @@ import { computed, reactive } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import useStream from '@/hooks/stream'
-import { id } from "element-plus/es/locales.mjs";
 
 const configStore = useConfigStore();
 const { moduleConfig } = storeToRefs(configStore);
