@@ -171,7 +171,7 @@ const useSessionsStore = defineStore('sessions', {
         async sendMessageInternal(index, { text, imgUrl, num }, qSession = this.currentSession, nextMsg = null) {
             const session = this.currentSession;
             const replyCount = num || (nextMsg && nextMsg.multiContent && nextMsg.multiContent.length) || this.currentSession.replyCount || 1;
-            if (imgUrl) qSession.model = "gpt-4o";
+            if (imgUrl) qSession.model = "swxx-gpt-4o";
             const systemMessage = this.getSystemMsg(qSession);
             const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index, session)
             const indexMsg = {
@@ -182,8 +182,8 @@ const useSessionsStore = defineStore('sessions', {
                 ] : text
             }
             const combinedMessages = [indexMsg];
-            if (systemMessage) combinedMessages.unshift(systemMessage);
             if (historyMessages) combinedMessages.unshift(...historyMessages)
+            if (systemMessage) combinedMessages.unshift(systemMessage);
 
             const data = {
                 model: qSession.model,

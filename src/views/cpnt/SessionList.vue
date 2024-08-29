@@ -2,7 +2,7 @@
   <div ref="sessionListRef"
     :class="{ 'transition-all duration-300': !draging, 'w-52': showPanel && !isMobile, '!w-0': !showPanel }"
     class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full bg-white z-50">
-    <div class=" mx-3 h-screen min-w-40 flex flex-col transition-all duration-300 [perspective:500px]"
+    <div class=" mx-3 h-screen min-w-40 flex flex-col transition-all duration-300"
       :style="!showPanel && `transform: translateX(-120%);`">
       <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
         <!-- <div class="center relative w-32 h-32 bg-dark-blue-base">
