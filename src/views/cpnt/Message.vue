@@ -17,7 +17,8 @@
           <img :src="isUser ? configStore.getAvatar : gptUrl" alt="" />
         </div>
         <span v-if="isUser" class="text-sm font-extrabold">{{ userConfig.name }}</span>
-        <div class="flex gap-x-1 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <div :class="{ 'flex-row-reverse': isUser }"
+          class="flex gap-x-1 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           <ExpandableBtn @click="sessionsStore.deleteMessage(message.id)" text="删除">
             <i class="iconfont">&#xec7b;</i>
           </ExpandableBtn>
@@ -26,6 +27,12 @@
           </ExpandableBtn>
           <ExpandableBtn @click="copy" text="复制">
             <i class="iconfont">&#xe8b0;</i>
+          </ExpandableBtn>
+          <ExpandableBtn @click="sessionsStore.createMessage(index, message.role)" text="向上创建">
+            <i class="iconfont">&#xe605;</i>
+          </ExpandableBtn>
+          <ExpandableBtn @click="sessionsStore.createMessage(index + 1, message.role)" text="向下创建">
+            <i class="iconfont">&#xe606;</i>
           </ExpandableBtn>
         </div>
       </div>
@@ -70,6 +77,7 @@ const { userConfig } = storeToRefs(configStore)
 
 const props = defineProps({
   message: Object,
+  index: Number,
 });
 
 const contentValueRef = ref(null)
@@ -114,7 +122,6 @@ const isUser = computed(() => {
 })
 
 const copy = () => {
-  // window.navigator.clipboard.writeText(getContent(props.message))
   copyToClip(getContent(props.message)).then(() => {
     useToast().success('复制成功')
   })

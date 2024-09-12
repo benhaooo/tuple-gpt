@@ -6,10 +6,7 @@
             </el-form-item>
             <el-form-item label="模型">
                 <el-select ref="select" v-model="configForm.model">
-
-                    <el-option value="0125-preview">gpt-4</el-option>
-                    <el-option value="swxx-ai">gpt-4o</el-option>
-                    <el-option value="gpt-35-turbo">gpt-35-turbo</el-option>
+                    <el-option v-for="(value, key) in modelConfig" :value="key" :key="value">{{ key }}</el-option>
                 </el-select>
             </el-form-item>
             <el-form-item label="上下文数量">
@@ -60,11 +57,34 @@
             <el-button type="primary" @click="handelOkConfig">确定</el-button>
         </template>
     </el-dialog>
+    <div class="font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
+        @click="handelShowConfig">
+        {{ modelValue.model }}
+    </div>
 </template>
 
 
-<script>
+<script setup>
+import { ref } from 'vue'
+import useConfigStore from '@/stores/modules/config'
+const configStore = useConfigStore()
+const modelConfig = configStore.getModelConfig
 
 
+const props = defineProps({
+    modelValue: Object,
+})
+const configForm = ref({})
+const showConfigModal = ref(false)
 
+const emits = defineEmits(['update:modelValue'])
+
+const handelShowConfig = () => {
+    configForm.value = JSON.parse(JSON.stringify(props.modelValue));
+    showConfigModal.value = true;
+};
+const handelOkConfig = () => {
+    emits('update:modelValue', configForm.value);
+    showConfigModal.value = false;
+}
 </script>

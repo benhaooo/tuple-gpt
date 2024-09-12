@@ -2,9 +2,11 @@ import useConfigStore from "@/stores/modules/config";
 import { freeAPI, defaultAPI } from "./config"
 
 // 默认会话请求
-export const completions = (data, model) => {
+export const completions = (data) => {
+    const model = data.model
     const configStore = useConfigStore();
-    const { url, config } = buildCompletionsConfig(defaultAPI.getter(configStore.serverConfig.apiKey), data, model);    
+    const modelConfig = configStore.getModelConfig
+    const { url, config } = buildCompletionsConfig(modelConfig[model], data, model);
     return fetch(url, config)
 }
 
@@ -49,6 +51,7 @@ const buildCompletionsConfig = ({ host, key, type }, data, model = null) => {
                 }
             }
         case "openai":
+        default:
             return {
                 url: `${host}/v1/chat/completions`,
                 config: {

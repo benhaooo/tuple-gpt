@@ -1,10 +1,13 @@
 <template>
-    <div :class="selected ? `border-green-500 hover:border-green-500 min-w-[90%]` : `border-transparent min-w-[30%]`"
-        class="content max-w-full hover:border-blue-500 border-4 transition-all duration-300 bg-light-hard dark:bg-dark-base overflow-scroll"
-        ref="contentRef">
-        <div class="markdown-body" v-html="parsedContent || '&nbsp;'" ref="contentValueRef"></div>
-        <span v-if="contentObj.chatting"
-            class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
+    <div :class="selected ? 'min-w-[90%]' : 'min-w-[30%]'" class="transition-all duration-300 relative max-w-full">
+        <div :class="selected ? `max-h-[calc(${maxHeight}px - 40px)] border-green-500 hover:border-green-500 ` : `border-transparent`"
+            class="content w-full relative hover:border-blue-500 border-4 bg-light-hard dark:bg-dark-base overflow-scroll"
+            ref="contentRef">
+            <div class="markdown-body" v-html="parsedContent || '&nbsp;'" ref="contentValueRef"></div>
+            <span v-if="contentObj.chatting"
+                class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
+        </div>
+        <span class="absolute -top-5 right-0 text-[#63666c] text-xs">{{ contentObj.model }}</span>
     </div>
 </template>
 
@@ -19,7 +22,6 @@ const props = defineProps({
     maxHeight: Number,
 });
 const parsedContent = computed(() => marked.parse(props.contentObj.content));
-
 
 const typer_position = reactive({ x: 0, y: 0 })
 const contentValueRef = ref(null)
@@ -120,7 +122,6 @@ onUnmounted(() => {
     padding: 12px 12px;
     margin-top: 8px;
     border-radius: 20px;
-    position: relative;
 
     .typer {
         // 动态渲染位置

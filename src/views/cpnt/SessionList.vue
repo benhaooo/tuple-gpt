@@ -1,19 +1,10 @@
 <template>
   <div ref="sessionListRef"
     :class="{ 'transition-all duration-300': !draging, 'w-52': showPanel && !isMobile, '!w-0': !showPanel }"
-    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full bg-white z-50">
+    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full bg-white dark:bg-dark-hard-dark z-50">
     <div class=" mx-3 h-screen min-w-40 flex flex-col transition-all duration-300"
       :style="!showPanel && `transform: translateX(-120%);`">
       <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
-        <!-- <div class="center relative w-32 h-32 bg-dark-blue-base">
-          <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-dark-blue-base rounded-full"></div>
-          <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-dark-blue-base rounded-full"></div>
-
-          <div class=" group flex flex-col justify-center items-center w-12 h-12 bg-[#eee] rounded-full z-10">
-            <div class="w-6 h-1 bg-black rounded transition-all group-hover:rotate-45 group-hover:translate-y-1/2"></div>
-            <div class="w-6 h-1 bg-black rounded transition-all group-hover:-rotate-45 group-hover:-translate-y-1/2"></div>
-          </div>
-        </div> -->
         <button @click="handleNewSession"
           class="flex items-center justify-center flex-1 bg-[#806fef] hover:bg-[#6757cb] h-full rounded-3xl text-xs whitespace-nowrap">+新的聊天</button>
         <el-tooltip content="电子斗蛐蛐" placement="top">
@@ -27,7 +18,7 @@
 
       <div :class="searchInput || searchFocus ? 'border-blue-500' : 'border-transparent'"
         class="overflow-hidden flex-shrink-0 rounded-xl border-4 mt-2">
-        <div class="flex w-full bg-white rounded-md py-1 px-2">
+        <div class="flex w-full bg-white dark:bg-dark-hard-dark rounded-md py-1 px-2">
           <i class="iconfont overflow-hidden">&#xe63f;</i>
           <input class=" outline-none flex-1 pl-2 w-full text-sm" v-model.laze="searchInput" @focus="searchFocus = true"
             @blur="searchFocus = false" placeholder="搜索历史会话"></input>
@@ -44,13 +35,13 @@
               class="group w-full rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
               :class="{
                 'bg-dark-blue-base': currentSessionId === session.id,
-                'hover:bg-[#f3f3f3] hover:border-dark-blue-base bg-white': currentSessionId !== session.id,
+                'hover:bg-[#f3f3f3] dark:hover:bg-[#333333] hover:border-dark-blue-base bg-white dark:bg-dark-hard-dark': currentSessionId !== session.id,
                 'opacity-0': index === draggedIndex,
                 'h-32': session.type === 'auto'
               }" @click="selectSession(session.id)">
               <div class="h-16">
                 <div class="flex flex-col w-full justify-between py-2 px-5 ">
-                  <div
+                  <div :class="{ 'text-purple-500': currentSessionId === session.id }"
                     class=" font-extrabold text-base group-hover:text-purple-500 whitespace-nowrap text-ellipsis overflow-hidden">
                     {{
                       session.name }}
@@ -70,8 +61,10 @@
                       <Unlock />
                     </el-icon>
                   </div>
-                  <i class="iconfont absolute top-1 -right-5 group-hover:right-2 transition-all hover:text-red-500 cursor-pointer"
+                  <i class="iconfont absolute top-1 -right-5 group-hover:right-2 transition-all text-sm hover:text-red-500"
                     @click.stop="deleteSession(index)">&#xe630;</i>
+                  <i class="iconfont absolute bottom-1 -right-5 group-hover:right-8 transition-all text-base hover:text-green-500"
+                    @click.stop="sessionsStore.copySession(index)">&#xe8b0;</i>
                 </div>
               </div>
               <div v-if="session.type === 'auto'" class="flex w-full h-16 justify-center items-center gap-2">
@@ -109,7 +102,6 @@
 import { ref, watchEffect, onMounted } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
-import AutoSession from "./AutoSession.vue"
 
 const { isMobile } = useWindowSize()
 const props = defineProps({

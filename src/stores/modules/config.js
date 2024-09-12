@@ -10,13 +10,14 @@ const useConfigStore = defineStore("config", {
             theme: "auto",
 
         },
-        serverConfig: {
-            apiHost: "",
-            apiKey: ""
-        },
+        serverConfig: [{
+            vendor: [],
+            host: '',
+            key: '',
+        }],
         moduleConfig: {
             name: "New Chat",
-            model: "swxx-gpt-4o",
+            model: "gpt-4o",
             ctxLimit: 10,
             maxTokens: 4096,
             replyCount: 1,
@@ -30,11 +31,27 @@ const useConfigStore = defineStore("config", {
     }),
     getters: {
         getAvatar: (state) => state.userConfig.avatar || avaUrl,
+        getModelConfig: (state) => {
+            const modelMap = {};
+            state.serverConfig.forEach(config => {
+                config.vendor.forEach(vendor => {
+                    modelMap[vendor[1]] = {
+                        type: vendor[0],
+                        host: config.host,
+                        key: config.key,
+                    }
+                })
+            })
+            return modelMap;
+        },
     },
     actions: {
         toggleTheme() {
             this.userConfig.theme = this.userConfig.theme === "auto" ? "dark" : "auto";
         },
+        applyServerConfig(serverConfig) {
+            this.serverConfig = serverConfig.filter(config => config.vendor.length && config.host && config.key);
+        }
     },
     persist: true,
 })

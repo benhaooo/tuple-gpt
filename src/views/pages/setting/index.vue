@@ -2,12 +2,11 @@
 import useConfigStore from '@/stores/modules/config'
 import useChatStore from '@/stores/modules/chat'
 import { storeToRefs } from 'pinia'
+import Service from './service/index.vue'
 const configStore = useConfigStore()
 const chatStore = useChatStore()
 const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
-
-
-
+const modelConfig = configStore.getModelConfig
 
 </script>
 
@@ -40,24 +39,18 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
                             <el-radio value="dark" border><i class="iconfont">&#xe72f;</i></el-radio>
                         </el-radio-group>
                     </el-form-item>
-
                 </el-form>
-
-
             </el-tab-pane>
             <el-tab-pane label="模型">
-                <el-form :model="configForm" label-width="auto" label-position="left">
+                <el-form :model="moduleConfig" label-width="auto" label-position="left">
                     <el-form-item label="名称">
                         <el-input v-model="moduleConfig.name" />
                     </el-form-item>
                     <el-form-item label="模型">
                         <el-select ref="select" v-model="moduleConfig.model" style="width: 120px">
-                            <el-option value="0125-preview">gpt-4</el-option>
-                            <el-option value="swxx-gpt-4o">gpt-4o</el-option>
-                            <el-option value="gpt-35-turbo">gpt-35-turbo</el-option>
-                            <!-- <el-option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</el-option>
-                            <el-option value="gpt-4-vision-preview">gpt-4-vision-preview</el-option>
-                            <el-option value="dall-e-3">dall-e-3</el-option> -->
+                            <el-option v-for="(value, key) in modelConfig" :key="value" :value="key">{{ key
+                                }}</el-option>
+
                         </el-select>
                     </el-form-item>
                     <el-form-item label="上下文数量">
@@ -96,17 +89,9 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
                         </el-collapse-item>
                     </el-collapse>
                 </el-form>
-
-
-
             </el-tab-pane>
             <el-tab-pane label="服务端">
-                <!-- <el-input placeholder="必须包含http(s)://" v-model="serverConfig.apiHost">
-                    <template #prepend>OpenAI接口地址</template>
-</el-input> -->
-                <el-input placeholder="自定义Open API Key" v-model="serverConfig.apiKey" show-password>
-                    <template #prepend>Open API Key</template>
-                </el-input>
+                <Service></Service>
             </el-tab-pane>
             <el-tab-pane label="关于">made by benhao</el-tab-pane>
         </el-tabs>
@@ -117,5 +102,10 @@ const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
 <style lang="less" scoped>
 :deep(.el-radio__input) {
     display: none;
+}
+
+:deep(.el-tabs__nav-scroll) {
+    display: flex;
+    justify-content: center;
 }
 </style>

@@ -1,48 +1,30 @@
 <script setup>
 import { ref, onMounted, onActivated, nextTick, watch, computed } from "vue";
 import useSessionsStore from "@/stores/modules/chat";
-import useUserStore from "@/stores/modules/user";
+import useConfigStore from '@/stores/modules/config'
 import { storeToRefs } from "pinia";
 import Message from "@/views/cpnt/Message.vue";
 import SessionList from "@/views/cpnt/SessionList.vue";
 import useAutoScrollToBottom from "@/hooks/scroll";
 import Editor from './cpnt/Editor.vue'
-import useListener from "@/hooks/listener";
+import ConfigDialog from "./cpnt/ConfigDialog.vue";
 
 const sessionsStore = useSessionsStore();
-const userStore = useUserStore();
+
 const { scrollRef, smoothScrollToBottom, scrollToBottom, scrollToButtomNearBottom } = useAutoScrollToBottom()
 
-// 监听会话变化
-const onSessionChange = (id) => {
-
-}
-useListener(onSessionChange)
-
-
-const showConfigModal = ref(false);
-const configForm = ref({});
 const sessionListRef = ref(null);
-
 
 const { sessions, currentSessionId, currentSession } =
   storeToRefs(sessionsStore);
 
-// 加载
-onMounted(() => {
-  //没有回话
-  if (!currentSessionId.value) {
-    handleNewSession();
-  }
-  nextTick().then(() => {
-    scrollToBottom()
-
-  })
+const localCurrentSession = ref(currentSession.value);
+watch(localCurrentSession, (newValue) => {
+  sessionsStore.updateSession(newValue);
 });
-
-const modelList = computed(() => {
-  return currentSession.value.model ? [currentSession.value.model] : currentSession.value.ai.map(ai => ai?.model);
-})
+watch(currentSession, (newValue) => {
+  localCurrentSession.value = newValue;
+});
 
 // 切换会话
 const handleSelectSession = async (id) => {
@@ -60,19 +42,6 @@ const handleDeleteSession = (index) => {
   sessionsStore.deleteSession(index);
 };
 
-
-const handelOkConfig = () => {
-  sessionsStore.updateSession(configForm.value);
-  showConfigModal.value = false;
-};
-
-const handelShowConfig = () => {
-  configForm.value = {
-    ...currentSession.value,
-  };
-  showConfigModal.value = true;
-};
-
 const onSendMessage = () => {
   smoothScrollToBottom()
 };
@@ -85,69 +54,6 @@ const handleCallSessionList = () => {
 </script>
 <template>
   <div class="flex h-full">
-    <!-- 配置窗口 -->
-    <el-dialog v-model="showConfigModal" title="会话配置" class="max-md:w-full" append-to-body>
-      <el-form :model="configForm" label-width="auto" label-position="left">
-        <el-form-item label="名称">
-          <el-input v-model="configForm.name" />
-        </el-form-item>
-        <el-form-item label="模型">
-          <el-select ref="select" v-model="configForm.model">
-
-            <el-option value="0125-preview">gpt-4</el-option>
-            <el-option value="swxx-gpt-4o">gpt-4o</el-option>
-            <el-option value="gpt-35-turbo">gpt-35-turbo</el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="上下文数量">
-          <el-slider v-model="configForm.ctxLimit" :max="50" show-input />
-        </el-form-item>
-        <el-form-item label="回复长度">
-          <el-slider v-model="configForm.maxTokens" :max="4096" show-input />
-        </el-form-item>
-        <el-row>
-          <el-col :span="5">
-            <el-form-item label="平均随机度">
-              <el-switch v-model="configForm.randomTemperature" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="19">
-            <el-form-item label="回复数">
-              <el-slider v-model="configForm.replyCount" :min="1" :max="10" show-input />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-form-item label="角色设定">
-          <el-input v-model="configForm.system" type="textarea" :rows="4" placeholder="给你的会话任命一个专属角色设定吧~" />
-        </el-form-item>
-        <el-form-item label="消息格式">
-          <el-input v-model="configForm.format" type="textarea" :autosize="{ minRows: 1, maxRows: 4 }"
-            placeholder="${text}" />
-        </el-form-item>
-        <el-collapse>
-          <el-collapse-item title="高级配置" name="advanced">
-            <el-form-item label="随机性">
-              <el-slider v-model="configForm.temperature" :max="1" :step="0.01" show-input />
-            </el-form-item>
-            <el-form-item label="核采样">
-              <el-slider v-model="configForm.top_p" :max="1" :step="0.01" show-input />
-            </el-form-item>
-            <el-form-item label="话题新鲜度">
-              <el-slider v-model="configForm.presence_penalty" :max="1" :step="0.01" show-input />
-            </el-form-item>
-            <el-form-item label="频率惩罚度">
-              <el-slider v-model="configForm.frequency_penalty" :max="1" :step="0.01" show-input />
-            </el-form-item>
-          </el-collapse-item>
-        </el-collapse>
-      </el-form>
-      <template #footer>
-        <el-button @click="showConfigModal = false">取消</el-button>
-        <el-button type="primary" @click="handelOkConfig">确定</el-button>
-      </template>
-    </el-dialog>
-
     <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId"
       @select="handleSelectSession" @delete="handleDeleteSession" @add="handleNewSession" />
     <div
@@ -157,16 +63,16 @@ const handleCallSessionList = () => {
           <i class="iconfont  text-2xl text-blue-500">&#xe66b;</i>
         </div>
         <div class="absolute w-full h-9 top-0 left-1/2 -translate-x-1/2 flex justify-evenly font-black z-10">
-          <div v-for="model in modelList"
-            class="font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
-            @click="handelShowConfig">
-            {{ model }}
-          </div>
+          <template v-if="localCurrentSession.ai && localCurrentSession.ai.length">
+            <ConfigDialog v-for="(aiItem, index) in localCurrentSession.ai" :key="index"
+              v-model="localCurrentSession.ai[index]"></ConfigDialog>
+          </template>
+          <ConfigDialog v-else v-model="localCurrentSession"></ConfigDialog>
         </div>
 
         <div v-if="currentSession.clearedCtx">
-          <template v-for="(message, index) in currentSession.clearedCtx" :key="index">
-            <Message :message="message" />
+          <template v-for="(message, index) in currentSession.clearedCtx" :key="message.id">
+            <Message :message="message" :index="index" />
           </template>
           <div @click="sessionsStore.clearCtx()"
             class="leading-5 text-center border-y border-slate-300 hover:border-dark-blue-base cursor-pointer text-slate-300 text-xs"
@@ -174,8 +80,8 @@ const handleCallSessionList = () => {
         </div>
 
         <template v-for="(message, index) in currentSession.messages" :key="message.id">
-          <Message :message="message" @delete="sessionsStore.deleteMessage(index)" @reChat="sessionsStore.reChat(index)"
-            class="animate__animated animate__fadeIn duration-75" />
+          <Message :message="message" :index="index" @delete="sessionsStore.deleteMessage(index)"
+            @reChat="sessionsStore.reChat(index)" class="animate__animated animate__fadeIn duration-75" />
         </template>
       </div>
       <!-- editor -->

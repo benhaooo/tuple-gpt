@@ -5,13 +5,24 @@ import { computed, reactive } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import useStream from '@/hooks/stream'
+import { da } from "element-plus/es/locales.mjs";
 
 const configStore = useConfigStore();
-const { moduleConfig } = storeToRefs(configStore);
+const { moduleConfig, getModelConfig } = storeToRefs(configStore);
 
 const useSessionsStore = defineStore('sessions', {
     state: () => ({
-        sessions: [],
+        sessions: [{
+            id: "02v16x9y34hhlzcywn2j",
+            name: "默认会话",
+            messages: [],
+            type: "chat",
+            ai: [],
+            ctxLimit: 5,
+            locked: false,
+            role: "user",
+            model: 'gpt-4o'
+        }],
         currentSessionId: "02v16x9y34hhlzcywn2j",
         askprompt: {},
     }),
@@ -80,6 +91,14 @@ const useSessionsStore = defineStore('sessions', {
                 this.sessions.splice(index, 1);
             }, 0);
         },
+        // 复制会话
+        copySession(index) {
+            const session = this.sessions[index];
+            const newSession = JSON.parse(JSON.stringify(session));
+            newSession.id = generateUniqueId();
+            this.sessions.splice(index + 1, 0, newSession);
+            this.currentSessionId = newSession.id;
+        },
 
         setCurrentSession(id) {
             this.currentSessionId = id;
@@ -89,14 +108,10 @@ const useSessionsStore = defineStore('sessions', {
         swapSession(index1, index2) {
             [this.sessions[index1], this.sessions[index2]] = [this.sessions[index2], this.sessions[index1]];
         },
-
         // 修改会话配置
-        updateSession(sessionConfig) {
-            const curIndex = this.sessions.findIndex(session => session.id === this.currentSessionId);
-            this.sessions[curIndex] = {
-                ...this.sessions[curIndex],
-                ...sessionConfig
-            };
+        updateSession(newSession) {
+            const session = this.sessions.find(session => session.id === newSession.id);
+            Object.assign(session, newSession);
         },
         toggleLockSession(id) {
             const curIndex = this.sessions.findIndex(session => session.id === id);
@@ -106,6 +121,17 @@ const useSessionsStore = defineStore('sessions', {
         // 删除消息
         deleteMessage(id) {
             this.currentSession.messages = this.currentSession.messages.filter(msg => msg.id !== id);
+        },
+        createMessage(index, role) {
+            this.currentSession.messages.splice(index, 0, {
+                id: generateUniqueId(),
+                role: role,
+                multiContent: [{
+                    content: "",
+                    id: generateUniqueId(),
+                }],
+                selectedContent: 0,
+            })
         },
 
         // 重新交流
@@ -167,11 +193,9 @@ const useSessionsStore = defineStore('sessions', {
             // return template.replace(/\${(.*?)}/g, (match, p) => values[p])
             return template.replace(placeholderRegEx, text)
         },
-
         async sendMessageInternal(index, { text, imgUrl, num }, qSession = this.currentSession, nextMsg = null) {
             const session = this.currentSession;
-            const replyCount = num || (nextMsg && nextMsg.multiContent && nextMsg.multiContent.length) || this.currentSession.replyCount || 1;
-            if (imgUrl) qSession.model = "swxx-gpt-4o";
+            if (imgUrl) qSession.model = "gpt-4o";
             const systemMessage = this.getSystemMsg(qSession);
             const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index, session)
             const indexMsg = {
@@ -195,20 +219,33 @@ const useSessionsStore = defineStore('sessions', {
                 presence_penalty: qSession.presence_penalty,
                 frequency_penalty: qSession.frequency_penalty,
             };
+
+            const generateDatas = (num, data) => {
+                if (num === 0) {
+                    const models = Object.keys(getModelConfig.value);
+                    return models.map(model => ({ ...data, model }));
+                } else {
+                    const replyCount = num || nextMsg?.multiContent?.length || 1;
+                    return Array(replyCount).fill(data);
+                }
+            };
+            const datas = generateDatas(num, data)
+            
+            const replyCount = datas.length
             const chattingMsg = reactive({
                 id: generateUniqueId(),
-                role: qSession.role && qSession.role === "assistant" ? "user" : "assistant",
+                role: qSession.role === "assistant" ? "user" : "assistant",
                 selectedContent: 0,
                 multiContent: Array.from({ length: replyCount }, () => ({ content: "", chatting: true, id: generateUniqueId() })),
                 chatting: true
             })
             session.messages.splice(index + 1, 0, chattingMsg);
-
             //多回复
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
-                if (session.randomTemperature) data.temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
-                responses.push(completions(data, qSession.model).then(response => {
+                if (session.randomTemperature) datas[i].temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
+                chattingMsg.multiContent[i].model = datas[i].model
+                responses.push(completions(datas[i]).then(response => {
                     if (response.ok) {
                         return this.handleStreamMsg(response, chattingMsg.multiContent[i])
 
@@ -221,6 +258,7 @@ const useSessionsStore = defineStore('sessions', {
                     chattingMsg.multiContent[i].content = `发生错误了捏～：\n\`\`\`json\n${error.message}\n\`\`\``;
                 }))
             }
+
             //所有回复完成
             await Promise.all(responses).finally(() => {
                 // 统一处理清理操作
@@ -265,7 +303,7 @@ const useSessionsStore = defineStore('sessions', {
                 messages: [
                     ...this.getHistoryMsgs(session.messages.length, session),
                     {
-                        role: "user",
+                        role: "system",
                         content: evaluatePrompt
                     },
                 ],

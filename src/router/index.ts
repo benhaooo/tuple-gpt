@@ -20,18 +20,13 @@ const router = createRouter({
     {
       path: '/chat/setting',
       name: 'setting',
-      component: () => import('@/views/pages/Setting.vue'),
+      component: () => import('@/views/pages/setting/index.vue'),
     },
     {
       path: '/chat/store',
       name: 'store',
       component: () => import('@/views/pages/Store.vue'),
     },
-    // {
-    //   path: '/chat/file',
-    //   name: 'file',
-    //   component: () => import('@/views/pages/FileAnalysis.vue'),
-    // },
   ],
 })
 

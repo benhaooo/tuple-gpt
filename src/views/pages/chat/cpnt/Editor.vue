@@ -21,7 +21,7 @@
                     @click="fileUrl = ''">&#xe630;</i>
             </div>
             <div ref="optimizeRef"
-                class=" relative px-2 py-4 pb-0 rounded-xl bg-white border-2 transition-colors duration-500"
+                class=" relative px-2 py-4 pb-0 rounded-xl bg-white dark:bg-dark-base border-2 transition-colors duration-500"
                 :class="taFocused ? 'border-dark-blue-base' : 'border-light-border dark:border-dark-border'">
                 <div v-if="showOptimizedModal"
                     class=" absolute flex flex-col bg-white w-full h-44 -top-48 left-0 shadow-md rounded-md p-4">
@@ -40,9 +40,9 @@
                 </div>
 
                 <div class="flex">
-                    <textarea class=" text-base dark:bg-dark-input-wrapper w-full  resize-none" v-model="text"
-                        @keydown="handleKeyDown" placeholder="ctrl + 1~9/enter 发送" @focus="taFocused = true"
-                        @blur="taFocused = false" ref="taRef" rows="1"></textarea>
+                    <textarea class=" text-base dark:bg-dark-base w-full  resize-none" v-model="text"
+                        @keydown="handleKeyDown" placeholder="ctrl + 1~9/enter 发送" @paste="handlePaste"
+                        @focus="taFocused = true" @blur="taFocused = false" ref="taRef" rows="1"></textarea>
                     <div class="flex justify-end flex-col">
                         <el-tooltip content="发送" placement="top" :show-after="500">
                             <button class="text-xs w-10 h-8 rounded-lg border-0  transition-all duration-300 shadow "
@@ -69,8 +69,6 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import ExpandableButtom from "@/views/cpnt/ExpandableBtn.vue";
 import useSessionsStore from "@/stores/modules/chat";
-// import useAutoScrollToBottom from "@/hooks/scroll";
-// const { resetAndScrollToBottom } = useAutoScrollToBottom(scrollRef)
 import { completions } from "@/apis";
 import useStream from '@/hooks/stream'
 
@@ -105,7 +103,7 @@ const autoHeight = async () => {
 const handleKeyDown = (e) => {
     if (e.ctrlKey) {
         e.preventDefault();
-        if (e.key >= '1' && e.key <= '9') {
+        if (e.key >= '0' && e.key <= '9') {
             handleSendMessage(Number(e.key))
         } else if (e.key === 'Enter') {
             handleSendMessage()
@@ -135,14 +133,28 @@ const handleSendMessage = async (num) => {
     nextTick(() => autoHeight());
 };
 
-const handleImgChange = (e) => {
-    const file = e.target.files[0];
+// 加载图片
+const appendImg = (file) => {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = function () {
         fileUrl.value = reader.result;
-        formRef.value.reset()
     };
     reader.readAsDataURL(file);
+}
+//  粘贴图片
+const handlePaste = (e) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+            const blob = items[i].getAsFile();
+            appendImg(blob)
+        }
+    }
+}
+// 选择图片
+const handleImgChange = (e) => {
+    const file = e.target.files[0];
+    appendImg(file)
 }
 const listenClick = (e) => {
     e.stopPropagation()
