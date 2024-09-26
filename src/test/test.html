@@ -1,12 +1,97 @@
-<!-- 解决click tap to zoom -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>SVG奇遇卡片</title>
 </head>
+
 <body>
-    
+    <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <svg width="750" height="346" xmlns="http://www.w3.org/2000/svg">
+        <!-- 背景 -->
+        <rect width="750" height="346" fill="#E0F7FA" />
+      
+        <!-- 装饰图案（几何形状） -->
+        <circle cx="100" cy="50" r="20" fill="#80DEEA" opacity="0.3"/>
+        <rect x="700" y="300" width="50" height="30" fill="#26C6DA" opacity="0.3"/>
+        <polygon points="400,20 420,40 380,40" fill="#4DD0E1" opacity="0.3"/>
+      
+        <!-- 标题 -->
+        <text x="50%" y="40" font-family="KaiTi, 楷体" font-size="24" fill="#00796B" text-anchor="middle">
+          今日的位置与有趣分享
+        </text>
+      
+        <!-- 今日位置与分享 -->
+        <text x="50%" y="80" font-family="KaiTi, 楷体" font-size="18" fill="#004D40" text-anchor="middle">
+          位于神秘海湾，与海豚共舞
+        </text>
+        <text x="50%" y="110" font-family="KaiTi, 楷体" font-size="14" fill="#004D40" text-anchor="middle">
+          月光下的宁静夜晚，心随海浪轻扬
+        </text>
+      
+        <!-- ���线图 -->
+        <g transform="translate(50, 150)">
+          <!-- 线条连接点 -->
+          <line x1="0" y1="0" x2="200" y2="20" stroke="#00838F" stroke-width="2"/>
+          <line x1="200" y1="20" x2="350" y2="50" stroke="#00838F" stroke-width="2"/>
+          <line x1="350" y1="50" x2="500" y2="80" stroke="#00838F" stroke-width="2"/>
+          <line x1="500" y1="80" x2="650" y2="110" stroke="#00838F" stroke-width="2"/>
+          <line x1="650" y1="110" x2="800" y2="140" stroke="#00838F" stroke-width="2"/>
+          <line x1="800" y1="140" x2="950" y2="170" stroke="#00838F" stroke-width="2"/>
+          <line x1="950" y1="170" x2="1100" y2="200" stroke="#00838F" stroke-width="2"/>
+      
+          <!-- 点标注 -->
+          <!-- 上海 -->
+          <circle cx="0" cy="0" r="5" fill="#D32F2F"/>
+          <text x="0" y="-10" font-family="KaiTi, 楷体" font-size="12" fill="#D32F2F" text-anchor="middle">
+            上海 (2024-04-20)
+          </text>
+      
+          <!-- 上海外海 -->
+          <circle cx="200" cy="20" r="5" fill="#C2185B"/>
+          <text x="200" y="10" font-family="KaiTi, 楷体" font-size="12" fill="#C2185B" text-anchor="middle">
+            上海外海 (2024-04-21)
+          </text>
+      
+          <!-- 东海岸 -->
+          <circle cx="350" cy="50" r="5" fill="#7B1FA2"/>
+          <text x="350" y="40" font-family="KaiTi, 楷体" font-size="12" fill="#7B1FA2" text-anchor="middle">
+            东海岸 (2024-04-22)
+          </text>
+      
+          <!-- 海底珊瑚礁 -->
+          <circle cx="500" cy="80" r="5" fill="#303F9F"/>
+          <text x="500" y="70" font-family="KaiTi, 楷体" font-size="12" fill="#303F9F" text-anchor="middle">
+            海底珊瑚礁 (2024-04-23)
+          </text>
+      
+          <!-- 深海区域 -->
+          <circle cx="650" cy="110" r="5" fill="#1976D2"/>
+          <text x="650" y="100" font-family="KaiTi, 楷体" font-size="12" fill="#1976D2" text-anchor="middle">
+            深海区域 (2024-04-24)
+          </text>
+      
+          <!-- 神秘海湾 -->
+          <circle cx="800" cy="140" r="5" fill="#0097A7"/>
+          <text x="800" y="130" font-family="KaiTi, 楷体" font-size="12" fill="#0097A7" text-anchor="middle">
+            神秘海湾 (2024-04-25)
+          </text>
+      
+          <!-- 珊瑚岛 -->
+          <circle cx="950" cy="170" r="5" fill="#00796B"/>
+          <text x="950" y="160" font-family="KaiTi, 楷体" font-size="12" fill="#00796B" text-anchor="middle">
+            珊瑚岛 (2024-04-26)
+          </text>
+        </g>
+      
+        <!-- 诗意描述 -->
+        <text x="50%" y="320" font-family="KaiTi, 楷体" font-size="16" fill="#004D40" text-anchor="middle">
+          海龟漫游，碧波荡漾，心随风舞，梦回大海。
+        </text>
+      </svg>
 </body>
+
 </html>

@@ -8,34 +8,35 @@
         <el-button type="primary" @click="handelEditOk">确定</el-button>
       </template>
     </el-dialog>
-    <div>
-      <div class="user-info flex items-center gap-x-2 font-extrabold">
-        <div class="avater-wrapper">
-          <el-tooltip content="编辑" placement="top">
-            <i class="iconfont center edit" @click="handleEditMessage()">&#xeabd;</i>
-          </el-tooltip>
-          <img :src="isUser ? configStore.getAvatar : gptUrl" alt="" />
-        </div>
-        <span v-if="isUser" class="text-sm font-extrabold">{{ userConfig.name }}</span>
-        <div :class="{ 'flex-row-reverse': isUser }"
-          class="flex gap-x-1 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          <ExpandableBtn @click="sessionsStore.deleteMessage(message.id)" text="删除">
-            <i class="iconfont">&#xec7b;</i>
-          </ExpandableBtn>
-          <ExpandableBtn v-if="isUser" @click="sessionsStore.reChat(message.id)" text="重试">
-            <i class="iconfont">&#xe616;</i>
-          </ExpandableBtn>
-          <ExpandableBtn @click="copy" text="复制">
-            <i class="iconfont">&#xe8b0;</i>
-          </ExpandableBtn>
-          <ExpandableBtn @click="sessionsStore.createMessage(index, message.role)" text="向上创建">
-            <i class="iconfont">&#xe605;</i>
-          </ExpandableBtn>
-          <ExpandableBtn @click="sessionsStore.createMessage(index + 1, message.role)" text="向下创建">
-            <i class="iconfont">&#xe606;</i>
-          </ExpandableBtn>
-        </div>
+    <div class="user-info w-full flex items-center gap-x-2 font-extrabold">
+      <div class="avater-wrapper">
+        <el-tooltip content="编辑" placement="top">
+          <i class="iconfont center edit" @click="handleEditMessage()">&#xeabd;</i>
+        </el-tooltip>
+        <img :src="isUser ? configStore.getAvatar : gptUrl" alt="" />
       </div>
+      <span v-if="isUser" class="text-sm font-extrabold">{{ userConfig.name }}</span>
+      <div :class="{ 'flex-row-reverse': isUser }"
+        class="flex gap-x-1 text-xs opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <ExpandableBtn @click="sessionsStore.deleteMessage(message.id)" text="删除">
+          <i class="iconfont">&#xec7b;</i>
+        </ExpandableBtn>
+        <ExpandableBtn v-if="isUser" @click="sessionsStore.reChat(message.id)" text="重试">
+          <i class="iconfont">&#xe616;</i>
+        </ExpandableBtn>
+        <ExpandableBtn @click="copy" text="复制">
+          <i class="iconfont">&#xe8b0;</i>
+        </ExpandableBtn>
+
+      </div>
+      <!-- <div class="mx-auto">
+        <ExpandableBtn @click="sessionsStore.createMessage(index, message.role)" text="向上创建">
+          <i class="iconfont">&#xe605;</i>
+        </ExpandableBtn>
+        <ExpandableBtn @click="sessionsStore.createMessage(index + 1, message.role)" text="向下创建">
+          <i class="iconfont">&#xe606;</i>
+        </ExpandableBtn>
+      </div> -->
     </div>
     <div v-if="message.multiContent" class=" flex items-start gap-2 w-full overflow-scroll p-4">
       <template v-for="(oneOf, index) in message.multiContent" :key="oneOf.id">

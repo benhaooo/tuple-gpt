@@ -21,7 +21,6 @@ function inlineKatex(options, renderer) {
     name: 'inlineKatex',
     level: 'inline',
     start(src) {
-      // console.log("🚀 ~ start ~ src:", src)
       let index;
       let indexSrc = src;
 
@@ -34,7 +33,6 @@ function inlineKatex(options, renderer) {
           const possibleKatex = indexSrc.substring(index);
 
           if (possibleKatex.match(inlineRule)) {
-            console.log("🚀 ~ start ~ index:", index)
             return index;
           }
         }
@@ -43,7 +41,6 @@ function inlineKatex(options, renderer) {
       }
     },
     tokenizer(src, tokens) {
-      // console.log("🚀 ~ tokenizer ~ src:", src)
       const match = src.match(inlineRule);
       if (match) {
         console.log("🚀 ~inine~ tokenizer ~ match:", match)
@@ -66,7 +63,6 @@ function blockKatex(options, renderer) {
     tokenizer(src, tokens) {
       const match = src.match(blockRule);
       if (match) {
-        console.log("🚀 ~ tokenizer ~ match:", match)
         return {
           type: 'blockKatex',
           raw: match[0],

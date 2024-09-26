@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-dark-nav flex md:flex-col justify-center items-center">
+  <div class="flex md:flex-col justify-center items-center">
     <div class="avatar-wrapper group relative flex justify-center items-end w-20 h-20 overflow-hidden md:mt-5">
       <div class=" absolute bottom-0  border-2 w-16 h-16 border-light-border rounded-full z-10 translate-y-1"></div>
       <img class=" w-12 rounded-full cursor-pointer duration-300 group-hover:scale-150 z-20"
@@ -23,27 +23,21 @@
 
 <script setup>
 import { ref, computed, onMounted, watchEffect } from "vue"
-import useUserStore from "@/stores/modules/user"
 import useConfigStore from "@/stores/modules/config"
 import { useRouter, useRoute } from "vue-router"
-import { storeToRefs } from 'pinia'
+import useTheme from "@/hooks/theme"
 
+useTheme()
 
-
-const userStore = useUserStore()
 const configStore = useConfigStore()
-const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
-
-
 const router = useRouter()
 const route = useRoute()
 
 const menuItems = [
   { icon: "icon-xinxi", route: '/chat/message' },
-  { icon: "icon-prompt", route: '/chat/prompt' },
+  // { icon: "icon-prompt", route: '/chat/prompt' },
+  { icon: "icon-tool", route: '/chat/tool' },
   { icon: "icon-shezhi", route: '/chat/setting' },
-  { icon: "icon-store", route: '/chat/store' },
-  // { icon: "icon-application", route: '/chat/file' },
 ];
 const handleClick = (routePath) => {
   router.push(routePath)
@@ -53,13 +47,6 @@ const isSelected = computed(() => {
     return route.matched.some((record) => record.path === routeName);
   };
 });
-
-//主题切换
-watchEffect(() => {
-  const theme = userConfig.value.theme
-  const html = document.querySelector('html')
-  html.className = theme
-})
 
 
 

@@ -18,7 +18,6 @@ import ChatNav from "./cpnt/ChatNav.vue";
 import { marked } from 'marked'
 import { markedHighlight } from "marked-highlight"
 import hljs from 'highlight.js'
-import HighlightBlock from "./cpnt/HighlightBlock.vue";
 import katex from "marked-katex-extension";
 import myKatex from "@/extensions/marked-katex"
 
@@ -46,7 +45,7 @@ marked.use(myKatex({
 function highlightBlock(str, lang) {
   // 只能返回字符串
   //方法1.返回静态字符串，onMounted和onUpdated遍历添加事件并在onMounted移除事件
-
+  return `<pre class="!bg-[#1c1d21]"><div class=" flex items-center justify-between px-4 py-2"><span class="">${lang}</span><span class="code-copy cursor-pointer select-none"><i class="iconfont">&#xe8b0;</i> 复制</span></div><code class="hljs code-block-body ${lang}">${str}</code></pre>`
   //方法2.返回组件渲染后的html，但是是异步函数，返回的是promise
   // const app = createSSRApp({
   //   render() {
@@ -55,8 +54,6 @@ function highlightBlock(str, lang) {
   // });
   // const html = await renderToString(app)
   // return html
-
-  return `<pre class="!bg-[#1c1d21]"><div class=" flex items-center justify-between px-4 py-2"><span class="">${lang}</span><span class="code-copy cursor-pointer"><i class="iconfont">&#xe8b0;</i> 复制</span></div><code class="hljs code-block-body ${lang}">${str}</code></pre>`
 }
 </script>
 

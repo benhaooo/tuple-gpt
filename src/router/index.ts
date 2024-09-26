@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory,createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 
 const router = createRouter({
   history: createWebHashHistory(),//hash模式
@@ -23,9 +23,9 @@ const router = createRouter({
       component: () => import('@/views/pages/setting/index.vue'),
     },
     {
-      path: '/chat/store',
-      name: 'store',
-      component: () => import('@/views/pages/Store.vue'),
+      path: '/chat/tool',
+      name: 'tool',
+      component: () => import('@/views/pages/tool/index.vue'),
     },
   ],
 })

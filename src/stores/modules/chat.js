@@ -5,8 +5,7 @@ import { computed, reactive } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import useStream from '@/hooks/stream'
-import { da } from "element-plus/es/locales.mjs";
-
+import { generateData, randomTemperature } from "@/models/data"
 const configStore = useConfigStore();
 const { moduleConfig, getModelConfig } = storeToRefs(configStore);
 
@@ -140,7 +139,7 @@ const useSessionsStore = defineStore('sessions', {
             const index = session.messages.findIndex(msg => msg.id === id);
             const { img: imgUrl, content: text } = session.messages[index];
             const nextMsg = session.messages[index + 1];
-            if (nextMsg && nextMsg.role === 'assistant') session.messages.splice(index + 1, 1);
+            if (nextMsg?.role === 'assistant') session.messages.splice(index + 1, 1);
             await this.sendMessageInternal(index, { text, imgUrl }, session.ai && session.ai[1], nextMsg);
         },
         // 获取上下文
@@ -209,45 +208,39 @@ const useSessionsStore = defineStore('sessions', {
             if (historyMessages) combinedMessages.unshift(...historyMessages)
             if (systemMessage) combinedMessages.unshift(systemMessage);
 
-            const data = {
-                model: qSession.model,
-                messages: combinedMessages,
-                stream: true,
-                max_tokens: qSession.maxTokens,
-                temperature: qSession.temperature,
-                top_p: qSession.top_p,
-                presence_penalty: qSession.presence_penalty,
-                frequency_penalty: qSession.frequency_penalty,
-            };
+            const getModels = (num, nextMsg) => {
 
-            const generateDatas = (num, data) => {
-                if (num === 0) {
-                    const models = Object.keys(getModelConfig.value);
-                    return models.map(model => ({ ...data, model }));
-                } else {
-                    const replyCount = num || nextMsg?.multiContent?.length || 1;
-                    return Array(replyCount).fill(data);
+                if (nextMsg?.multiContent?.length) {
+                    return nextMsg.multiContent.map(mc => mc.model)
                 }
-            };
-            const datas = generateDatas(num, data)
-            
+
+                if (num === 0) {
+                    return Object.keys(getModelConfig.value)
+                }
+                return Array.from({ length: num | 1 }, () => qSession.model)
+
+            }
+            const models = getModels(num, nextMsg)
+            let datas = models.map(model => {
+                return generateData(qSession, combinedMessages, model)
+            })
+            datas = randomTemperature(qSession, datas)
             const replyCount = datas.length
             const chattingMsg = reactive({
                 id: generateUniqueId(),
                 role: qSession.role === "assistant" ? "user" : "assistant",
                 selectedContent: 0,
-                multiContent: Array.from({ length: replyCount }, () => ({ content: "", chatting: true, id: generateUniqueId() })),
+                multiContent: datas.map(data => ({ content: "", chatting: true, id: generateUniqueId(), model: data.model })),
                 chatting: true
             })
             session.messages.splice(index + 1, 0, chattingMsg);
             //多回复
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
-                if (session.randomTemperature) datas[i].temperature = Number(((i + 1) / (replyCount + 1)).toFixed(2));
                 chattingMsg.multiContent[i].model = datas[i].model
                 responses.push(completions(datas[i]).then(response => {
                     if (response.ok) {
-                        return this.handleStreamMsg(response, chattingMsg.multiContent[i])
+                        return datas[i].stream ? this.handleStreamMsg(response, chattingMsg.multiContent[i]) : this.handleUnStreamMsg(response, chattingMsg.multiContent[i])
 
                     } else {
                         return response.json().then(errorMsg => {
@@ -273,7 +266,16 @@ const useSessionsStore = defineStore('sessions', {
                 this.evaluateSession(session)
             }
         },
-
+        handleUnStreamMsg(response, chatting) {
+            return new Promise((resolve, reject) => {
+                response.json().then(res => {
+                    const content = res.choices[0].message.content
+                    chatting.content = content;
+                    delete chatting.chatting;
+                    resolve()
+                })
+            })
+        },
         // 处理流消息
         handleStreamMsg(response, chatting) {
             return new Promise((resolve, reject) => {

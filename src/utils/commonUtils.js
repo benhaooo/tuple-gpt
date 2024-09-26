@@ -25,7 +25,7 @@ const copyToClip = (text) => {
         }
     })
 }
-
+// 
 const debounce = (func, wait) => {
     let timeout;
 

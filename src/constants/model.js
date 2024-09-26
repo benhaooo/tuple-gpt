@@ -3,7 +3,10 @@ const models = {
         'gpt-3.5-turbo',
         'gpt-4',
         'gpt-4o',
-        'gpt-4o-mini'
+        'gpt-4o-mini',
+        'o1-preview',
+        'o1-mini',
+        
     ],
     azure: [
         'gpt-3.5-turbo',
