@@ -43,20 +43,27 @@
                     <textarea class=" text-base dark:bg-dark-base w-full  resize-none" v-model="text"
                         @keydown="handleKeyDown" placeholder="ctrl + 1~9/enter 发送" @paste="handlePaste"
                         @focus="taFocused = true" @blur="taFocused = false" ref="taRef" rows="1"></textarea>
-                    <div class="flex justify-end flex-col">
-                        <el-tooltip content="发送" placement="top" :show-after="500">
-                            <button class="text-xs w-10 h-8 rounded-lg border-0  transition-all duration-300 shadow "
-                                :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5]'" :disabled="!canSend"
-                                @click="handleSendMessage()"><i class="iconfont text-white">&#xe888;</i></button>
-                        </el-tooltip>
+                    <div v-if="currentSession.type === 'auto' && currentSession.chatting"
+                        class="relative w-10 h-8 flex justify-center items-center cursor-pointer" @click="stopAutoChat">
+                        <img src="@/assets/icons/spinning-circle.svg" class="animate-spin w-6 h-6" alt="Loading" />
+                        <span class="absolute text-sm font-bold">{{ currentSession.chatting }}</span>
                     </div>
+                    <button v-else @click="handleSendMessage()"
+                        :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5] dark:bg-[#333]'" :disabled="!canSend"
+                        class="flex justify-center items-center w-10 h-8 rounded-lg">
+                        <el-tooltip content="发送" placement="top" :show-after="500">
+                            <i class="iconfont text-white">&#xe888;</i>
+                        </el-tooltip>
+                    </button>
                 </div>
-                <div>
+                <div class=" flex items-center gap-2">
                     <el-tooltip content="优化" placement="top">
-
                         <i @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing || !canSend }"
                             class="iconfont cursor-pointer font-extrabold hover:text-dark-blue-base">&#xe624;</i>
                     </el-tooltip>
+                    <button @click="handleFormat('题目：新疆是中国面积最大的省级行政区，它的面积可以装下多少个北京？')" :class="{ 'border-dark-blue-base border-2': activeFomat }"
+                        class=" text-xs bg-transparent border rounded-md flex"><span
+                            class=" scale-75">JSON</span></button>
                 </div>
 
             </div>
@@ -69,12 +76,11 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import ExpandableButtom from "@/views/cpnt/ExpandableBtn.vue";
 import useSessionsStore from "@/stores/modules/chat";
+import { storeToRefs } from 'pinia';
 import { completions } from "@/apis";
-import useStream from '@/hooks/stream'
-
 
 const sessionsStore = useSessionsStore();
-const { streamController } = useStream()
+const { currentSession } = storeToRefs(sessionsStore);
 
 
 const fileUrl = ref("");
@@ -86,9 +92,10 @@ const optimizing = ref(false)
 const optimizeRef = ref(null)
 const taRef = ref(null);
 const canSend = computed(() => {
-    return text.value.trim().length > 0;
+    return text.value.trim().length > 0 || currentSession.value.type === 'auto';
 });
 const taFocused = ref(false);
+const activeFomat = ref('')
 
 const emits = defineEmits(["send"]);
 
@@ -109,26 +116,30 @@ const handleKeyDown = (e) => {
             handleSendMessage()
         }
     }
-
 }
 
 // 发送消息
 const handleSendMessage = async (num) => {
-    if (!text.value) return;
-    if (fileUrl.value) {
-        sessionsStore.sendImgMessage(text.value, fileUrl.value, num)
+    if (currentSession.value.type === 'auto') {
+        sessionsStore.sendNextMessage(text.value, num)
+        text.value = "";
+    } else {
+        if (!text.value) return;
+        if (fileUrl.value) {
+            sessionsStore.sendImgMessage(text.value, fileUrl.value, num)
+            text.value = "";
+            fileUrl.value = "";
+            return
+        }
+        emits("send")
+        sessionsStore.sendMessage(text.value, num, activeFomat.value).then(() => {
+            // resetAndScrollToBottom()
+        })
+
         text.value = "";
         fileUrl.value = "";
-        return
+        activeFomat.value = ""
     }
-    emits("send")
-    sessionsStore.sendMessage(text.value, num).then(() => {
-        // resetAndScrollToBottom()
-    })
-
-    text.value = "";
-    fileUrl.value = "";
-
     //可能watch那没更新来
     nextTick(() => autoHeight());
 };
@@ -163,6 +174,18 @@ const listenClick = (e) => {
         showOptimizedModal.value = false
     }
 }
+
+const handleFormat = (char) => {
+    if (activeFomat.value === char) {
+        activeFomat.value = ""
+    } else {
+        activeFomat.value = char
+    }
+}
+
+
+
+
 const dataPicker = (json, onMessage) => {
     const { content, sessionId } = json
     if (content) onMessage(content)
@@ -223,7 +246,7 @@ watch(showOptimizedModal, () => {
         document.removeEventListener('click', listenClick)
     }
 })
-
-
-
 </script>
+
+
+<style lang="less" scoped></style>

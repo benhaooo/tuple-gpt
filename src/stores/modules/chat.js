@@ -6,13 +6,15 @@ import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import useStream from '@/hooks/stream'
 import { generateData, randomTemperature } from "@/models/data"
+import { useToast } from 'vue-toast-notification';
+
 const configStore = useConfigStore();
 const { moduleConfig, getModelConfig } = storeToRefs(configStore);
 
 const useSessionsStore = defineStore('sessions', {
     state: () => ({
         sessions: [{
-            id: "02v16x9y34hhlzcywn2j",
+            id: "default",
             name: "默认会话",
             messages: [],
             type: "chat",
@@ -22,7 +24,7 @@ const useSessionsStore = defineStore('sessions', {
             role: "user",
             model: 'gpt-4o'
         }],
-        currentSessionId: "02v16x9y34hhlzcywn2j",
+        currentSessionId: "default",
         askprompt: {},
     }),
     getters: {
@@ -41,37 +43,40 @@ const useSessionsStore = defineStore('sessions', {
         }
     },
     actions: {
-        // 新增会话
-        addSession({ name, prompt }) {
+        // 创建会话
+        createSession(custom) {
             const session = {
                 id: generateUniqueId(),
                 messages: [],
                 ...moduleConfig.value,
-                name,
-                system: prompt
+                ...custom,
             };
+            return session;
+        },
+        // 新增会话
+        addSession(custom) {
+            const session = this.createSession(custom);
             this.sessions.unshift(session);
             this.currentSessionId = session.id;
         },
         // 新增模拟会话
         addAutoSession() {
-            const session = {
-                name: "模拟对话",
-                id: generateUniqueId(),
-                messages: [],
+            const session = this.createSession({
+                name: "Mock Chat",
                 type: "auto",
-                ai: Array.from({ length: 2 }),
-            }
+                ai: Array(2).fill(null),
+            });
             this.sessions.unshift(session);
             this.currentSessionId = session.id;
         },
+
         // 模拟会话添加会话方
         autoPushSession(index1, index2, no) {
             const autoSession = this.sessions[index1];
-            const session = this.sessions[index2];
+            const session = index2 ? this.sessions[index2] : this.createSession();
             session.role = no === 1 ? "user" : "assistant";
             autoSession.ai[no] = session;
-            this.deleteSession(index2)
+            index2 && this.deleteSession(index2)
         },
         // 删除会话
         deleteSession(index) {
@@ -143,17 +148,18 @@ const useSessionsStore = defineStore('sessions', {
             await this.sendMessageInternal(index, { text, imgUrl }, session.ai && session.ai[1], nextMsg);
         },
         // 获取上下文
-        getHistoryMsgs(index, session) {
-            const reversed = session.role === "assistant"
+        getHistoryMsgs(index, session, qSession) {
+            const reversed = qSession?.role === "user"
             const historyMessages = session.messages.slice(Math.max(0, index - session.ctxLimit), index);
+
             return historyMessages.map(msg => ({
-                role: reversed ? (msg.role === "user" ? "assistant" : "user") : msg.role,
+                role: reversed ? (msg.role === "assistant" ? "user" : "assistant") : msg.role,
                 content: msg.multiContent ? msg.multiContent[msg.selectedContent].content : msg.content,
             }));
         },
 
         // 发送消息
-        async sendMessage(text, num) {
+        async sendMessage(text, num, formatter) {
             const session = this.currentSession;
             text = this.formatMessage({ text })
             const index = session.messages.push({
@@ -161,19 +167,41 @@ const useSessionsStore = defineStore('sessions', {
                 role: "user",
                 content: text,
             }) - 1;
-            await this.sendMessageInternal(index, { text, num }, session.ai && session.ai[1]);
-            if (session.type === "auto") this.autoChat(session, 1)
+            this.sendMessageInternal(index, { text, num, formatter })
         },
+        async sendNextMessage(text, num) {
+            const session = this.currentSession;
+            if (!session.ai[0] || !session.ai[1]) {
+                useToast().warning('没有填充完全')
+                return
+            }
+            text = this.formatMessage({ text })
+            const lastMsg = session.messages[session.messages.length - 1]
+            const roleMap = [
+                'user',
+                'assistant',
+            ]
+            const no = +(!lastMsg?.role === 'user')
+            const index = session.messages.push({
+                id: generateUniqueId(),
+                role: roleMap[no],
+                content: text,
+            }) - 1;
+            session.chatting = num || session.replyCount
+            this.sendMessageInternal(index, { text, num: 1 }, session.ai[no]).then(() => {
+                if (session.chatting) this.autoChat(session, no)
+            })
+        },
+        // 模拟会话发送消息
         async autoChat(session, no) {
             const latestIndex = session.messages.length - 1;
             const latestMsg = session.messages[latestIndex];
             const text = latestMsg.content || latestMsg.multiContent[latestMsg.selectedContent].content;
-            const qno = 1 - no
-            await this.sendMessageInternal(latestIndex, { text }, session.ai[qno])
-            if (session.messages.length > 10) return
-            this.autoChat(session, qno)
+            const nextNo = 1 - no
+            this.sendMessageInternal(latestIndex, { text }, session.ai[nextNo]).then(() => {
+                if (session.chatting) this.autoChat(session, nextNo)
+            })
         },
-
         // 发送图片消息
         async sendImgMessage(text, imgUrl, num) {
             const index = this.currentSession.messages.push({
@@ -192,11 +220,11 @@ const useSessionsStore = defineStore('sessions', {
             // return template.replace(/\${(.*?)}/g, (match, p) => values[p])
             return template.replace(placeholderRegEx, text)
         },
-        async sendMessageInternal(index, { text, imgUrl, num }, qSession = this.currentSession, nextMsg = null) {
+        async sendMessageInternal(index, { text, imgUrl, num, formatter = '' }, qSession = this.currentSession, nextMsg = null) {
             const session = this.currentSession;
             if (imgUrl) qSession.model = "gpt-4o";
             const systemMessage = this.getSystemMsg(qSession);
-            const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index, session)
+            const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index, session, qSession)
             const indexMsg = {
                 role: "user",
                 content: imgUrl ? [
@@ -209,35 +237,32 @@ const useSessionsStore = defineStore('sessions', {
             if (systemMessage) combinedMessages.unshift(systemMessage);
 
             const getModels = (num, nextMsg) => {
-
                 if (nextMsg?.multiContent?.length) {
                     return nextMsg.multiContent.map(mc => mc.model)
                 }
-
                 if (num === 0) {
                     return Object.keys(getModelConfig.value)
                 }
                 return Array.from({ length: num | 1 }, () => qSession.model)
-
             }
             const models = getModels(num, nextMsg)
             let datas = models.map(model => {
-                return generateData(qSession, combinedMessages, model)
+                return generateData(qSession, combinedMessages, model, formatter)
             })
             datas = randomTemperature(qSession, datas)
             const replyCount = datas.length
+
             const chattingMsg = reactive({
                 id: generateUniqueId(),
-                role: qSession.role === "assistant" ? "user" : "assistant",
+                role: qSession.role || "assistant",
                 selectedContent: 0,
-                multiContent: datas.map(data => ({ content: "", chatting: true, id: generateUniqueId(), model: data.model })),
+                multiContent: datas.map(data => ({ content: formatter, chatting: true, id: generateUniqueId(), model: data.model })),
                 chatting: true
             })
             session.messages.splice(index + 1, 0, chattingMsg);
             //多回复
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
-                chattingMsg.multiContent[i].model = datas[i].model
                 responses.push(completions(datas[i]).then(response => {
                     if (response.ok) {
                         return datas[i].stream ? this.handleStreamMsg(response, chattingMsg.multiContent[i]) : this.handleUnStreamMsg(response, chattingMsg.multiContent[i])
@@ -253,18 +278,21 @@ const useSessionsStore = defineStore('sessions', {
             }
 
             //所有回复完成
-            await Promise.all(responses).finally(() => {
-                // 统一处理清理操作
-                chattingMsg.multiContent.forEach(content => {
-                    delete content.chatting;
+            await Promise.all(responses)
+                .then(() => {
+                    //未评估
+                    if (session.name === configStore.moduleConfig.name) {
+                        this.evaluateSession(session)
+                    }
+                })
+                .finally(() => {
+                    // 统一处理清理操作
+                    chattingMsg.multiContent.forEach(content => {
+                        delete content.chatting;
+                    });
+                    delete chattingMsg.chatting;
+                    session.chatting--
                 });
-                delete chattingMsg.chatting;
-            });
-
-            //未评估
-            if (session.name === configStore.moduleConfig.name) {
-                this.evaluateSession(session)
-            }
         },
         handleUnStreamMsg(response, chatting) {
             return new Promise((resolve, reject) => {

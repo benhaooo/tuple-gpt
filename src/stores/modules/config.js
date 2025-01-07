@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import avaUrl from "@/assets/imgs/xiaoxing.png";
+import { reactive } from "vue";
 
 const useConfigStore = defineStore("config", {
     state: () => ({

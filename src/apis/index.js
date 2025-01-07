@@ -1,12 +1,13 @@
 import useConfigStore from "@/stores/modules/config";
 import { freeAPI, defaultAPI } from "./config"
+import { modelConver } from "@/models/data"
 
 // 默认会话请求
 export const completions = (data) => {
     const model = data.model
     const configStore = useConfigStore();
     const modelConfig = configStore.getModelConfig
-    const { url, config } = buildCompletionsConfig(modelConfig[model], data, model);
+    const { url, config } = buildCompletionsConfig(modelConfig[model], data);
     return fetch(url, config)
 }
 
@@ -36,11 +37,16 @@ const freeCompletions = (retryList, data, model, retry = 0) => {
     });
 };
 // 构建请求配置
-const buildCompletionsConfig = ({ host, key, type }, data, model = null) => {
+const buildCompletionsConfig = ({ host, key, type }, data) => {
+    // model名转换
+    data = {
+        ...data,
+        model: modelConver(data.model)
+    }
     switch (type) {
         case "azure":
             return {
-                url: `${host}/openai/deployments/${model}/chat/completions?api-version=2024-04-01-preview`,
+                url: `${host}/openai/deployments/${data.model}/chat/completions?api-version=2024-04-01-preview`,
                 config: {
                     method: 'POST',
                     headers: {
@@ -53,7 +59,7 @@ const buildCompletionsConfig = ({ host, key, type }, data, model = null) => {
         case "openai":
         default:
             return {
-                url: `${host}/v1/chat/completions`,
+                url: `${host}/v1/chat/completions?tts=${new Date().getTime()}`,
                 config: {
                     method: 'POST',
                     headers: {

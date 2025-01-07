@@ -5,8 +5,7 @@ import { storeToRefs } from 'pinia'
 import Service from './service/index.vue'
 const configStore = useConfigStore()
 const chatStore = useChatStore()
-const { userConfig, moduleConfig, serverConfig } = storeToRefs(configStore)
-const modelConfig = configStore.getModelConfig
+const { userConfig, moduleConfig, serverConfig, getModelConfig: modelConfig } = storeToRefs(configStore)
 
 </script>
 

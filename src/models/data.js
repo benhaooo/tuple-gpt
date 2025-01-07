@@ -1,4 +1,4 @@
-export const generateData = (session, messages, model) => {
+export const generateData = (session, messages, model, formatter) => {
     let data = {
         model,
         messages: messages,
@@ -6,6 +6,18 @@ export const generateData = (session, messages, model) => {
     if (model.includes('o1')) {
         return data
     }
+    // json格式回复实现方式
+    if (formatter) {
+        if (model.includes('moonshot')) {
+            data.response_format = { "type": "json_object" }
+        } else {
+            data.messages.push({
+                role: "assistant",
+                content: formatter
+            })
+        }
+    }
+
     data = {
         ...data,
         stream: true,
@@ -24,4 +36,27 @@ export const randomTemperature = (session, datas) => {
         }
     }
     return datas
+}
+
+
+const modelMap = {
+    // 'claude-3-5-sonnet': 'claude-3-5-sonnet-20241022',
+    // 'claude-3-opus': 'claude-3-opus-20240229',
+    // 'claude-3-sonnet': 'claude-3-sonnet-20240229',
+    'o1-preview': 'o1-preview-2024-09-12',
+    'o1-mini': 'o1-mini-2024-09-12',
+}
+
+export const modelConver = (model) => {
+    model = model.trim();
+    for (const key of Object.keys(modelMap)) {
+        const value = modelMap[key];
+        if (key.trim() === model) {
+            return value;
+        }
+        if (value.trim() === model) {
+            return key;
+        }
+    }
+    return model;
 }

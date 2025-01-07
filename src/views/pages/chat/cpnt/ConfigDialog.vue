@@ -57,7 +57,8 @@
             <el-button type="primary" @click="handelOkConfig">确定</el-button>
         </template>
     </el-dialog>
-    <div class="font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
+    <div v-if="modelValue"
+        class="font-black bg-light-hard dark:bg-dark-hard-dark rounded-b-md py-1 px-4 cursor-pointer z-10 hover:text-blue-500 shadow-md"
         @click="handelShowConfig">
         {{ modelValue.model }}
     </div>
@@ -65,10 +66,10 @@
 
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import useConfigStore from '@/stores/modules/config'
 const configStore = useConfigStore()
-const modelConfig = configStore.getModelConfig
+const modelConfig = computed(() => configStore.getModelConfig)
 
 
 const props = defineProps({

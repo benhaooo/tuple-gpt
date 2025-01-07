@@ -1,7 +1,7 @@
 <template>
   <div ref="sessionListRef"
-    :class="{ 'transition-all duration-300': !draging, 'w-52': showPanel && !isMobile, '!w-0': !showPanel }"
-    class=" relative first-line:border-r-2 border-solid w-56 max-md:absolute max-md:h-full max-md:w-full bg-white dark:bg-dark-hard-dark z-50">
+    :class="{ 'transition-all duration-300': !draging, 'w-56': showPanel && !isMobile, '!w-0': !showPanel }"
+    class=" relative first-line:border-r-2 border-solid w-56 max-md:h-full max-md:w-screen shrink-0 bg-white dark:bg-dark-hard-dark z-50">
     <div class=" mx-3 h-screen min-w-40 flex flex-col transition-all duration-300"
       :style="!showPanel && `transform: translateX(-120%);`">
       <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
@@ -25,21 +25,23 @@
         </div>
       </div>
 
-      <div class="relative mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
+      <div ref="scrollContainerRef"
+        class="relative mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
         <transition-group name="list">
           <template v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id">
             <div draggable="true" :ref="currentSessionId === session.id ? 'selectedSessionRef' : null"
               @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
               @dragenter="onDragEnterThrottled($event, index, session.id, session.type)"
               @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
-              class="group w-full rounded-2xl cursor-grab mb-2 last:mb-0 relative overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
+              class="group w-full rounded-2xl cursor-grab mb-2 last:mb-0 overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
               :class="{
                 'bg-dark-blue-base': currentSessionId === session.id,
                 'hover:bg-[#f3f3f3] dark:hover:bg-[#333333] hover:border-dark-blue-base bg-white dark:bg-dark-hard-dark': currentSessionId !== session.id,
                 'opacity-0': index === draggedIndex,
                 'h-32': session.type === 'auto'
               }" @click="selectSession(session.id)">
-              <div class="h-16">
+              <!-- 上 -->
+              <div class="h-16 relative">
                 <div class="flex flex-col w-full justify-between py-2 px-5 ">
                   <div :class="{ 'text-purple-500': currentSessionId === session.id }"
                     class=" font-extrabold text-base group-hover:text-purple-500 whitespace-nowrap text-ellipsis overflow-hidden">
@@ -67,19 +69,30 @@
                     @click.stop="sessionsStore.copySession(index)">&#xe8b0;</i>
                 </div>
               </div>
+              <!-- 下 -->
               <div v-if="session.type === 'auto'" class="flex w-full h-16 justify-center items-center gap-2">
                 <template v-for="(ai, jdex) in session.ai" :key="ai?.id">
-                  <div draggable="true" @dragenter="onDragEnterAuto($event, jdex)" @dragleave="onDragLeaveAuto($event)"
-                    @drop="onDropAuto($event, index, jdex)" class="flex-grow h-full rounded-md  py-2 px-1"
-                    :class="ai ? 'bg-purple-500' : 'bg-[#eee]'">
-                    <div class="font-bold text-xs whitespace-nowrap text-ellipsis overflow-hidden">{{ ai?.name }}
+                  <div v-if="ai" draggable="true" @dragenter="onDragEnterAuto($event, jdex)"
+                    @dragleave="onDragLeaveAuto($event)" @drop="onDropAuto($event, index, jdex)"
+                    class="flex-grow h-full rounded-md  py-2 px-1 bg-purple-500">
+                    <div class="font-bold text-xs whitespace-nowrap text-ellipsis overflow-hidden">{{ ai.name }}
+                    </div>
+                  </div>
+                  <div v-else
+                    class="flex-grow h-full rounded-md py-2 px-1 bg-[#eee] cursor-pointer relative overflow-hidden transition-colors duration-300 ease-in-out hover:bg-purple-400"
+                    @click="sessionsStore.autoPushSession(index, null, jdex)">
+                    <div class="flex justify-center items-center h-full">
+                      <span
+                        class="text-2xl text-gray-500 transition-opacity duration-300 ease-in-out group-hover:opacity-100">+</span>
+                    </div>
+                    <div
+                      class="absolute inset-0 bg-purple-400 opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-20">
                     </div>
                   </div>
                 </template>
               </div>
             </div>
           </template>
-
         </transition-group>
       </div>
       <div class="h-20 flex-shrink-0 flex items-center justify-center">
@@ -87,7 +100,7 @@
       </div>
     </div>
     <div @mousedown="handleLineMousedown($event)" ref="resizeLineRef"
-      class=" hover:cursor-col-resize absolute -right-1 top-0 h-full w-1 border-l-2 border-grey-500"
+      class=" hover:cursor-col-resize absolute -right-1 top-0 h-full w-1 border-l-2 border-transparent hover:border-blue-500"
       :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
     </div>
     <div @click="togglePanel" :class="showPanel ? ' translate-x-1/2' : 'translate-x-12 rotate-180'"
@@ -99,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, watchEffect, onMounted } from "vue";
+import { ref, watchEffect, onMounted, onBeforeUnmount } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
 
@@ -108,6 +121,7 @@ const props = defineProps({
   sessions: Array,
   currentSessionId: String,
 });
+
 const sessionsStore = useSessionsStore()
 const searchInput = ref("")
 const searchFocus = ref(false)
@@ -117,6 +131,31 @@ const selectedSessionRef = ref(null)
 const showPanel = ref(true);
 
 
+const scrollContainerRef = ref(null);
+const scrollInterval = ref(null);
+const scrollThreshold = 100; // 滚动阈值，单位为像素
+const scrollSpeed = 20;     // 每次滚动的像素数
+const scrollIntervalTime = 30; // 自动滚动的时间间隔，单位为毫秒
+
+// 开始滚动
+const startAutoScroll = (direction) => {
+  if (scrollInterval.value) return;
+  scrollInterval.value = setInterval(() => {
+    if (!scrollContainerRef.value) return;
+    if (direction === 'up') {
+      scrollContainerRef.value.scrollTop -= scrollSpeed;
+    } else if (direction === 'down') {
+      scrollContainerRef.value.scrollTop += scrollSpeed;
+    }
+  }, scrollIntervalTime);
+};
+// 停止滚动
+const stopAutoScroll = () => {
+  if (scrollInterval.value) {
+    clearInterval(scrollInterval.value);
+    scrollInterval.value = null;
+  }
+};
 
 const emits = defineEmits(["select", "delete", "add"]);
 
@@ -188,6 +227,22 @@ const throttle = (func, limit, key) => {
 };
 const onDrag = (e, index) => {
   e.preventDefault();
+  const container = scrollContainerRef.value;
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  const y = e.clientY;
+
+  if (y < rect.top + scrollThreshold) {
+    // 鼠标靠近顶部，向上滚动
+    startAutoScroll('up');
+  } else if (y > rect.bottom - scrollThreshold) {
+    // 鼠标靠近底部，向下滚动
+    startAutoScroll('down');
+  } else {
+    // 鼠标不在滚动区域，停止滚动
+    stopAutoScroll();
+  }
 }
 const onDragEnter = (e, index, type) => {
   e.preventDefault();
@@ -195,7 +250,6 @@ const onDragEnter = (e, index, type) => {
   if (draggedIndex.value !== index) {
     sessionsStore.swapSession(draggedIndex.value, index);
     draggedIndex.value = index;
-    e.target.scrollIntoView({ behavior: "smooth", block: "center" })
   }
 }
 const onDragEnterThrottled = (e, index, id, type) => {
@@ -211,6 +265,7 @@ const onDragEnd = (e, index) => {
   e.preventDefault();
   draggedIndex.value = null;
   document.body.removeChild(cloneElement);
+  stopAutoScroll(); // 确保停止滚动
 }
 
 const onDragEnterAuto = (e, index) => {
@@ -228,9 +283,13 @@ const onDropAuto = (e, index, no) => {
   sessionsStore.autoPushSession(index, draggedIndex.value, no)
 };
 
-
+// 切换列表显隐
 const togglePanel = () => {
   showPanel.value = !showPanel.value
+  // 0或者NAN时,清除style影响
+  if (showPanel.value && !parseInt(sessionListRef.value.style.width)) {
+    sessionListRef.value.style.width = ''
+  }
 }
 const resizeLineRef = ref(null);
 const sessionListRef = ref(null);
@@ -276,11 +335,17 @@ const handleLineMousedown = (e) => {
   document.addEventListener('mousemove', lineMousemove);
 };
 
+// 刚进来时，跳到选中的会话
 onMounted(() => {
   selectedSessionRef.value[0].scrollIntoView({ block: "center" })
 })
+// 离开时，停止自动滚动
+onBeforeUnmount(() => {
+  stopAutoScroll();
+});
 
-defineExpose({ togglePanel });
+
+defineExpose({ togglePanel, sessionListRef });
 </script>
 
 <style scoped lang="less">
