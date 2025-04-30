@@ -1,5 +1,5 @@
 <template>
-  <div class="message group" :class="{ self: isUser }">
+  <div class="message mb-5 group" :class="{ self: isUser }">
     <!-- 编辑窗口 -->
     <el-dialog v-model="showEditModal" title="编辑" append-to-body>
       <el-input v-model="editText" type="textarea" :rows="10" />
@@ -13,7 +13,7 @@
         <el-tooltip content="编辑" placement="top">
           <i class="iconfont center edit" @click="handleEditMessage()">&#xeabd;</i>
         </el-tooltip>
-        <img :src="isUser ? configStore.getAvatar : gptUrl" alt="" />
+        <el-avatar :size="40" :src="isUser ? configStore.getAvatar : modelAva" />
       </div>
       <span v-if="isUser" class="text-sm font-extrabold">{{ userConfig.name }}</span>
       <div :class="{ 'flex-row-reverse': isUser }"
@@ -43,18 +43,19 @@
       <template v-for="(oneOf, index) in message.multiContent" :key="oneOf.id">
         <Content @click="message.selectedContent = index" :contentObj="oneOf"
           :selected="index === message.selectedContent"
-          :ref="index === message.selectedContent ? 'contentValueRef' : null" :maxHeight="maxHeight" />
+          :ref="index === message.selectedContent ? 'contentValueRef' : null" />
       </template>
     </div>
     <div v-else>
-      <div
-        class="content max-w-full text-sm hover:border-blue-500 border-4  transition-all duration-300 bg-light-hard dark:bg-dark-base"
-        ref="contentRef">
-        <img v-if="message.img" :src="message.img" alt="">
-        <div class="contentValue" v-html="message.content">
+      <div class="content max-w-full text-sm relative bg-white dark:bg-[#262626] 
+           transition-all duration-300 rounded-[12px] p-4
+           hover:bg-gray-50/40 dark:hover:bg-[#303030] group">
+
+        <img v-if="message.img" :src="message.img" class="rounded-lg mb-3 shadow-sm" alt="消息图片">
+
+        <div class="contentValue prose prose-gray dark:prose-invert 
+             text-gray-600 dark:text-gray-300" v-html="message.content">
         </div>
-        <span v-if="message.chatting"
-          class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
       </div>
     </div>
   </div>
@@ -68,9 +69,9 @@ import { storeToRefs } from "pinia";
 import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
 import { useToast } from 'vue-toast-notification';
 import useSessionsStore from "@/stores/modules/chat";
-import gptUrl from '@/assets/imgs/ye.png'
 import Content from "./Content.vue"
 import { copyToClip } from "@/utils/commonUtils";
+import { useModel } from "@/models/data"
 
 
 const sessionsStore = useSessionsStore();
@@ -83,10 +84,15 @@ const props = defineProps({
 });
 
 const contentValueRef = ref(null)
-const maxHeight = ref(100)
 
 const showEditModal = ref(false);
 const editText = ref("");
+
+const modelAva = computed(() => {
+  const id = props.message.multiContent[0].model
+  const { group } = useModel(id)
+  return group.icon
+})
 
 const handelEditOk = () => {
   setContent(props.message, editText.value)
@@ -96,14 +102,6 @@ const handleEditMessage = () => {
   showEditModal.value = true;
   editText.value = getContent(props.message)
 };
-
-const maxHeightFn = computed(() => {
-  nextTick(() => {
-    if (contentValueRef.value) {
-      return contentValueRef.value.offsetHeight
-    }
-  })
-})
 
 const getContent = (message) => {
   if (props.message.multiContent) {
@@ -140,10 +138,6 @@ onMounted(() => {
 
 <style scoped lang="less">
 .message {
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
 
   .user-info {
     display: flex;
@@ -165,12 +159,6 @@ onMounted(() => {
         background-color: rgba(67, 66, 87, 0.535);
         transition: 0.3s;
         z-index: 9;
-      }
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
       }
     }
   }

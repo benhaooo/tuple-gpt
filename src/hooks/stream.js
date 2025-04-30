@@ -1,11 +1,37 @@
-function defalutDataPicker(json, onMessage) {
-    if (json.choices && json.choices[0] && json.choices[0].delta) {
-        const content = json.choices[0].delta.content || '';
-        onMessage && onMessage(content)
+const defalutDataPicker = (data, onMessage) => {
+    try {
+        const { choices: [{ delta: { content = '', reasoning_content = '' } }], usage } = data;
+        onMessage?.(content || '', reasoning_content || '', usage)
+    } catch (error) {
+        console.error(error)
     }
+
 }
+const ollamaDataPicker = (data, onMessage) => {
+    const { message: { content } } = data
+    onMessage?.(content)
+}
+
 export default function useStream() {
     const streamController = (response, onMessage, onEnd, dataPicker = defalutDataPicker) => {
+
+        const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+        const lineProcessor = contentType.includes('application/x-ndjson') ? (line) => {
+            const trimmed = line.trim();
+            const data = JSON.parse(trimmed);
+            ollamaDataPicker(data, onMessage)
+        } : (line) => {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:')) {
+                const jsonStr = trimmed.substring(5).trim();
+                if (jsonStr !== '[DONE]') {
+                    const data = JSON.parse(jsonStr);
+                    defalutDataPicker(data, onMessage)
+                }
+            }
+        };
+
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -24,14 +50,10 @@ export default function useStream() {
                     const lines = buffer.split('\n');
                     buffer = lines.pop();
                     for (const line of lines) {
-                        if (line.trim().startsWith('data:')) {
-                            const jsonStr = line.trim().substring(5).trim();
-                            if (jsonStr !== '[DONE]') {
-                                const json = JSON.parse(jsonStr);
-                                dataPicker(json, onMessage)
-                            }
+                        if (line) {
+                            console.log("🚀 ~ push ~ line:", line)
+                            lineProcessor(line)
                         }
-
                     }
                     push();
                 }
@@ -41,8 +63,10 @@ export default function useStream() {
                 reader.cancel();
             }
         });
+
         return stream
     }
+
     return {
         streamController
     }

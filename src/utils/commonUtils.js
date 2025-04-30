@@ -39,4 +39,8 @@ const debounce = (func, wait) => {
     };
 }
 
-export { generateUniqueId, delay, copyToClip, debounce }
+const deepClone = (obj) => {
+    return JSON.parse(JSON.stringify(obj));
+}
+
+export { generateUniqueId, delay, copyToClip, debounce, deepClone }

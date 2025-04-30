@@ -1,13 +1,27 @@
 <template>
     <div :class="selected ? 'min-w-[90%]' : 'min-w-[30%]'" class="transition-all duration-300 relative max-w-full">
-        <div :class="selected ? `max-h-[calc(${maxHeight}px - 40px)] border-green-500 hover:border-green-500 ` : `border-transparent`"
-            class="content w-full relative hover:border-blue-500 border-4 bg-light-hard dark:bg-dark-base overflow-scroll"
-            ref="contentRef">
-            <div class="markdown-body" v-html="parsedContent || '&nbsp;'" ref="contentValueRef"></div>
-            <span v-if="contentObj.chatting"
-                class="typer absolute w-4 h-5 bg-[#B3C2F1] border-dark-blue-base border-2 rounded-md" />
+        <div ref="contentRef" class="content w-full relative bg-white dark:bg-[#262626] overflow-scroll 
+                   transition-all duration-300 rounded-[12px] p-4
+                   hover:bg-gray-50/40 dark:hover:bg-[#303030]
+                   group">
+            <div v-if="parsedReasoningContent"
+                class="bg-gray-50/80 dark:bg-gray-800/60 text-xs text-gray-500 dark:text-gray-400 p-3 rounded-lg mb-4">
+                <div class="cursor-pointer select-none font-medium" @click="contentObj.rcFolded = !contentObj.rcFolded">
+                    思考 {{ parsedContent ? '😲👆' : '🤔' }}
+                </div>
+                <div v-if="!contentObj.rcFolded" v-html="parsedReasoningContent"
+                    class="mt-4 prose prose-sm dark:prose-invert" />
+            </div>
+
+            <div class="markdown-body" v-html="parsedContent || '&nbsp;'" ref="contentValueRef" />
+
+            <span v-if="contentObj.chatting" class="typer absolute w-4 h-5 bg-[#B3C2F1] 
+                       rounded-[3px] shadow-inner" />
         </div>
-        <span class="absolute -top-5 right-0 text-[#63666c] text-xs">{{ contentObj.model }}</span>
+        <div class="absolute -top-5 right-0 text-gray-400/90 dark:text-gray-500 text-xs flex gap-10">
+            <span>tokens:{{ contentObj?.usage?.total_tokens }}</span>
+            <span class="font-mono">{{ modelName }}</span>
+        </div>
     </div>
 </template>
 
@@ -15,13 +29,16 @@
 import { computed, ref, reactive, onMounted, onUpdated, onUnmounted } from "vue";
 import { marked } from 'marked'
 import { copyToClip } from "@/utils/commonUtils";
+import { useModel } from "@/models/data"
 
 const props = defineProps({
     selected: Boolean,
     contentObj: Object,
-    maxHeight: Number,
 });
+
+const parsedReasoningContent = computed(() => marked.parse(props.contentObj.reasoning_content ?? ''))
 const parsedContent = computed(() => marked.parse(props.contentObj.content));
+const modelName = computed(() => useModel(props.contentObj.model).model.name)
 
 const typer_position = reactive({ x: 0, y: 0 })
 const contentValueRef = ref(null)

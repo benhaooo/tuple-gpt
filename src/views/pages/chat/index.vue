@@ -106,20 +106,18 @@ const onSendMessage = () => {
     <div class="flex max-md:w-[200vw] h-full max-md:-translate-x-1/2 ">
       <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId"
         @select="handleSelectSession" @delete="handleDeleteSession" @add="handleNewSession" />
-      <div
-        class="relative grow-1 max-md:shrink-0 max-md:w-screen overflow-hidden bg-light-wrapper dark:bg-dark-wrapper w-full rounded-3xl p-5 box-border max-md:pb-0 flex flex-col md:m-4">
+      <div v-if="currentSession"
+        class="relative grow-1 max-md:shrink-0 max-md:w-screen overflow-hidden dark:bg-dark-wrapper w-full rounded-3xl p-5 box-border max-md:pb-0 flex flex-col md:m-4">
         <div class="w-full flex-1 overflow-y-scroll" ref="scrollRef">
           <div class="absolute w-full h-9 top-0 left-1/2 -translate-x-1/2 flex justify-evenly font-black z-10">
-            <ConfigDialog v-if="localCurrentSession.ai && localCurrentSession.ai[0]"
-              v-model="localCurrentSession.ai[0]">
+            <ConfigDialog v-if="localCurrentSession.ai?.[0]" v-model="localCurrentSession.ai[0]">
             </ConfigDialog>
             <ConfigDialog v-model="localCurrentSession"></ConfigDialog>
-            <ConfigDialog v-if="localCurrentSession.ai && localCurrentSession.ai[1]"
-              v-model="localCurrentSession.ai[1]">
+            <ConfigDialog v-if="localCurrentSession.ai?.[1]" v-model="localCurrentSession.ai[1]">
             </ConfigDialog>
           </div>
 
-          <div v-if="currentSession.clearedCtx">
+          <div v-if="currentSession?.clearedCtx">
             <template v-for="(message, index) in currentSession.clearedCtx" :key="message.id">
               <Message :message="message" :index="index" />
             </template>
@@ -128,13 +126,16 @@ const onSendMessage = () => {
               style="mask-image: linear-gradient(90deg, transparent, #000, transparent);">上下文已清除</div>
           </div>
 
-          <template v-for="(message, index) in currentSession.messages" :key="message.id">
+          <template v-for="(message, index) in currentSession?.messages" :key="message.id">
             <Message :message="message" :index="index" @delete="sessionsStore.deleteMessage(index)"
               @reChat="sessionsStore.reChat(index)" class="animate__animated animate__fadeIn duration-75" />
           </template>
         </div>
         <!-- editor -->
         <Editor @send="onSendMessage"></Editor>
+      </div>
+      <div v-else>
+
       </div>
     </div>
   </div>

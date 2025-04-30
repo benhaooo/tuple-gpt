@@ -5,15 +5,37 @@
     <div class=" mx-3 h-screen min-w-40 flex flex-col transition-all duration-300"
       :style="!showPanel && `transform: translateX(-120%);`">
       <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
-        <button @click="handleNewSession"
-          class="flex items-center justify-center flex-1 bg-[#806fef] hover:bg-[#6757cb] h-full rounded-3xl text-xs whitespace-nowrap">+新的聊天</button>
-        <el-tooltip content="电子斗蛐蛐" placement="top">
-          <i @click="sessionsStore.addAutoSession"
-            class="iconfont ml-4 w-9 h-9 center rounded-full hover:bg-[#eee] text-2xl">&#xeca8;</i>
-        </el-tooltip>
-        <el-tooltip content="清除会话" placement="top">
-          <i @click="handleClearSession" class="iconfont ml-2 w-9 h-9 center rounded-full hover:bg-[#eee]">&#xe6c7;</i>
-        </el-tooltip>
+        <!-- 新增会话按钮 -->
+        <button @click="handleNewSession" class="flex-1 flex items-center justify-center h-full px-6 space-x-1 transition-all duration-200 transform 
+         bg-purple-500 hover:bg-purple-600 dark:bg-purple-600 dark:hover:bg-purple-700 
+         text-white dark:text-gray-100 
+         rounded-[2rem] shadow-md hover:shadow-lg
+         text-sm font-medium tracking-wide">
+          <span>+</span>
+        </button>
+
+        <!-- 功能按钮组 -->
+        <div class="ml-4 flex items-center space-x-3">
+          <el-tooltip content="电子斗蛐蛐" placement="top">
+            <i @click="sessionsStore.addAutoSession" class="iconfont center w-9 h-9 text-xl rounded-full cursor-pointer transition-colors
+             text-gray-600 hover:text-purple-600 
+             dark:text-gray-300 dark:hover:text-purple-300
+             hover:bg-gray-100 dark:hover:bg-gray-600
+             active:scale-95">
+              &#xeca8;
+            </i>
+          </el-tooltip>
+
+          <el-tooltip content="清除会话" placement="top">
+            <i @click="handleClearSession" class="iconfont center w-9 h-9 text-lg rounded-full cursor-pointer transition-colors
+             text-gray-600 hover:text-red-600 
+             dark:text-gray-300 dark:hover:text-red-300
+             hover:bg-gray-100 dark:hover:bg-gray-600
+             active:scale-95">
+              &#xe6c7;
+            </i>
+          </el-tooltip>
+        </div>
       </div>
 
       <div :class="searchInput || searchFocus ? 'border-blue-500' : 'border-transparent'"
@@ -28,45 +50,82 @@
       <div ref="scrollContainerRef"
         class="relative mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
         <transition-group name="list">
-          <template v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session.id">
-            <div draggable="true" :ref="currentSessionId === session.id ? 'selectedSessionRef' : null"
+          <template v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session?.id">
+            <div v-if="session" draggable="true" :ref="currentSessionId === session.id ? 'selectedSessionRef' : null"
               @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
               @dragenter="onDragEnterThrottled($event, index, session.id, session.type)"
-              @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)"
-              class="group w-full rounded-2xl cursor-grab mb-2 last:mb-0 overflow-hidden border-2 border-dark-border shadow-md transition-transform scroll-smooth"
-              :class="{
-                'bg-dark-blue-base': currentSessionId === session.id,
-                'hover:bg-[#f3f3f3] dark:hover:bg-[#333333] hover:border-dark-blue-base bg-white dark:bg-dark-hard-dark': currentSessionId !== session.id,
-                'opacity-0': index === draggedIndex,
-                'h-32': session.type === 'auto'
-              }" @click="selectSession(session.id)">
+              @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)" class="group w-full rounded-[20px] cursor-grab transition-all
+       bg-white/95 dark:bg-gray-900/95 backdrop-blur
+       hover:bg-white dark:hover:bg-gray-800
+       border border-transparent
+       shadow-[0_12px_28px_-8px] shadow-gray-200/80 dark:shadow-black/30
+       relative
+       before:absolute before:inset-0 before:rounded-[20px] 
+       before:bg-gradient-to-r before:from-blue-400/0 before:via-blue-400/0 before:to-blue-400/0
+       hover:before:via-blue-400/10 hover:before:to-blue-400/5" :class="{
+        'bg-white dark:border-blue-600/30 dark:bg-gray-800 border-blue-400/30 before:via-blue-400/20 before:to-blue-400/10': currentSessionId === session.id,
+        'hover:bg-[#f3f3f3] dark:hover:bg-[#333333] hover:border-dark-blue-base bg-white dark:bg-dark-hard-dark': currentSessionId !== session.id,
+        'opacity-0': index === draggedIndex,
+        'h-32': session.type === 'auto'
+      }" @click="selectSession(session.id)">
               <!-- 上 -->
-              <div class="h-16 relative">
-                <div class="flex flex-col w-full justify-between py-2 px-5 ">
-                  <div :class="{ 'text-purple-500': currentSessionId === session.id }"
-                    class=" font-extrabold text-base group-hover:text-purple-500 whitespace-nowrap text-ellipsis overflow-hidden">
-                    {{
-                      session.name }}
-                  </div>
-                  <div class="text-xs whitespace-nowrap">{{ session.messages.length }}条对话</div>
+              <div class="h-16 relative flex items-center px-3 py-2 group  rounded-md transition-colors">
+                <div class="relative mr-3">
+                  <el-avatar :size="36" :src="useModel(session.model).group.icon"
+                    :class="{ 'border-2 border-purple-500': currentSessionId === session.id }" class="transition-all" />
+                  <el-avatar :size="16" :src="useModel(session.model).service.logo"
+                    class="absolute bottom-1 right-1 border border-white shadow-sm" />
                 </div>
-                <div v-if="session.locked" @click="handleToggleLockSession($event, session.id)"
-                  class="absolute bottom-1 right-2 cursor-pointer text-green-500">
-                  <el-icon>
-                    <Lock />
-                  </el-icon>
-                </div>
-                <div v-else>
-                  <div @click="handleToggleLockSession($event, session.id)"
-                    class="absolute bottom-1 -right-5 group-hover:right-2 transition-all cursor-pointer">
-                    <el-icon>
-                      <Unlock />
-                    </el-icon>
+
+                <div class="flex flex-col w-full justify-between overflow-hidden">
+                  <div class="flex items-center">
+                    <div :class="{ 'text-purple-500': currentSessionId === session.id }"
+                      class="font-semibold text-base group-hover:text-purple-500 whitespace-nowrap text-ellipsis overflow-hidden mr-1.5">
+                      {{ session.name }}
+                    </div>
+                    <div v-if="session.locked" @click="handleToggleLockSession($event, session.id)"
+                      class="cursor-pointer text-green-500 text-sm">
+                      <el-icon :size="14">
+                        <Lock />
+                      </el-icon>
+                    </div>
                   </div>
-                  <i class="iconfont absolute top-1 -right-5 group-hover:right-2 transition-all text-sm hover:text-red-500"
-                    @click.stop="deleteSession(index)">&#xe630;</i>
-                  <i class="iconfont absolute bottom-1 -right-5 group-hover:right-8 transition-all text-base hover:text-green-500"
-                    @click.stop="sessionsStore.copySession(index)">&#xe8b0;</i>
+                  <div v-if="session.messages.length > 0"
+                    class="bg-purple-100 text-purple-600 text-xs rounded-full px-1.5 min-w-[20px] text-center w-fit">
+                    {{ session.messages.length > 99 ? '99+' : session.messages.length }}
+                  </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div class="flex bg-white dark:bg-black rounded-md shadow-sm">
+                    <div v-if="session.locked" @click="handleToggleLockSession($event, session.id)"
+                      class="cursor-pointer text-green-500 p-1.5 hover:bg-gray-100 rounded-l-md">
+                      <el-icon>
+                        <Unlock />
+                      </el-icon>
+                    </div>
+                    <div v-else @click="handleToggleLockSession($event, session.id)"
+                      class="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-l-md">
+                      <el-icon>
+                        <Lock />
+                      </el-icon>
+                    </div>
+
+                    <div @click.stop="sessionsStore.copySession(index)"
+                      class="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-green-500">
+                      <el-icon>
+                        <CopyDocument />
+                      </el-icon>
+                    </div>
+
+                    <div @click.stop="deleteSession(index)"
+                      class="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-500 rounded-r-md">
+                      <el-icon>
+                        <Delete />
+                      </el-icon>
+                    </div>
+                  </div>
                 </div>
               </div>
               <!-- 下 -->
@@ -104,7 +163,7 @@
       :class="draging ? 'bg-blue-500 border-blue-500' : 'bg-transparent'">
     </div>
     <div @click="togglePanel" :class="showPanel ? ' translate-x-1/2' : 'translate-x-12 rotate-180'"
-      class=" absolute w-8 h-8 bg-white rounded-full shadow-md right-0 top-1/4 duration-300 flex justify-center items-center cursor-pointer font-extrabold text-base max-md:hidden">
+      class=" absolute w-8 h-8 bg-white dark:bg-gray-800 rounded-full shadow-md right-0 top-1/4 duration-300 flex justify-center items-center cursor-pointer font-extrabold text-base text-gray-800 dark:text-white max-md:hidden">
       <i class="iconfont">&#xe604;</i>
     </div>
   </div>
@@ -115,6 +174,7 @@
 import { ref, watchEffect, onMounted, onBeforeUnmount } from "vue";
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
+import { useModel } from "@/models/data"
 
 const { isMobile } = useWindowSize()
 const props = defineProps({
@@ -125,11 +185,8 @@ const props = defineProps({
 const sessionsStore = useSessionsStore()
 const searchInput = ref("")
 const searchFocus = ref(false)
-
 const selectedSessionRef = ref(null)
-
 const showPanel = ref(true);
-
 
 const scrollContainerRef = ref(null);
 const scrollInterval = ref(null);
@@ -337,7 +394,7 @@ const handleLineMousedown = (e) => {
 
 // 刚进来时，跳到选中的会话
 onMounted(() => {
-  selectedSessionRef.value[0].scrollIntoView({ block: "center" })
+  selectedSessionRef.value?.[0].scrollIntoView({ block: "center" })
 })
 // 离开时，停止自动滚动
 onBeforeUnmount(() => {

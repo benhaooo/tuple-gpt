@@ -7,9 +7,10 @@ import { storeToRefs } from "pinia";
 import useStream from '@/hooks/stream'
 import { generateData, randomTemperature } from "@/models/data"
 import { useToast } from 'vue-toast-notification';
+import { useModel } from "@/models/data"
 
 const configStore = useConfigStore();
-const { moduleConfig, getModelConfig } = storeToRefs(configStore);
+const { modelConfig, getModelConfig } = storeToRefs(configStore);
 
 const useSessionsStore = defineStore('sessions', {
     state: () => ({
@@ -48,7 +49,7 @@ const useSessionsStore = defineStore('sessions', {
             const session = {
                 id: generateUniqueId(),
                 messages: [],
-                ...moduleConfig.value,
+                ...modelConfig.value[0].config,
                 ...custom,
             };
             return session;
@@ -100,6 +101,7 @@ const useSessionsStore = defineStore('sessions', {
             const session = this.sessions[index];
             const newSession = JSON.parse(JSON.stringify(session));
             newSession.id = generateUniqueId();
+            newSession.name = `${newSession.name} 副本`
             this.sessions.splice(index + 1, 0, newSession);
             this.currentSessionId = newSession.id;
         },
@@ -159,7 +161,7 @@ const useSessionsStore = defineStore('sessions', {
         },
 
         // 发送消息
-        async sendMessage(text, num, formatter) {
+        async sendMessage(text, num, formatter, empowerThink) {
             const session = this.currentSession;
             text = this.formatMessage({ text })
             const index = session.messages.push({
@@ -167,7 +169,7 @@ const useSessionsStore = defineStore('sessions', {
                 role: "user",
                 content: text,
             }) - 1;
-            this.sendMessageInternal(index, { text, num, formatter })
+            this.sendMessageInternal(index, { text, num, formatter, empowerThink })
         },
         async sendNextMessage(text, num) {
             const session = this.currentSession;
@@ -220,9 +222,8 @@ const useSessionsStore = defineStore('sessions', {
             // return template.replace(/\${(.*?)}/g, (match, p) => values[p])
             return template.replace(placeholderRegEx, text)
         },
-        async sendMessageInternal(index, { text, imgUrl, num, formatter = '' }, qSession = this.currentSession, nextMsg = null) {
+        async sendMessageInternal(index, { text, imgUrl, num, formatter = '', empowerThink }, qSession = this.currentSession, nextMsg = null) {
             const session = this.currentSession;
-            if (imgUrl) qSession.model = "gpt-4o";
             const systemMessage = this.getSystemMsg(qSession);
             const historyMessages = imgUrl ? [] : this.getHistoryMsgs(index, session, qSession)
             const indexMsg = {
@@ -256,34 +257,55 @@ const useSessionsStore = defineStore('sessions', {
                 id: generateUniqueId(),
                 role: qSession.role || "assistant",
                 selectedContent: 0,
-                multiContent: datas.map(data => ({ content: formatter, chatting: true, id: generateUniqueId(), model: data.model })),
+                multiContent: datas.map(data => ({ content: formatter, reasoning_content: '', chatting: true, id: generateUniqueId(), model: data.model })),
                 chatting: true
             })
             session.messages.splice(index + 1, 0, chattingMsg);
             //多回复
             const responses = [];
             for (let i = 0; i < replyCount; i++) {
-                responses.push(completions(datas[i]).then(response => {
-                    if (response.ok) {
-                        return datas[i].stream ? this.handleStreamMsg(response, chattingMsg.multiContent[i]) : this.handleUnStreamMsg(response, chattingMsg.multiContent[i])
+                responses.push(
+                    (async () => {
+                        if (empowerThink) {
+                            try {
+                                const thinkResponse = await useModel(configStore.modelConfig[3].config.model).serviceFetch(datas[i])
+                                if (thinkResponse.ok) {
+                                    await (datas[i].stream ?
+                                        this.handleStreamMsg(thinkResponse, chattingMsg.multiContent[i], { onlyThink: true }) :
+                                        this.handleUnStreamMsg(thinkResponse, chattingMsg.multiContent[i]))
+                                    datas[i].messages.push({
+                                        role: "assistant",
+                                        content: `<thinking>${chattingMsg.multiContent[i].reasoning_content}</thinking>`
+                                    })
+                                }
+                            } catch (error) {
 
-                    } else {
-                        return response.json().then(errorMsg => {
-                            throw new Error(JSON.stringify(errorMsg, null, 2));
-                        });
-                    }
-                }).catch(error => {
-                    chattingMsg.multiContent[i].content = `发生错误了捏～：\n\`\`\`json\n${error.message}\n\`\`\``;
-                }))
+                            }
+                        }
+
+                        // 执行原来的 completions
+                        return completions(datas[i]).then(response => {
+                            if (response.ok) {
+                                return datas[i].stream ?
+                                    this.handleStreamMsg(response, chattingMsg.multiContent[i]) :
+                                    this.handleUnStreamMsg(response, chattingMsg.multiContent[i])
+                            } else {
+                                return response.json().then(errorMsg => {
+                                    throw new Error(JSON.stringify(errorMsg, null, 2));
+                                });
+                            }
+                        }).catch(error => {
+                            chattingMsg.multiContent[i].content = `发生错误了捏～：\n\`\`\`json\n${error.message}\n\`\`\``;
+                        })
+                    })()
+                )
             }
 
             //所有回复完成
             await Promise.all(responses)
                 .then(() => {
                     //未评估
-                    if (session.name === configStore.moduleConfig.name) {
-                        this.evaluateSession(session)
-                    }
+                    this.evaluateSession(session)
                 })
                 .finally(() => {
                     // 统一处理清理操作
@@ -305,12 +327,16 @@ const useSessionsStore = defineStore('sessions', {
             })
         },
         // 处理流消息
-        handleStreamMsg(response, chatting) {
+        handleStreamMsg(response, chatting, { onlyThink } = {}) {
             return new Promise((resolve, reject) => {
                 const { streamController } = useStream()
-                const controller = streamController(response, async (content) => {
+                const controller = streamController(response, async (content, reasoning_content, usage) => {
+                    chatting.reasoning_content += reasoning_content
+                    if (onlyThink && content) resolve(chatting.reasoning_content)
                     chatting.content += content;
-                    await delay(4);
+                    if (usage) {
+                        chatting.usage = usage
+                    }
                 }, async () => {
                     await delay(800);
                     resolve()
@@ -326,6 +352,7 @@ const useSessionsStore = defineStore('sessions', {
                 content: session.system
             } : null;
         },
+        // 评估会话
         async evaluateSession(session) {
             const evaluatePrompt = `使用一个emoji和四到六个字直接返回这句话的简要主题，不要解释、不要标点、不要语气词、不要多余文本，不要加粗，如果没有主题，请直接返回“闲聊”`
             const data = {
@@ -338,7 +365,8 @@ const useSessionsStore = defineStore('sessions', {
                     },
                 ],
             }
-            const response = await retryCompletions(data, "gpt-3.5-turbo")
+
+            const response = await useModel(configStore.modelConfig[1].config.model).serviceFetch(data)
             response.json().then(({ choices }) => {
                 const res = choices[0].message.content
                 session.name = res
