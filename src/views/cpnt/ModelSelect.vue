@@ -9,7 +9,7 @@
         <el-option-group v-for="service in mergedServices" :key="service.provider" :label="service.provider">
             <template v-for="group in service.groups" :key="group.name">
                 <el-option v-for="model in group.models" :key="model.id" :value="model.id" :label="model.name"
-                    :disabled="!service.status || !model.status"
+                    :disabled="!service.status"
                     class="hover:!bg-indigo-50 active:!bg-indigo-100 rounded-lg mx-2 my-1">
                     <div class="flex items-center gap-2">
                         <el-avatar :src="group.icon" size="small" />

@@ -39,12 +39,12 @@ export const randomTemperature = (session, datas) => {
 }
 
 import useConfigStore from '@/stores/modules/config'
-import { da } from 'element-plus/es/locales.mjs'
 import { computed } from 'vue'
 
 
-const assembleUrl = (service) => {
-    const { api_url, url_suffix } = service
+const assembleUrl = (service, data) => {
+    let { api_url, url_suffix } = service
+    if (api_url.includes('{DEPLOYMENT}')) api_url = api_url.replace('{DEPLOYMENT}', data.model)
     if (api_url.endsWith('#')) return api_url
     return `${api_url}/${url_suffix || 'v1/chat/completions'}`
 }
@@ -52,7 +52,12 @@ const assembleFetchData = (service, data) => {
     switch (service.provider) {
         case 'Azure':
             return {
-
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': service.api_key,
+                },
+                body: JSON.stringify(data),
             }
         case '扣子':
             return {
@@ -105,12 +110,13 @@ const getServiceModel = (id) => {
 
 // 对模型的请求封装
 export const useModel = (id) => {
-    const { serviceConfig, geModelInfo } = useConfigStore?.()
+    console.log("🚀 ~ useModel ~ id:", id)
+    // const { serviceConfig, getModelInfo } = useConfigStore?.()
     const { service, group, model } = getServiceModel(id)
     const modelInfo = computed(() => serviceStore.getModelInfo(id))
     const serviceFetch = (data) => {
         data.model = model.name
-        const url = assembleUrl(service)
+        const url = assembleUrl(service, data)
         const fetchData = assembleFetchData(service, data)
         return fetch(url, fetchData)
     }

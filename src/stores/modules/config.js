@@ -82,18 +82,18 @@ const useConfigStore = defineStore("config", {
         },
         availableServices: (state) => {
             return state.serviceConfig
-                .filter(service => service.status) // 过滤有效服务商
+                .filter(service => service.status)
                 .map(service => ({
                     ...service,
                     groups: service.groups
                         .map(group => ({
                             ...group,
-                            models: group.models.filter(model => model.status).map(model => ({
+                            models: group.models.map(model => ({
                                 ...model,
                                 id: model.id || `${service.provider}/_${group.name}/_${model.name}`,
                             }))
                         }))
-                        .filter(group => group.models.length > 0) // 过滤空分组
+                        // .filter(group => group.models.length > 0) // 过滤空分组
                 }))
                 .filter(service => service.groups.length > 0); // 过滤空服务商
         },
