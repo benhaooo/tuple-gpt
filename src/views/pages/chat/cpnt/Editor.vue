@@ -12,6 +12,11 @@
                             class="absolute w-full h-full top-0 left-0 opacity-0" />
                     </form>
                 </el-tooltip>
+                <el-tooltip content="选择模型" placement="top">
+                    <div class="cursor-pointer hover:bg-light-blue-base rounded px-2 py-1 flex items-center relative" @click="openModelSelector" ref="atButtonRef">
+                        <span class="font-bold text-sm">@</span>
+                    </div>
+                </el-tooltip>
             </div>
         </div>
         <div>
@@ -21,62 +26,64 @@
                     @click="fileUrl = ''">&#xe630;</i>
             </div>
             <div ref="optimizeRef"
-                class=" relative px-2 py-4 pb-0 rounded-xl bg-white dark:bg-dark-base border-2 transition-colors duration-500"
+                class="relative px-2 py-4 pb-0 rounded-xl bg-white dark:bg-dark-base border-2 transition-colors duration-500"
                 :class="taFocused ? 'border-dark-blue-base' : 'border-light-border dark:border-dark-border'">
                 <div v-if="showOptimizedModal"
-                    class=" absolute flex flex-col bg-white w-full h-44 -top-48 left-0 shadow-md rounded-md p-4">
+                    class="absolute flex flex-col bg-white w-full h-44 -top-48 left-0 shadow-md rounded-md p-4">
                     <div class="flex justify-between">
-                        <h3 class=" font-extrabold">提示词优化:</h3>
+                        <h3 class="font-extrabold">提示词优化:</h3>
                         <i @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing }"
                             class="iconfont font-extrabold cursor-pointer">&#xe616;</i>
                     </div>
-                    <div class=" flex-1">
-                        <textarea class=" w-full h-full resize-none" v-model="optimizedPrompt"></textarea>
+                    <div class="flex-1">
+                        <textarea class="w-full h-full resize-none" v-model="optimizedPrompt"></textarea>
                     </div>
-                    <div class=" flex flex-row-reverse">
-                        <el-button @click="applyOptimize" :loading="optimizing" type="primary" class=" ml-2">应用
+                    <div class="flex flex-row-reverse">
+                        <el-button @click="applyOptimize" :loading="optimizing" type="primary" class="ml-2">应用
                         </el-button>
                     </div>
                 </div>
-                <div class="flex gap-1 ">
-                    <ElTag v-for="(model, index) in atModels" :key="model" closable @close="atModels.splice(index, 1)">
+                <div class="flex flex-wrap gap-1 mb-2">
+                    <ElTag v-for="(model, index) in selectedModels" :key="model" closable @close="removeSelectedModel(index)">
                         {{ useModel(model).model.name }}</ElTag>
                 </div>
-                <div class="flex">
-                    <AtSelect ref="atSelectRef" class="absolute top-0 left-4" @change="handleSelectAt" />
-
-                    <textarea class=" text-base dark:bg-dark-base w-full  resize-none" v-model="text"
-                        @input="handleInput" @keydown="handleKeyDown" placeholder="ctrl + 1~9/enter 发送"
-                        @paste="handlePaste" @focus="taFocused = true" @blur="taFocused = false" ref="taRef"
-                        rows="1"></textarea>
-                    <div v-if="currentSession.type === 'auto' && currentSession.chatting"
-                        class="relative w-10 h-8 flex justify-center items-center cursor-pointer" @click="stopAutoChat">
-                        <img src="@/assets/icons/spinning-circle.svg" class="animate-spin w-6 h-6" alt="Loading" />
-                        <span class="absolute text-sm font-bold">{{ currentSession.chatting }}</span>
+                <div class="relative mb-1">
+                    <!-- 模型选择器组件 -->
+                    <ModelSelector ref="modelSelectorRef" @select="handleSelectModel" />
+                    
+                    <div class="flex">
+                        <textarea class="text-base dark:bg-dark-base w-full resize-none" v-model="text"
+                            @input="handleInput" @keydown="handleKeyDown" placeholder="ctrl + 1~9/enter 发送"
+                            @paste="handlePaste" @focus="taFocused = true" @blur="taFocused = false" ref="taRef"
+                            rows="1"></textarea>
+                        <div v-if="currentSession.type === 'auto' && currentSession.chatting"
+                            class="relative w-10 h-8 flex justify-center items-center cursor-pointer" @click="stopAutoChat">
+                            <img src="@/assets/icons/spinning-circle.svg" class="animate-spin w-6 h-6" alt="Loading" />
+                            <span class="absolute text-sm font-bold">{{ currentSession.chatting }}</span>
+                        </div>
+                        <button v-else @click="handleSendMessage()"
+                            :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5] dark:bg-[#333]'" :disabled="!canSend"
+                            class="flex justify-center items-center w-10 h-8 rounded-lg">
+                            <el-tooltip content="发送" placement="top" :show-after="500">
+                                <i class="iconfont text-white">&#xe888;</i>
+                            </el-tooltip>
+                        </button>
                     </div>
-                    <button v-else @click="handleSendMessage()"
-                        :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5] dark:bg-[#333]'" :disabled="!canSend"
-                        class="flex justify-center items-center w-10 h-8 rounded-lg">
-                        <el-tooltip content="发送" placement="top" :show-after="500">
-                            <i class="iconfont text-white">&#xe888;</i>
-                        </el-tooltip>
-                    </button>
                 </div>
-                <div class=" flex items-center gap-2">
+                <div class="flex items-center gap-2">
                     <el-tooltip content="优化" placement="top">
                         <i @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing || !canSend }"
                             class="iconfont cursor-pointer font-extrabold hover:text-dark-blue-base">&#xe624;</i>
                     </el-tooltip>
                     <button @click="handleFormat('题目：新疆是中国面积最大的省级行政区，它的面积可以装下多少个北京？')"
                         :class="{ 'border-dark-blue-base border-2': activeFomat }"
-                        class=" text-xs bg-transparent border rounded-md flex"><span
-                            class=" scale-75">JSON</span></button>
+                        class="text-xs bg-transparent border rounded-md flex"><span
+                            class="scale-75">JSON</span></button>
                     <button @click="empowerThink = !empowerThink"
                         :class="{ 'border-dark-blue-base border-2': empowerThink }"
-                        class=" text-xs bg-transparent border rounded-md flex"><span
-                            class=" scale-75">🤔</span></button>
+                        class="text-xs bg-transparent border rounded-md flex"><span
+                            class="scale-75">🤔</span></button>
                 </div>
-
             </div>
         </div>
     </div>
@@ -89,7 +96,7 @@ import ExpandableButtom from "@/views/cpnt/ExpandableBtn.vue";
 import useSessionsStore from "@/stores/modules/chat";
 import { storeToRefs } from 'pinia';
 import { completions } from "@/apis";
-import AtSelect from '@/views/cpnt/AtSelect.vue';
+import ModelSelector from '@/views/cpnt/ModelSelector.vue';
 import { useModel } from "@/models/data"
 
 const sessionsStore = useSessionsStore();
@@ -113,11 +120,13 @@ const empowerThink = ref(false)
 
 const emits = defineEmits(["send"]);
 
-const atModels = ref([])
+// 选中的模型列表
+const selectedModels = ref([])
+const modelSelectorRef = ref(null)
 const atIndex = ref(-1)
 const cursorIndex = ref(-1)
-const atSelectRef = ref(null)
 
+const atButtonRef = ref(null);
 
 const handleInput = (e) => {
     const input = e.target.value
@@ -129,21 +138,51 @@ const handleInput = (e) => {
         // @前没有字符或者是空格，@到光标位置之间没有空格符
         const inAt = (atIndex.value === 0 || input.charAt(atIndex.value - 1) === ' ') && betweenInput.indexOf(' ') === -1
         if (inAt) {
-            atSelectRef.value.openAtSelect(betweenInput)
+            // 设置插入符号的位置
+            nextTick(() => {
+                // 传入文本框元素和'top'位置参数
+                modelSelectorRef.value.open(betweenInput, taRef.value, 'top')
+                
+                // 移除@及后面的搜索文本
+                const beforeAt = text.value.substring(0, atIndex.value);
+                const afterSearch = text.value.substring(cursorIndex.value);
+                text.value = beforeAt + afterSearch;
+                // 重置索引
+                atIndex.value = -1;
+                cursorIndex.value = -1;
+            })
         } else {
-            atSelectRef.value.closeAtSelect()
+            modelSelectorRef.value.close()
         }
     } else {
-        atSelectRef.value.closeAtSelect()
+        modelSelectorRef.value.close()
     }
 }
 
-// @选择
-const handleSelectAt = (modelID) => {
-    const modelName = useModel(modelID).model
-    atModels.value.push(modelID)
-    text.value = text.value.substring(0, atIndex.value) + text.value.substring(cursorIndex.value)
+// 选择模型
+const handleSelectModel = (modelID) => {
+    selectedModels.value.push(modelID)
+    
+    // 聚焦回文本框
+    nextTick(() => {
+        if (taRef.value) {
+            taRef.value.focus();
+        }
+    });
 }
+
+// 移除选中的模型
+const removeSelectedModel = (index) => {
+    selectedModels.value.splice(index, 1)
+}
+
+// 打开模型选择器
+const openModelSelector = () => {
+    // 直接打开模型选择器，显示在按钮上方
+    nextTick(() => {
+        modelSelectorRef.value.open('', atButtonRef.value, 'top');
+    });
+};
 
 const autoHeight = async () => {
     await nextTick()
@@ -172,7 +211,7 @@ const handleSendMessage = async (num) => {
         sessionsStore.sendNextMessage(text.value, num)
         text.value = "";
     } else {
-        if (!text.value) return;
+        if (!text.value && selectedModels.value.length === 0) return;
         if (fileUrl.value) {
             sessionsStore.sendImgMessage(text.value, fileUrl.value, num)
             text.value = "";
@@ -180,13 +219,14 @@ const handleSendMessage = async (num) => {
             return
         }
         emits("send")
-        sessionsStore.sendMessage(text.value, num, activeFomat.value, empowerThink.value).then(() => {
+        sessionsStore.sendMessage(text.value, num, activeFomat.value, empowerThink.value, selectedModels.value).then(() => {
             // resetAndScrollToBottom()
         })
 
         text.value = "";
         fileUrl.value = "";
         activeFomat.value = ""
+        selectedModels.value = []
     }
     //可能watch那没更新来
     nextTick(() => autoHeight());
@@ -231,7 +271,12 @@ const handleFormat = (char) => {
     }
 }
 
-
+// 停止自动聊天
+const stopAutoChat = () => {
+    if (currentSession.value.type === 'auto') {
+        sessionsStore.stopAutoChat()
+    }
+}
 
 
 const dataPicker = (json, onMessage) => {

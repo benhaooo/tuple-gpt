@@ -27,29 +27,61 @@
         <ExpandableBtn @click="copy" text="复制">
           <i class="iconfont">&#xe8b0;</i>
         </ExpandableBtn>
-
       </div>
-      <!-- <div class="mx-auto">
-        <ExpandableBtn @click="sessionsStore.createMessage(index, message.role)" text="向上创建">
-          <i class="iconfont">&#xe605;</i>
-        </ExpandableBtn>
-        <ExpandableBtn @click="sessionsStore.createMessage(index + 1, message.role)" text="向下创建">
-          <i class="iconfont">&#xe606;</i>
-        </ExpandableBtn>
-      </div> -->
     </div>
-    <div v-if="message.multiContent" :class="{ 'justify-end': isUser }"
-      class=" flex items-start gap-2 w-full overflow-scroll p-4">
-      <template v-for="(oneOf, index) in message.multiContent" :key="oneOf.id">
-        <Content @click="message.selectedContent = index" :contentObj="oneOf"
-          :selected="index === message.selectedContent"
-          :ref="index === message.selectedContent ? 'contentValueRef' : null" />
-      </template>
+    
+    <div v-if="message.multiContent" :class="{ 'flex justify-end': isUser && message.multiContent.length === 1 }">
+      <!-- 单个消息，直接全宽显示 -->
+      <div v-if="message.multiContent.length === 1" class="mt-4" :class="{ 'max-w-[80%]': isUser }">
+        <Content 
+          :contentObj="message.multiContent[0]" 
+          :selected="true"
+          ref="contentValueRef" />
+      </div>
+      
+      <!-- 多个消息，显示卡片模式或标签页模式 -->
+      <div v-else class="mt-4 w-full">
+        <!-- 卡片模式 -->
+        <div v-if="!expandedView" :class="{ 'justify-end': isUser }"
+          class="flex items-start gap-2 w-full overflow-x-auto p-4 message-cards">
+          <template v-for="(oneOf, index) in message.multiContent" :key="oneOf.id">
+            <div class="card-container" style="min-width: 50%; max-width: 50%;">
+              <Content @click="selectContent(index)" :contentObj="oneOf"
+                :selected="index === message.selectedContent"
+                :ref="index === message.selectedContent ? 'contentValueRef' : null" />
+            </div>
+          </template>
+        </div>
+        
+        <!-- 标签页模式 -->
+        <div v-else>
+          <div class="flex justify-between items-center mb-2">
+            <el-button size="small" @click="expandedView = false" type="text">
+              <i class="iconfont mr-1">&#xe66b;</i>返回卡片视图
+            </el-button>
+            <span class="text-xs text-gray-500">{{ message.selectedContent + 1 }} / {{ message.multiContent.length }}</span>
+          </div>
+          <el-tabs v-model="activeTab" type="border-card" class="custom-tabs">
+            <el-tab-pane 
+              v-for="(oneOf, index) in message.multiContent" 
+              :key="oneOf.id"
+              :label="getModelName(oneOf.model)"
+              :name="`${index}`">
+              <Content 
+                :contentObj="oneOf" 
+                :selected="true"
+                :ref="index === message.selectedContent ? 'contentValueRef' : null" />
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+      </div>
     </div>
-    <div v-else>
+    
+    <div v-else :class="{ 'flex justify-end': isUser }">
       <div class="content max-w-full text-sm relative bg-white dark:bg-[#262626] 
            transition-all duration-300 rounded-[12px] p-4
-           hover:bg-gray-50/40 dark:hover:bg-[#303030] group">
+           hover:bg-gray-50/40 dark:hover:bg-[#303030] group"
+           :class="{ 'max-w-[80%]': isUser }">
 
         <img v-if="message.img" :src="message.img" class="rounded-lg mb-3 shadow-sm" alt="消息图片">
 
@@ -59,11 +91,10 @@
       </div>
     </div>
   </div>
-
 </template>
 
 <script setup>
-import { computed, ref, reactive, onMounted, onUpdated, onUnmounted, nextTick } from "vue";
+import { computed, ref, reactive, onMounted, onUpdated, onUnmounted, nextTick, watch } from "vue";
 import useConfigStore from "@/stores/modules/config";
 import { storeToRefs } from "pinia";
 import ExpandableBtn from "../cpnt/ExpandableBtn.vue"
@@ -84,15 +115,34 @@ const props = defineProps({
 });
 
 const contentValueRef = ref(null)
+const expandedView = ref(false);
+const activeTab = ref('0');
+
+// 监听选中内容变化，同步标签页
+watch(() => props.message.selectedContent, (newVal) => {
+  activeTab.value = String(newVal);
+});
+
+// 监听标签页变化，同步选中内容
+watch(() => activeTab.value, (newVal) => {
+  props.message.selectedContent = Number(newVal);
+});
 
 const showEditModal = ref(false);
 const editText = ref("");
 
 const modelAva = computed(() => {
+  if (!props.message.multiContent || props.message.multiContent.length === 0) return '';
   const id = props.message.multiContent[0].model
   const { group } = useModel(id)
   return group.icon
 })
+
+// 获取模型名称
+const getModelName = (modelId) => {
+  const { model } = useModel(modelId)
+  return model.name || `模型 ${modelId}`
+}
 
 const handelEditOk = () => {
   setContent(props.message, editText.value)
@@ -101,6 +151,12 @@ const handelEditOk = () => {
 const handleEditMessage = () => {
   showEditModal.value = true;
   editText.value = getContent(props.message)
+};
+
+// 选择内容并切换到扩展视图
+const selectContent = (index) => {
+  props.message.selectedContent = index;
+  expandedView.value = true;
 };
 
 const getContent = (message) => {
@@ -128,17 +184,21 @@ const copy = () => {
 }
 //将选中的内容置首位
 onMounted(() => {
-  if (props.message.selectedContent && props.message.selectedContent > 0) {
+  if (props.message.multiContent && props.message.selectedContent && props.message.selectedContent > 0) {
     const { multiContent, selectedContent } = props.message;
     [multiContent[0], multiContent[selectedContent]] = [multiContent[selectedContent], multiContent[0]];
     props.message.selectedContent = 0;
+  }
+  
+  // 默认设置标签页的活跃选项
+  if (props.message.multiContent && props.message.multiContent.length > 1) {
+    activeTab.value = String(props.message.selectedContent);
   }
 });
 </script>
 
 <style scoped lang="less">
 .message {
-
   .user-info {
     display: flex;
 
@@ -176,7 +236,16 @@ onMounted(() => {
     }
   }
 
-
+  .message-cards {
+    .card-container {
+      flex: 0 0 50%;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: translateY(-3px);
+      }
+    }
+  }
 
   &:hover {
     .user-info {
@@ -205,6 +274,22 @@ onMounted(() => {
   }
 }
 
+.custom-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 10px;
+  }
+
+  :deep(.el-tabs__item) {
+    height: 30px;
+    line-height: 30px;
+    font-size: 12px;
+    padding: 0 10px;
+  }
+  
+  :deep(.el-tabs__nav) {
+    border: none;
+  }
+}
 
 :deep(code) {
   border-radius: 16px;

@@ -134,6 +134,11 @@ const modelService = <Service[]>[
                         name: 'Qwen/Qwen2.5-7B-Instruct',
                         power: [],
                         status: true,
+                    },
+                    {
+                        name: 'Qwen/Qwen3-235B-A22B',
+                        power: [],
+                        status: true
                     }
                 ]
             }
@@ -238,9 +243,11 @@ const modelService = <Service[]>[
                         power: [],
                         status: true,
                     },
-                    // {
-                    //     name:
-                    // }
+                    {
+                        name: 'gpt-4o-image',
+                        power: [],
+                        status: true,
+                    }
                 ]
             },
             {
@@ -259,6 +266,21 @@ const modelService = <Service[]>[
                     },
                     {
                         name: 'claude-3-5-sonnet-20240620',
+                        power: [],
+                        status: true,
+                    },
+                    {
+                        name: 'claude-opus-4-20250514',
+                        power: [],
+                        status: true,
+                    },
+                    {
+                        name: 'claude-sonnet-4-20250514',
+                        power: [],
+                        status: true,
+                    },
+                    {
+                        name: 'claude-sonnet-4-20250514-thinking',
                         power: [],
                         status: true,
                     },
@@ -283,6 +305,47 @@ const modelService = <Service[]>[
                         power: [],
                         status: true,
                     },
+                ]
+            }
+        ]
+    },
+    {
+        provider: '302AI',
+        logo: 'https://favicon.im/all.302.ai',
+        api_key: '',
+        api_url: 'https://api.302.ai',
+        status: false,
+        groups: [
+            {
+                name: 'gemini',
+                icon: 'https://favicon.im/gemini.google.com',
+                models: [
+                    {
+                        name: 'gemini-2.5-pro-preview-05-06',
+                        power: [],
+                        status: true,
+                    },
+                    {
+                        name: 'gemini-2.5-pro-exp-03-25',
+                        power: [],
+                        status: true,
+                    },
+                ]
+            },
+            {
+                name: 'openai',
+                icon: 'https://favicon.im/openai.com',
+                models: [
+                    {
+                        name: 'o3',
+                        power: [],
+                        status: true,
+                    },
+                    {
+                        name: 'o3-mini',
+                        power: [],
+                        status: true,
+                    }
                 ]
             }
         ]

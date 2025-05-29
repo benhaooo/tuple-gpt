@@ -1,21 +1,47 @@
 import useConfigStore from "@/stores/modules/config";
-import { freeAPI, defaultAPI } from "./config"
-import { useModel } from "@/models/data"
+import { freeAPI, defaultAPI } from "./config";
+import { useModel } from "@/models/data";
+
+interface ApiConfig {
+    host: string;
+    key: string;
+    type: string;
+}
+
+interface RequestData {
+    model: string;
+    [key: string]: any;
+}
+
+interface CompletionsConfig {
+    url: string;
+    config: {
+        method: string;
+        headers: Record<string, string>;
+        body: string;
+    };
+}
 
 // 默认会话请求
-export const completions = (data) => {
-    const id = data.model
-    const { serviceFetch } = useModel(id)
-    return serviceFetch(data)
-}
+export const completions = (data: RequestData): Promise<Response> => {
+    const id = data.model;
+    const { serviceFetch } = useModel(id);
+    return serviceFetch(data);
+};
 
 // 免费接口列表重试
-export const retryCompletions = (data, model) => {
+export const retryCompletions = (data: RequestData, model: string): Promise<Response> => {
     const configStore = useConfigStore();
-    const retryList = [...freeAPI, defaultAPI.getter(configStore.serverConfig.apiKey)]
-    return freeCompletions(retryList, data, model)
-}
-const freeCompletions = (retryList, data, model, retry = 0) => {
+    const retryList = [...freeAPI, defaultAPI.getter(configStore.serverConfig.apiKey)];
+    return freeCompletions(retryList, data, model);
+};
+
+const freeCompletions = (
+    retryList: ApiConfig[], 
+    data: RequestData, 
+    model: string, 
+    retry: number = 0
+): Promise<Response> => {
     return new Promise((resolve, reject) => {
         const { url, config } = buildCompletionsConfig(retryList[retry], data, model);
         fetch(url, config)
@@ -31,13 +57,18 @@ const freeCompletions = (retryList, data, model, retry = 0) => {
             });
     });
 };
+
 // 构建请求配置
-const buildCompletionsConfig = ({ host, key, type }, data) => {
+const buildCompletionsConfig = (
+    { host, key, type }: ApiConfig, 
+    data: RequestData
+): CompletionsConfig => {
     // model名转换
     data = {
         ...data,
         model: useModel(data.model).model.name
-    }
+    };
+    
     switch (type) {
         case "azure":
             return {
@@ -50,7 +81,7 @@ const buildCompletionsConfig = ({ host, key, type }, data) => {
                     },
                     body: JSON.stringify(data),
                 }
-            }
+            };
         case 'doubao':
             return {
                 url: `http://localhost:3111/apis/proxy?apiUrl=${host}/chat/completions`,
@@ -63,7 +94,7 @@ const buildCompletionsConfig = ({ host, key, type }, data) => {
                     },
                     body: JSON.stringify(data),
                 }
-            }
+            };
         case 'local':
             return {
                 url: `${host}/api/chat`,
@@ -72,7 +103,7 @@ const buildCompletionsConfig = ({ host, key, type }, data) => {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data)
                 }
-            }
+            };
         case "openai":
         default:
             return {
@@ -85,6 +116,6 @@ const buildCompletionsConfig = ({ host, key, type }, data) => {
                     },
                     body: JSON.stringify(data),
                 }
-            }
+            };
     }
-}
+};
