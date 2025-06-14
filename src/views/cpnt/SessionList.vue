@@ -172,6 +172,7 @@
 
 <script setup>
 import { ref, watchEffect, onMounted, onBeforeUnmount } from "vue";
+import { ElMessageBox } from 'element-plus';
 import useSessionsStore from '@/stores/modules/chat'
 import { useWindowSize } from '@/hooks/size'
 import { useModel } from "@/models/data"

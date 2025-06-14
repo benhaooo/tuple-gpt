@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import prompts from '@/script/output/combine.json';
+import prompts from '../../../scripts/output/combine.json';
 import { ref, reactive, toRefs } from 'vue';
 import { useRouter, useRoute } from "vue-router"
 import useSessionsStore from "@/stores/modules/chat";

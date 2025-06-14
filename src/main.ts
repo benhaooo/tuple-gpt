@@ -22,9 +22,5 @@ app.use(ToastPlugin);
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
-// 屏蔽错误信息
-// app.config.errorHandler = () => null;
-// 屏蔽警告信息
-// app.config.warnHandler = () => null;
 
 app.mount('#app')

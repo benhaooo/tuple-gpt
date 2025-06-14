@@ -1,392 +1,380 @@
+/**
+ * 聊天主 Store - 重构版本
+ * 现在作为各个专门 Store 的协调器，保持向后兼容性
+ */
+
 import { defineStore } from "pinia";
-import { generateUniqueId, delay } from "@/utils/commonUtils";
-import { completions } from "@/apis";
 import { computed, reactive } from "vue";
-import useConfigStore from "@/stores/modules/config";
-import { storeToRefs } from "pinia";
-import useStream from '@/hooks/stream'
-import { generateData, randomTemperature } from "@/models/data"
 import { useToast } from 'vue-toast-notification';
-import { useModel } from "@/models/data"
+import { createLogger } from '@/utils/logger';
+import { generateUniqueId, delay } from '@/utils/commonUtils';
+import { completions } from '@/apis';
+import { generateData, randomTemperature, useModel } from '@/models/data';
+import useConfigStore from './config';
+import useStream from '@/hooks/stream';
 
-// 定义类型
-interface Message {
-  id: string;
-  role: string;
-  content?: string;
-  img?: string;
-  multiContent?: MultiContent[];
-  selectedContent?: number;
-  chatting?: boolean | any;
-}
+// 导入新的模块化 stores
+import { useSessionStore } from './session';
+import { useMessageStore } from './message';
+import { useStreamStore } from './stream';
+import { useEvaluationStore } from './evaluation';
+import { useChatService } from './chat-service';
 
-interface MultiContent {
-  id: string;
-  content: string;
-  reasoning_content?: string;
-  chatting?: boolean | any;
-  model?: string;
-  usage?: any;
-}
+// 导入类型定义
+import type {
+  Message,
+  Session,
+  SessionStore,
+  SendMessageOptions,
+  MultiContent,
+  SystemMessage,
+  MessageContent,
+  MessageData
+} from '../types/chat';
 
-interface Session {
-  id: string;
-  name: string;
-  messages: Message[];
-  type: string;
-  ai: Session[];
-  ctxLimit: number;
-  locked: boolean;
-  role: string;
-  model: string;
-  format?: string;
-  system?: string;
-  chatting?: number;
-  replyCount?: number;
-  clearedCtx?: Message[];
-  [key: string]: any; // 允许其他属性
-}
+const logger = createLogger('ChatStore');
 
-interface SystemMessage {
-  role: string;
-  content: string;
-}
-
-interface MessageContent {
-  type: string;
-  text?: string;
-  image_url?: {
-    url: string;
-  };
-}
-
-interface MessageData {
-  model: string;
-  messages: any[];
-  stream?: boolean;
-  [key: string]: any;
-}
-
-interface SendMessageOptions {
-  text: string;
-  imgUrl?: string;
-  num?: number;
-  formatter?: string;
-  empowerThink?: boolean;
-  selectedModels?: string[];
-}
-
-interface SessionStore {
-  sessions: Session[];
-  currentSessionId: string;
-  askprompt: Record<string, any>;
-}
-
-const configStore = useConfigStore();
-const { modelConfig, getModelConfig } = storeToRefs(configStore);
-
-// 默认会话配置
-const DEFAULT_SESSION: Session = {
-  id: "default",
-  name: "默认会话",
-  messages: [],
-  type: "chat",
-  ai: [],
-  ctxLimit: 5,
-  locked: false,
-  role: "user",
-  model: 'gpt-4o'
-};
-
+/**
+ * 主聊天 Store - 作为各个专门 Store 的协调器
+ * 保持原有的 API 接口，内部委托给专门的 stores
+ */
 const useSessionsStore = defineStore('sessions', {
-  state: (): SessionStore => ({
-    sessions: [{ ...DEFAULT_SESSION }],
-    currentSessionId: "default",
-    askprompt: {},
-  }),
+  state: (): SessionStore => {
+    // 使用 session store 的状态
+    const sessionStore = useSessionStore();
+    return {
+      sessions: sessionStore.sessions,
+      currentSessionId: sessionStore.currentSessionId,
+      askprompt: sessionStore.askprompt,
+    };
+  },
 
   getters: {
-    currentSession: (state): Session | undefined => 
-      state.sessions.find(session => session.id === state.currentSessionId),
-    
-    filterSessions: (state) => (text: string): Session[] => {
-      if (!text) return state.sessions;
-      
-      return state.sessions.filter(session => {
-        return session.messages.some(msg => {
-          if (msg.content && msg.content.includes(text)) return true;
-          
-          return msg.multiContent && msg.multiContent.length > 0 && msg.multiContent.some(mc => 
-            mc.content.includes(text)
-          );
-        });
-      });
-    }
+    /**
+     * 获取当前会话 - 委托给 session store
+     */
+    currentSession: (): Session | undefined => {
+      const sessionStore = useSessionStore();
+      return sessionStore.currentSession;
+    },
+
+    /**
+     * 过滤会话 - 委托给 session store
+     */
+    filterSessions: () => (text: string): Session[] => {
+      const sessionStore = useSessionStore();
+      return sessionStore.filterSessions(text);
+    },
+
+    /**
+     * 获取会话统计信息
+     */
+    sessionStats: () => {
+      const sessionStore = useSessionStore();
+      return sessionStore.sessionStats;
+    },
+
+    /**
+     * 检查是否有正在处理的消息
+     */
+    isProcessing: () => {
+      const chatService = useChatService();
+      return chatService.hasProcessingMessages;
+    },
   },
 
   actions: {
-    // =============== 会话管理 ===============
-    
+    // =============== 会话管理 - 委托给 session store ===============
+
+    /**
+     * 创建会话
+     */
     createSession(custom: Partial<Session> = {}): Session {
-      const session: Session = {
-        id: generateUniqueId(),
-        name: custom.name || 'New Chat',
-        messages: [],
-        type: custom.type || 'chat',
-        ai: custom.ai || [],
-        ctxLimit: custom.ctxLimit || 5,
-        locked: custom.locked || false,
-        role: custom.role || 'user',
-        model: custom.model || 'gpt-4o'
-      };
-
-      // 应用配置
-      if (modelConfig.value[0]?.config) {
-        Object.assign(session, modelConfig.value[0].config);
-      }
-
-      // 覆盖自定义配置
-      if (Object.keys(custom).length > 0) {
-        Object.assign(session, custom);
-      }
-
-      return session;
+      const sessionStore = useSessionStore();
+      return sessionStore.createSession(custom);
     },
-    
+
+    /**
+     * 添加会话
+     */
     addSession(custom: Partial<Session> = {}): void {
-      const session = this.createSession(custom);
-      this.sessions.unshift(session);
-      this.currentSessionId = session.id;
+      const sessionStore = useSessionStore();
+      sessionStore.addSession(custom);
+      // 同步状态
+      this.sessions = sessionStore.sessions;
+      this.currentSessionId = sessionStore.currentSessionId;
     },
-    
+
+    /**
+     * 添加自动会话
+     */
     addAutoSession(): void {
-      const session = this.createSession({
-        name: "Mock Chat",
-        type: "auto",
-        ai: Array(2).fill(null),
-      });
-      this.sessions.unshift(session);
-      this.currentSessionId = session.id;
+      const sessionStore = useSessionStore();
+      sessionStore.addAutoSession();
+      // 同步状态
+      this.sessions = sessionStore.sessions;
+      this.currentSessionId = sessionStore.currentSessionId;
     },
 
+    /**
+     * 自动推送会话
+     */
     autoPushSession(index1: number, index2: number | null, no: number): void {
-      const autoSession = this.sessions[index1];
-      const session = index2 !== null ? this.sessions[index2] : this.createSession();
-      session.role = no === 1 ? "user" : "assistant";
-      autoSession.ai[no] = session;
-      
-      if (index2 !== null) this.deleteSession(index2);
+      const sessionStore = useSessionStore();
+      sessionStore.autoPushSession(index1, index2, no);
+      // 同步状态
+      this.sessions = sessionStore.sessions;
     },
-    
+
+    /**
+     * 删除会话
+     */
     deleteSession(index: number): void {
-      const curIndex = this.sessions.findIndex(session => session.id === this.currentSessionId);
-      
-      if (index === curIndex) {
-        if (this.sessions.length === 1) {
-          this.sessions[index].messages = [];
-          return;
-        }
-        
-        this.currentSessionId = index === this.sessions.length - 1
-          ? this.sessions[index - 1].id
-          : this.sessions[index + 1].id;
-      }
-      
-      setTimeout(() => {
-        this.sessions.splice(index, 1);
-      }, 0);
+      const sessionStore = useSessionStore();
+      sessionStore.deleteSession(index);
+      // 同步状态
+      this.sessions = sessionStore.sessions;
+      this.currentSessionId = sessionStore.currentSessionId;
     },
-    
+
+    /**
+     * 复制会话
+     */
     copySession(index: number): void {
-      const session = this.sessions[index];
-      const newSession = JSON.parse(JSON.stringify(session)) as Session;
-      newSession.id = generateUniqueId();
-      newSession.name = `${newSession.name} 副本`;
-      
-      this.sessions.splice(index + 1, 0, newSession);
-      this.currentSessionId = newSession.id;
+      const sessionStore = useSessionStore();
+      sessionStore.copySession(index);
+      // 同步状态
+      this.sessions = sessionStore.sessions;
+      this.currentSessionId = sessionStore.currentSessionId;
     },
 
+    /**
+     * 设置当前会话
+     */
     setCurrentSession(id: string): void {
-      this.currentSessionId = id;
+      const sessionStore = useSessionStore();
+      sessionStore.setCurrentSession(id);
+      // 同步状态
+      this.currentSessionId = sessionStore.currentSessionId;
     },
 
+    /**
+     * 交换会话
+     */
     swapSession(index1: number, index2: number): void {
-      [this.sessions[index1], this.sessions[index2]] = [this.sessions[index2], this.sessions[index1]];
+      const sessionStore = useSessionStore();
+      sessionStore.swapSession(index1, index2);
+      // 同步状态
+      this.sessions = sessionStore.sessions;
     },
-    
-    updateSession(newSession: Session): void {
-      const session = this.sessions.find(session => session.id === newSession.id);
-      if (session) {
-        Object.assign(session, newSession);
-      }
-    },
-    
-    toggleLockSession(id: string): void {
-      const session = this.sessions.find(session => session.id === id);
-      if (session) {
-        session.locked = !session.locked;
-      }
-    },
-    
-    // =============== 消息管理 ===============
-    
-    deleteMessage(id: string): void {
-      if (!this.currentSession) return;
-      this.currentSession.messages = this.currentSession.messages.filter(msg => msg.id !== id);
-    },
-    
-    createMessage(index: number, role: string): void {
-      if (!this.currentSession) return;
-      
-      this.currentSession.messages.splice(index, 0, {
-        id: generateUniqueId(),
-        role,
-        multiContent: [{
-          content: "",
-          id: generateUniqueId(),
-        }],
-        selectedContent: 0,
-      });
-    },
-    
-    // =============== 消息格式化和准备 ===============
-    
-    formatMessage({ text }: { text: string }): string {
-      if (!this.currentSession) return text;
-      
-      const template = this.currentSession.format || "";
-      const placeholderRegEx = /\${(.*?)}/g;
-      
-      if (!template || !placeholderRegEx.test(template)) {
-        return `${template}${text}`;
-      }
-      
-      return template.replace(placeholderRegEx, text);
-    },
-    
-    getSystemMsg(session: Session): SystemMessage | null {
-      return session.system 
-        ? { role: "system", content: session.system }
-        : null;
-    },
-    
-    getHistoryMsgs(index: number, session: Session, qSession?: Session): { role: string; content: string }[] {
-      const reversed = qSession?.role === "user";
-      const historyMessages = session.messages.slice(
-        Math.max(0, index - session.ctxLimit), 
-        index
-      );
 
-      return historyMessages.map(msg => ({
-        role: reversed 
-          ? (msg.role === "assistant" ? "user" : "assistant") 
-          : msg.role,
-        content: msg.multiContent && typeof msg.selectedContent === 'number'
-          ? msg.multiContent[msg.selectedContent].content 
-          : (msg.content || ""),
-      }));
+    /**
+     * 更新会话
+     */
+    updateSession(newSession: Session): void {
+      const sessionStore = useSessionStore();
+      sessionStore.updateSession(newSession);
+      // 同步状态
+      this.sessions = sessionStore.sessions;
     },
-    
-    // =============== 消息发送和处理 ===============
-    
+
+    /**
+     * 切换会话锁定状态
+     */
+    toggleLockSession(id: string): void {
+      const sessionStore = useSessionStore();
+      sessionStore.toggleLockSession(id);
+      // 同步状态
+      this.sessions = sessionStore.sessions;
+    },
+
+    // =============== 消息管理 - 委托给 message store ===============
+
+    /**
+     * 删除消息
+     */
+    deleteMessage(id: string): void {
+      const sessionStore = useSessionStore();
+      const messageStore = useMessageStore();
+      const session = sessionStore.currentSession;
+
+      if (!session) return;
+
+      messageStore.deleteMessage(session.id, id);
+      logger.debug('Message deleted via chat store', { messageId: id });
+    },
+
+    /**
+     * 创建消息
+     */
+    createMessage(index: number, role: string): void {
+      const sessionStore = useSessionStore();
+      const messageStore = useMessageStore();
+      const session = sessionStore.currentSession;
+
+      if (!session) return;
+
+      messageStore.createMessage(session.id, index, role);
+      logger.debug('Message created via chat store', { index, role });
+    },
+
+    // =============== 消息格式化和准备 - 委托给 message store ===============
+
+    /**
+     * 格式化消息
+     */
+    formatMessage({ text }: { text: string }): string {
+      const sessionStore = useSessionStore();
+      const messageStore = useMessageStore();
+      const session = sessionStore.currentSession;
+
+      if (!session) return text;
+
+      return messageStore.formatMessage(session.id, text);
+    },
+
+    /**
+     * 获取系统消息
+     */
+    getSystemMsg(session: Session): SystemMessage | null {
+      const messageStore = useMessageStore();
+      return messageStore.getSystemMessage(session.id);
+    },
+
+    /**
+     * 获取历史消息
+     */
+    getHistoryMsgs(index: number, session: Session, qSession?: Session): { role: string; content: string }[] {
+      const messageStore = useMessageStore();
+      return messageStore.getHistoryMessages(session.id, index, qSession?.id);
+    },
+
+    // =============== 消息发送和处理 - 委托给 chat service ===============
+
+    /**
+     * 发送消息
+     */
     async sendMessage(
-      this: any,
-      text: string, 
-      num?: number, 
-      formatter: string = '', 
-      empowerThink?: boolean, 
+      text: string,
+      num?: number,
+      formatter: string = '',
+      empowerThink?: boolean,
       selectedModels: string[] = []
     ): Promise<void> {
-      const session = this.currentSession;
-      if (!session) return;
-      
-      text = this.formatMessage({ text });
-      const index = session.messages.push({
-        id: generateUniqueId(),
-        role: "user",
-        content: text,
-      }) - 1;
-      
-      await this.sendMessageInternal(index, { text, num, formatter, empowerThink, selectedModels });
+      const chatService = useChatService();
+
+      try {
+        const result = await chatService.sendMessage(text, num, formatter, empowerThink, selectedModels);
+
+        if (!result.success) {
+          logger.error('Failed to send message', { error: result.error });
+          useToast().error(`发送消息失败: ${result.error}`);
+        }
+      } catch (error) {
+        logger.error('Send message error', error);
+        useToast().error('发送消息时发生错误');
+      }
     },
-    
-    async sendImgMessage(this: any, text: string, imgUrl: string, num?: number): Promise<void> {
-      if (!this.currentSession) return;
-      
-      const index = this.currentSession.messages.push({
-        id: generateUniqueId(),
-        role: "user",
-        content: text,
-        img: imgUrl,
-      }) - 1;
-      
-      await this.sendMessageInternal(index, { text, imgUrl, num });
+
+    /**
+     * 发送图片消息
+     */
+    async sendImgMessage(text: string, imgUrl: string, num?: number): Promise<void> {
+      const chatService = useChatService();
+
+      try {
+        const result = await chatService.sendImageMessage(text, imgUrl, num);
+
+        if (!result.success) {
+          logger.error('Failed to send image message', { error: result.error });
+          useToast().error(`发送图片消息失败: ${result.error}`);
+        }
+      } catch (error) {
+        logger.error('Send image message error', error);
+        useToast().error('发送图片消息时发生错误');
+      }
     },
-    
-    async sendNextMessage(this: any, text: string, num?: number): Promise<void> {
-      const session = this.currentSession;
+
+    /**
+     * 发送下一条消息（自动聊天）
+     */
+    async sendNextMessage(text: string, num?: number): Promise<void> {
+      const sessionStore = useSessionStore();
+      const session = sessionStore.currentSession;
+
       if (!session) return;
-      
+
       if (!session.ai[0] || !session.ai[1]) {
         useToast().warning('没有填充完全');
         return;
       }
-      
-      text = this.formatMessage({ text });
+
+      // 这里保持原有逻辑，因为涉及到复杂的自动聊天状态管理
+      const formattedText = this.formatMessage({ text });
       const lastMsg = session.messages[session.messages.length - 1];
       const roleMap = ['user', 'assistant'];
       const no = +(lastMsg?.role === 'user' ? 1 : 0);
-      
-      const index = session.messages.push({
+
+      // 创建消息
+      const newMessage: Message = {
         id: generateUniqueId(),
         role: roleMap[no],
-        content: text,
-      }) - 1;
-      
+        content: formattedText,
+      };
+
+      const index = session.messages.push(newMessage) - 1;
       session.chatting = num || session.replyCount || 1;
-      
-      await this.sendMessageInternal(index, { text, num: 1 }, session.ai[no]);
+
+      // 使用内部处理逻辑
+      await this.sendMessageInternal(index, { text: formattedText, num: 1 }, session.ai[no]);
       if (session.chatting) this.autoChat(session, no);
     },
-    
-    async reChat(this: any, id: string): Promise<void> {
-      const session = this.currentSession;
-      if (!session) return;
-      
-      const index = session.messages.findIndex((msg: Message) => msg.id === id);
-      if (index === -1) return;
-      
-      const { img: imgUrl, content: text = "" } = session.messages[index];
-      const nextMsg = session.messages[index + 1];
-      
-      if (nextMsg?.role === 'assistant') {
-        session.messages.splice(index + 1, 1);
+
+    /**
+     * 重新生成回复
+     */
+    async reChat(id: string): Promise<void> {
+      const chatService = useChatService();
+
+      try {
+        const result = await chatService.regenerateResponse(id);
+
+        if (!result.success) {
+          logger.error('Failed to regenerate response', { error: result.error });
+          useToast().error(`重新生成回复失败: ${result.error}`);
+        }
+      } catch (error) {
+        logger.error('Regenerate response error', error);
+        useToast().error('重新生成回复时发生错误');
       }
-      
-      await this.sendMessageInternal(index, { text, imgUrl }, session.ai && session.ai[1], nextMsg);
     },
-    
-    async autoChat(this: any, session: Session, no: number): Promise<void> {
+
+    /**
+     * 自动聊天
+     */
+    async autoChat(session: Session, no: number): Promise<void> {
       if (!session.messages.length) return;
-      
+
       const latestIndex = session.messages.length - 1;
       const latestMsg = session.messages[latestIndex];
-      const text = latestMsg.content || 
-                  (latestMsg.multiContent && 
-                   typeof latestMsg.selectedContent === 'number' && 
-                   latestMsg.multiContent[latestMsg.selectedContent]?.content) || 
+      const text = latestMsg.content ||
+                  (latestMsg.multiContent &&
+                   typeof latestMsg.selectedContent === 'number' &&
+                   latestMsg.multiContent[latestMsg.selectedContent]?.content) ||
                   "";
       const nextNo = 1 - no;
-      
-      // 在调用sendMessageInternal前检查角色是否正确
+
+      // 检查角色是否正确
       const roleMap = ['user', 'assistant'];
       if (latestMsg.role !== roleMap[no]) {
-        console.warn(`角色不匹配: 当前消息角色 ${latestMsg.role}, 应为 ${roleMap[no]}`);
+        logger.warn('Role mismatch in auto chat', {
+          currentRole: latestMsg.role,
+          expectedRole: roleMap[no]
+        });
       }
-      
+
       await this.sendMessageInternal(latestIndex, { text }, session.ai[nextNo]);
-      
+
       if (session.chatting) {
         this.autoChat(session, nextNo);
       }
@@ -520,143 +508,183 @@ const useSessionsStore = defineStore('sessions', {
         session.chatting--;
       }
     },
-    
-    // 消息响应处理
-    handleUnStreamMsg(this: any, response: Response, chatting: MultiContent): Promise<void> {
-      return response.json().then(res => {
-        const content = res.choices[0].message.content;
-        chatting.content = content;
-        delete chatting.chatting;
-      });
+
+    // =============== 流处理 - 委托给 stream store ===============
+
+    /**
+     * 处理非流式响应 - 保持向后兼容
+     */
+    handleUnStreamMsg(response: Response, chatting: MultiContent): Promise<void> {
+      const streamStore = useStreamStore();
+      return streamStore.handleNonStreamResponse(response, chatting, 'legacy');
     },
-    
+
+    /**
+     * 处理流式响应 - 保持向后兼容
+     */
     handleStreamMsg(
-      response: Response, 
-      chatting: MultiContent, 
+      response: Response,
+      chatting: MultiContent,
       options: { onlyThink?: boolean } = {}
     ): Promise<void> {
-      return new Promise<void>((resolve) => {
-        const { streamController } = useStream();
-        const controller = streamController(
-          response, 
-          (content: string, reasoning_content?: string, usage?: any) => {
-            if (reasoning_content) chatting.reasoning_content = (chatting.reasoning_content || '') + reasoning_content;
-            if (options.onlyThink && content) resolve();
-            if (content) chatting.content += content;
-            if (usage) chatting.usage = usage;
-          }, 
-          async () => {
-            await delay(800);
-            resolve();
-          }
-        );
-        chatting.chatting = controller;
-      });
+      const streamStore = useStreamStore();
+      return streamStore.handleStreamResponse(response, chatting, 'legacy', options);
     },
-    
-    // =============== 会话评估和维护 ===============
-    
-    async evaluateSession(this: any, session: Session): Promise<void> {
-      try {
-        const evaluatePrompt = `使用一个emoji和四到六个字直接返回这句话的简要主题，不要解释、不要标点、不要语气词、不要多余文本，不要加粗，如果没有主题，请直接返回"闲聊"`;
-        
-        const data = {
-          model: "gpt-3.5-turbo",
-          messages: [
-            ...this.getHistoryMsgs(session.messages.length, session),
-            {
-              role: "system",
-              content: evaluatePrompt
-            },
-          ],
-        };
 
-        const modelId = configStore.modelConfig[1].config.model || "gpt-3.5-turbo";
-        const response = await useModel(modelId).serviceFetch(data);
-        const result = await response.json();
-        
-        if (result.choices && result.choices[0]) {
-          session.name = result.choices[0].message.content;
+    // =============== 会话评估 - 委托给 evaluation store ===============
+
+    /**
+     * 评估会话 - 委托给 evaluation store
+     */
+    async evaluateSession(session: Session): Promise<void> {
+      const evaluationStore = useEvaluationStore();
+
+      try {
+        const result = await evaluationStore.evaluateSession(session.id);
+        if (result.success && result.title) {
+          session.name = result.title;
         }
       } catch (error) {
-        console.error('会话评估失败', error);
+        logger.error('Session evaluation failed', error, { sessionId: session.id });
       }
     },
-    
-    // 上下文管理
-    clearCtx(this: any): void {
-      const session = this.currentSession;
+
+    // =============== 上下文管理 ===============
+
+    /**
+     * 清理上下文
+     */
+    clearCtx(): void {
+      const sessionStore = useSessionStore();
+      const session = sessionStore.currentSession;
       if (!session) return;
-      
+
       if (!session.clearedCtx) {
         session.clearedCtx = [...session.messages];
         session.messages = [];
+        logger.info('Context cleared', { sessionId: session.id });
       } else {
         session.messages.unshift(...session.clearedCtx);
         delete session.clearedCtx;
+        logger.info('Context restored', { sessionId: session.id });
       }
     },
-    
+
     // =============== 导入导出 ===============
-    
-    importChat(this: any, e: Event): void {
+
+    /**
+     * 导入聊天记录
+     */
+    importChat(e: Event): void {
+      const sessionStore = useSessionStore();
+
       try {
         const target = e.target as HTMLInputElement;
         const file = target.files?.[0];
         if (!file) return;
-        
+
         const reader = new FileReader();
         reader.readAsText(file);
-        
+
         reader.onload = (e: ProgressEvent<FileReader>) => {
           if (!e.target?.result) return;
-          
-          const data = JSON.parse(e.target.result as string) as Session[];
-          this.sessions = data;
-          this.currentSessionId = this.sessions[0]?.id || "default";
+
+          try {
+            const data = JSON.parse(e.target.result as string) as Session[];
+
+            // 验证数据格式
+            if (!Array.isArray(data)) {
+              throw new Error('Invalid chat data format');
+            }
+
+            // 更新 session store
+            sessionStore.sessions = data;
+            sessionStore.currentSessionId = data[0]?.id || 'default';
+
+            // 同步到当前 store
+            this.sessions = sessionStore.sessions;
+            this.currentSessionId = sessionStore.currentSessionId;
+
+            logger.info('Chat imported successfully', { sessionCount: data.length });
+            useToast().success('聊天记录导入成功');
+
+          } catch (parseError) {
+            logger.error('Failed to parse imported chat data', parseError);
+            useToast().error('聊天记录格式错误');
+          }
         };
       } catch (error) {
-        console.error('导入聊天记录失败', error);
+        logger.error('Import chat failed', error);
         useToast().error('导入聊天记录失败');
       }
     },
-    
-    exportChat(this: any): void {
+
+    /**
+     * 导出聊天记录
+     */
+    exportChat(): void {
+      const sessionStore = useSessionStore();
+
       try {
-        const data = JSON.stringify(this.sessions);
+        const exportData = {
+          version: '1.0',
+          timestamp: Date.now(),
+          sessions: sessionStore.sessions,
+          metadata: {
+            totalSessions: sessionStore.sessions.length,
+            totalMessages: sessionStore.sessions.reduce((sum, s) => sum + s.messages.length, 0),
+            exportedBy: 'Tuple-GPT',
+          },
+        };
+
+        const data = JSON.stringify(exportData, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'chat.json';
+        link.download = `chat-export-${new Date().toISOString().split('T')[0]}.json`;
         link.click();
-        
+
         URL.revokeObjectURL(url);
+
+        logger.info('Chat exported successfully', {
+          sessionCount: exportData.sessions.length,
+          messageCount: exportData.metadata.totalMessages
+        });
+        useToast().success('聊天记录导出成功');
+
       } catch (error) {
-        console.error('导出聊天记录失败', error);
+        logger.error('Export chat failed', error);
         useToast().error('导出聊天记录失败');
       }
     },
-    
-    clearChat(this: any): void {
-      this.sessions = this.sessions.filter((session: Session) => session.locked);
-      
-      if (!this.sessions.some((session: Session) => session.id === this.currentSessionId)) {
-        if (this.sessions.length > 0) {
-          this.currentSessionId = this.sessions[0].id;
-        } else {
-          // 如果没有锁定的会话，创建一个新的默认会话
-          this.sessions = [{ ...DEFAULT_SESSION }];
-          this.currentSessionId = DEFAULT_SESSION.id;
-        }
-      }
+
+    /**
+     * 清理聊天记录
+     */
+    clearChat(): void {
+      const sessionStore = useSessionStore();
+      sessionStore.clearUnlockedSessions();
+
+      // 同步状态
+      this.sessions = sessionStore.sessions;
+      this.currentSessionId = sessionStore.currentSessionId;
+
+      logger.info('Chat cleared');
+      useToast().success('聊天记录已清理');
     },
-    
-    stopAutoChat(this: any): void {
-      const session = this.currentSession;
+
+    /**
+     * 停止自动聊天
+     */
+    stopAutoChat(): void {
+      const sessionStore = useSessionStore();
+      const session = sessionStore.currentSession;
+
       if (session?.type === 'auto') {
         session.chatting = 0;
+        logger.info('Auto chat stopped', { sessionId: session.id });
       }
     },
   },

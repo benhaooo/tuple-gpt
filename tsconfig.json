@@ -4,8 +4,17 @@
     "target": "esnext",
     // 目标代码需要使用的模块化方案(commonjs require/module.exports/es module import/export)
     "module": "esnext",
-    // 严格一些严格的检查(any)
+    // 严格模式检查
     "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
     // 对jsx进行怎么样的处理
     "jsx": "preserve",
     // 辅助的导入功能
@@ -49,9 +58,13 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "tests/**/*.ts",
-    "tests/**/*.tsx"
+    "tests/**/*.tsx",
+    "scripts/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist",
+    "scripts/docs",
+    "scripts/output"
   ]
 }
