@@ -34,9 +34,9 @@ const { userConfig, serverConfig, getModelConfig: modelConfig } = storeToRefs(co
                     </el-form-item>
                     <el-form-item label="主题">
                         <el-radio-group v-model="userConfig.theme">
-                            <el-radio value="auto" border><i class="iconfont">&#xe629;</i></el-radio>
                             <el-radio value="light" border><i class="iconfont">&#xec8e;</i></el-radio>
                             <el-radio value="dark" border><i class="iconfont">&#xe72f;</i></el-radio>
+                            <el-radio value="auto" border><i class="iconfont">&#xe629;</i></el-radio>
                         </el-radio-group>
                     </el-form-item>
                 </el-form>

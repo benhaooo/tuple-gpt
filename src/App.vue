@@ -5,8 +5,13 @@ import { configDialogRef } from '@/utils/configDialogService';
 import ConfigDialog from '@/views/cpnt/ConfigDialog.vue';
 import useConfigStore from '@/stores/modules/config'
 import { modelService, mergeServiceConfigurations } from './constants/model';
+import { useTheme } from '@/composables/use-theme';
 
 const localDialogRef = ref(null)
+
+// 初始化主题系统
+const { } = useTheme()
+
 onMounted(() => {
     configDialogRef.value = localDialogRef.value
     const configStore = useConfigStore()

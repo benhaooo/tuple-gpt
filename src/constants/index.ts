@@ -34,7 +34,6 @@ export const CONSTANTS = {
   ROUTES: {
     HOME: '/',
     CHAT: '/chat/message',
-    PROMPT: '/chat/prompt',
     SETTING: '/chat/setting',
     TOOL: '/chat/tool',
   },

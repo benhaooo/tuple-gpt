@@ -7,7 +7,7 @@
         </div>
         <div class="flex justify-center items-center gap-6 mt-10">
             <div v-for="tool in config" @click="handleChangeTool(tool)" :key="tool.name"
-                class="group flex items-center shadow-md w-60 h-24 py-2 px-4 box-border rounded-3xl dark:bg-dark-hard-dark cursor-pointer hover:bg-blue-500 transition-colors duration-500">
+                class="group flex items-center shadow-soft w-60 h-24 py-2 px-4 box-border rounded-3xl bg-surface-light-elevated dark:bg-surface-dark-elevated cursor-pointer hover:bg-primary-500 transition-colors duration-500">
                 <div
                     class=" w-24 py-3 h-full flex items-start transition-all duration-300 group-hover:w-0">
                     <div
@@ -20,7 +20,7 @@
         </div>
     </div>
     <div :class="{ 'translate-x-0': activeTool, 'translate-x-full': !activeTool }"
-        class=" fixed top-0 w-full h-screen rounded-3xl shadow-md border-2 transition-all duration-300 ease-in z-50 bg-dark-base">
+        class=" fixed top-0 w-full h-screen rounded-3xl shadow-md border-2 transition-all duration-300 ease-in z-50 bg-surface-light-primary dark:bg-surface-dark-primary">
         <i @click="activeTool = !activeTool"
             class="iconfont absolute top-1/2 left-0 text-3xl hover:text-blue-500 -translate-y-1/2 rotate-180">&#xe6c5;</i>
         <component v-if="currentToolComponent" :is="currentToolComponent" />

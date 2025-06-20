@@ -9,6 +9,7 @@ import { completions } from '@/apis';
 import { generateData, randomTemperature } from '@/models/data';
 import { useModel } from '@/models/data';
 import { createLogger } from '@/utils/logger';
+import { generateUniqueId } from '@/utils/commonUtils';
 import { useToast } from 'vue-toast-notification';
 import useConfigStore from './config';
 import { useSessionStore } from './session';
@@ -66,7 +67,7 @@ export const useChatService = defineStore('chatService', {
         
         // 创建用户消息
         const userMessage: Message = {
-          id: messageStore.generateUniqueId(),
+          id: generateUniqueId(),
           role: 'user',
           content: formattedText,
         };
@@ -118,7 +119,7 @@ export const useChatService = defineStore('chatService', {
       try {
         // 创建用户消息
         const userMessage: Message = {
-          id: messageStore.generateUniqueId(),
+          id: generateUniqueId(),
           role: 'user',
           content: text,
           img: imgUrl,

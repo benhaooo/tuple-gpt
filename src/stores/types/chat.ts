@@ -79,7 +79,6 @@ export interface SendMessageOptions {
 export interface SessionStore {
   sessions: Session[];
   currentSessionId: string;
-  askprompt: Record<string, any>;
 }
 
 // 消息存储状态

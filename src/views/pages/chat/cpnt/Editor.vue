@@ -26,10 +26,10 @@
                     @click="fileUrl = ''">&#xe630;</i>
             </div>
             <div ref="optimizeRef"
-                class="relative px-2 py-4 pb-0 rounded-xl bg-white dark:bg-dark-base border-2 transition-colors duration-500"
-                :class="taFocused ? 'border-dark-blue-base' : 'border-light-border dark:border-dark-border'">
+                class="relative px-2 py-4 pb-0 rounded-xl bg-surface-light-primary dark:bg-surface-dark-primary border-2 transition-colors duration-500"
+                :class="taFocused ? 'border-primary-500' : 'border-border-light-primary dark:border-border-dark-primary'">
                 <div v-if="showOptimizedModal"
-                    class="absolute flex flex-col bg-white w-full h-44 -top-48 left-0 shadow-md rounded-md p-4">
+                    class="absolute flex flex-col bg-surface-light-elevated dark:bg-surface-dark-elevated w-full h-44 -top-48 left-0 shadow-medium rounded-md p-4 border border-border-light-primary dark:border-border-dark-primary">
                     <div class="flex justify-between">
                         <h3 class="font-extrabold">提示词优化:</h3>
                         <i @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing }"
@@ -52,7 +52,7 @@
                     <ModelSelector ref="modelSelectorRef" @select="handleSelectModel" />
                     
                     <div class="flex">
-                        <textarea class="text-base dark:bg-dark-base w-full resize-none" v-model="text"
+                        <textarea class="text-base bg-transparent text-text-light-primary dark:text-text-dark-primary w-full resize-none" v-model="text"
                             @input="handleInput" @keydown="handleKeyDown" placeholder="ctrl + 1~9/enter 发送"
                             @paste="handlePaste" @focus="taFocused = true" @blur="taFocused = false" ref="taRef"
                             rows="1"></textarea>
@@ -62,7 +62,7 @@
                             <span class="absolute text-sm font-bold">{{ currentSession.chatting }}</span>
                         </div>
                         <button v-else @click="handleSendMessage()"
-                            :class="canSend ? 'bg-dark-blue-base' : 'bg-[#e5e5e5] dark:bg-[#333]'" :disabled="!canSend"
+                            :class="canSend ? 'bg-primary-600 hover:bg-primary-700' : 'bg-surface-light-tertiary dark:bg-surface-dark-tertiary'" :disabled="!canSend"
                             class="flex justify-center items-center w-10 h-8 rounded-lg">
                             <el-tooltip content="发送" placement="top" :show-after="500">
                                 <i class="iconfont text-white">&#xe888;</i>
@@ -73,15 +73,15 @@
                 <div class="flex items-center gap-2">
                     <el-tooltip content="优化" placement="top">
                         <i @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing || !canSend }"
-                            class="iconfont cursor-pointer font-extrabold hover:text-dark-blue-base">&#xe624;</i>
+                            class="iconfont cursor-pointer font-extrabold text-text-light-secondary dark:text-text-dark-secondary hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">&#xe624;</i>
                     </el-tooltip>
                     <button @click="handleFormat('题目：新疆是中国面积最大的省级行政区，它的面积可以装下多少个北京？')"
-                        :class="{ 'border-dark-blue-base border-2': activeFomat }"
-                        class="text-xs bg-transparent border rounded-md flex"><span
+                        :class="{ 'border-primary-500 border-2': activeFomat }"
+                        class="text-xs bg-transparent border border-border-light-primary dark:border-border-dark-primary text-text-light-secondary dark:text-text-dark-secondary hover:border-primary-500 rounded-md flex transition-colors duration-200"><span
                             class="scale-75">JSON</span></button>
                     <button @click="empowerThink = !empowerThink"
-                        :class="{ 'border-dark-blue-base border-2': empowerThink }"
-                        class="text-xs bg-transparent border rounded-md flex"><span
+                        :class="{ 'border-primary-500 border-2': empowerThink }"
+                        class="text-xs bg-transparent border border-border-light-primary dark:border-border-dark-primary text-text-light-secondary dark:text-text-dark-secondary hover:border-primary-500 rounded-md flex transition-colors duration-200"><span
                             class="scale-75">🤔</span></button>
                 </div>
             </div>
@@ -195,12 +195,15 @@ watch(text, autoHeight)
 
 const handleKeyDown = (e) => {
     if (e.ctrlKey) {
-        e.preventDefault();
+        // 只阻止我们要处理的特定快捷键，允许其他快捷键（如Ctrl+V）正常工作
         if (e.key >= '0' && e.key <= '9') {
+            e.preventDefault();
             handleSendMessage(Number(e.key))
         } else if (e.key === 'Enter') {
+            e.preventDefault();
             handleSendMessage()
         }
+        // 不阻止其他Ctrl组合键，如Ctrl+V、Ctrl+C、Ctrl+A等
     }
 }
 

@@ -1,7 +1,7 @@
 <template>
   <div ref="sessionListRef"
     :class="{ 'transition-all duration-300': !draging, 'w-56': showPanel && !isMobile, '!w-0': !showPanel }"
-    class=" relative first-line:border-r-2 border-solid w-56 max-md:h-full max-md:w-screen shrink-0 bg-white dark:bg-dark-hard-dark z-50">
+    class=" relative first-line:border-r-2 border-solid w-56 max-md:h-full max-md:w-screen shrink-0 bg-surface-light-primary dark:bg-surface-dark-primary z-50">
     <div class=" mx-3 h-screen min-w-40 flex flex-col transition-all duration-300"
       :style="!showPanel && `transform: translateX(-120%);`">
       <div class="flex items-center h-9 flex-shrink-0 mt-8 overflow-hidden">
@@ -38,33 +38,33 @@
         </div>
       </div>
 
-      <div :class="searchInput || searchFocus ? 'border-blue-500' : 'border-transparent'"
-        class="overflow-hidden flex-shrink-0 rounded-xl border-4 mt-2">
-        <div class="flex w-full bg-white dark:bg-dark-hard-dark rounded-md py-1 px-2">
-          <i class="iconfont overflow-hidden">&#xe63f;</i>
-          <input class=" outline-none flex-1 pl-2 w-full text-sm" v-model.laze="searchInput" @focus="searchFocus = true"
+      <div :class="searchInput || searchFocus ? 'border-primary-500' : 'border-transparent'"
+        class="overflow-hidden flex-shrink-0 rounded-xl border-4 mt-2 transition-colors duration-200">
+        <div class="flex w-full bg-surface-light-elevated dark:bg-surface-dark-elevated rounded-md py-1 px-2 border border-border-light-primary dark:border-border-dark-primary">
+          <i class="iconfont overflow-hidden text-text-light-secondary dark:text-text-dark-secondary">&#xe63f;</i>
+          <input class="outline-none flex-1 pl-2 w-full text-sm bg-transparent text-text-light-primary dark:text-text-dark-primary placeholder-text-light-tertiary dark:placeholder-text-dark-tertiary" v-model.laze="searchInput" @focus="searchFocus = true"
             @blur="searchFocus = false" placeholder="搜索历史会话"></input>
         </div>
       </div>
 
       <div ref="scrollContainerRef"
-        class="relative mt-5 flex-grow overflow-y-scroll text-light-text dark:text-dark-text">
+        class="relative mt-5 flex-grow overflow-y-scroll text-text-light-primary dark:text-text-dark-primary">
         <transition-group name="list">
           <template v-for="(session, index) in sessionsStore.filterSessions(searchInput)" :key="session?.id">
             <div v-if="session" draggable="true" :ref="currentSessionId === session.id ? 'selectedSessionRef' : null"
               @dragstart="onDragStart($event, index)" @drag="onDrag($event, index)"
               @dragenter="onDragEnterThrottled($event, index, session.id, session.type)"
               @dragover="onDragOver($event, index)" @dragend="onDragEnd($event, index)" class="group w-full rounded-[20px] cursor-grab transition-all
-       bg-white/95 dark:bg-gray-900/95 backdrop-blur
-       hover:bg-white dark:hover:bg-gray-800
+       bg-surface-light-elevated/95 dark:bg-surface-dark-elevated/95 backdrop-blur
+       hover:bg-surface-light-elevated dark:hover:bg-surface-dark-secondary
        border border-transparent
-       shadow-[0_12px_28px_-8px] shadow-gray-200/80 dark:shadow-black/30
+       shadow-soft dark:shadow-medium
        relative
-       before:absolute before:inset-0 before:rounded-[20px] 
-       before:bg-gradient-to-r before:from-blue-400/0 before:via-blue-400/0 before:to-blue-400/0
-       hover:before:via-blue-400/10 hover:before:to-blue-400/5" :class="{
-        'bg-white dark:border-blue-600/30 dark:bg-gray-800 border-blue-400/30 before:via-blue-400/20 before:to-blue-400/10': currentSessionId === session.id,
-        'hover:bg-[#f3f3f3] dark:hover:bg-[#333333] hover:border-dark-blue-base bg-white dark:bg-dark-hard-dark': currentSessionId !== session.id,
+       before:absolute before:inset-0 before:rounded-[20px]
+       before:bg-gradient-to-r before:from-primary-400/0 before:via-primary-400/0 before:to-primary-400/0
+       hover:before:via-primary-400/10 hover:before:to-primary-400/5" :class="{
+        'bg-surface-light-elevated dark:border-primary-600/30 dark:bg-surface-dark-elevated border-primary-400/30 before:via-primary-400/20 before:to-primary-400/10': currentSessionId === session.id,
+        'hover:bg-interactive-light-hover dark:hover:bg-interactive-dark-hover hover:border-primary-500 bg-surface-light-elevated dark:bg-surface-dark-elevated': currentSessionId !== session.id,
         'opacity-0': index === draggedIndex,
         'h-32': session.type === 'auto'
       }" @click="selectSession(session.id)">

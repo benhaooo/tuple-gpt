@@ -107,7 +107,7 @@ const onSendMessage = () => {
       <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId"
         @select="handleSelectSession" @delete="handleDeleteSession" @add="handleNewSession" />
       <div v-if="currentSession"
-        class="relative grow-1 max-md:shrink-0 max-md:w-screen overflow-hidden dark:bg-dark-wrapper w-full rounded-3xl p-5 box-border max-md:pb-0 flex flex-col md:m-4">
+        class="relative grow-1 max-md:shrink-0 max-md:w-screen overflow-hidden bg-surface-light-secondary dark:bg-surface-dark-secondary w-full rounded-3xl p-5 box-border max-md:pb-0 flex flex-col md:m-4">
         <div class="w-full flex-1 overflow-y-scroll" ref="scrollRef">
           <div class="absolute w-full h-9 top-0 left-1/2 -translate-x-1/2 flex justify-evenly font-black z-10">
             <ConfigDialog v-if="localCurrentSession.ai?.[0]" v-model="localCurrentSession.ai[0]">
@@ -122,7 +122,7 @@ const onSendMessage = () => {
               <Message :message="message" :index="index" />
             </template>
             <div @click="sessionsStore.clearCtx()"
-              class="leading-5 text-center border-y border-slate-300 hover:border-dark-blue-base cursor-pointer text-slate-300 text-xs"
+              class="leading-5 text-center border-y border-border-light-secondary dark:border-border-dark-secondary hover:border-primary-500 cursor-pointer text-text-light-tertiary dark:text-text-dark-tertiary text-xs transition-colors duration-200"
               style="mask-image: linear-gradient(90deg, transparent, #000, transparent);">上下文已清除</div>
           </div>
 

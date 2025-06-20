@@ -239,8 +239,8 @@ export function useSessionActions() {
    * 创建默认会话
    */
   const createDefaultSession = async (): Promise<Session | null> => {
+    // 不传递 name 和其他参数，让 createSession 使用默认配置
     return await session.createSession({
-      name: 'New Chat',
       type: 'chat',
     });
   };

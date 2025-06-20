@@ -1,11 +1,11 @@
 <template>
     <div :class="selected ? 'min-w-[90%]' : 'min-w-[30%]'" class="transition-all duration-300 relative max-w-full">
-        <div ref="contentRef" class="content w-full relative bg-white dark:bg-[#262626] overflow-scroll 
+        <div ref="contentRef" class="content w-full relative bg-surface-light-elevated dark:bg-surface-dark-elevated overflow-scroll
                    transition-all duration-300 rounded-[12px] p-4
-                   hover:bg-gray-50/40 dark:hover:bg-[#303030]
+                   hover:bg-interactive-light-hover dark:hover:bg-interactive-dark-hover
                    group">
             <div v-if="parsedReasoningContent"
-                class="bg-gray-50/80 dark:bg-gray-800/60 text-xs text-gray-500 dark:text-gray-400 p-3 rounded-lg mb-4">
+                class="bg-surface-light-tertiary/80 dark:bg-surface-dark-tertiary/60 text-xs text-text-light-tertiary dark:text-text-dark-tertiary p-3 rounded-lg mb-4">
                 <div class="cursor-pointer select-none font-medium" @click="contentObj.rcFolded = !contentObj.rcFolded">
                     思考 {{ parsedContent ? '😲👆' : '🤔' }}
                 </div>

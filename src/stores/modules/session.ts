@@ -8,6 +8,7 @@ import { computed } from 'vue';
 import { generateUniqueId } from '@/utils/commonUtils';
 import { DEFAULT_VALUES } from '@/constants';
 import { createLogger } from '@/utils/logger';
+import useConfigStore from './config';
 import type {
   Session,
   SessionStore,
@@ -28,14 +29,13 @@ const DEFAULT_SESSION: Session = {
   ctxLimit: DEFAULT_VALUES.CONTEXT_LIMIT,
   locked: false,
   role: 'user',
-  model: 'gpt-4o'
+  model: 'gpt-4o' // 这个作为最后的兜底默认值
 };
 
 export const useSessionStore = defineStore('session', {
   state: (): SessionStore => ({
     sessions: [{ ...DEFAULT_SESSION }],
     currentSessionId: 'default',
-    askprompt: {},
   }),
 
   getters: {
@@ -111,17 +111,30 @@ export const useSessionStore = defineStore('session', {
      */
     createSession(options: SessionCreateOptions = {}): Session {
       logger.info('Creating new session', options);
-      
+
+      // 获取默认配置
+      const configStore = useConfigStore();
+      const defaultModel = configStore.getDefaultModelId || 'gpt-4o';
+      const defaultConfig = configStore.getDefaultAssistantModel?.config || {};
+
       const session: Session = {
         id: generateUniqueId(),
-        name: options.name || DEFAULT_VALUES.SESSION_NAME,
+        name: options.name || defaultConfig.name || DEFAULT_VALUES.SESSION_NAME,
         messages: [],
         type: options.type || 'chat',
         ai: options.ai || [],
-        ctxLimit: options.ctxLimit || DEFAULT_VALUES.CONTEXT_LIMIT,
+        ctxLimit: options.ctxLimit || defaultConfig.ctxLimit || DEFAULT_VALUES.CONTEXT_LIMIT,
         locked: options.locked || false,
         role: options.role || 'user',
-        model: options.model || 'gpt-4o',
+        model: options.model || defaultModel,
+        // 应用默认配置中的其他参数
+        system: options.system || defaultConfig.system,
+        maxTokens: options.maxTokens || defaultConfig.maxTokens,
+        temperature: options.temperature || defaultConfig.temperature,
+        top_p: options.top_p || defaultConfig.top_p,
+        presence_penalty: options.presence_penalty || defaultConfig.presence_penalty,
+        frequency_penalty: options.frequency_penalty || defaultConfig.frequency_penalty,
+        replyCount: options.replyCount || defaultConfig.replyCount,
         ...options
       };
 

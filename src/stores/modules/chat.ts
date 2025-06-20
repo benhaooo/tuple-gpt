@@ -45,7 +45,6 @@ const useSessionsStore = defineStore('sessions', {
     return {
       sessions: sessionStore.sessions,
       currentSessionId: sessionStore.currentSessionId,
-      askprompt: sessionStore.askprompt,
     };
   },
 

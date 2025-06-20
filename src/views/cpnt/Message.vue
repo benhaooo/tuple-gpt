@@ -78,9 +78,9 @@
     </div>
     
     <div v-else :class="{ 'flex justify-end': isUser }">
-      <div class="content max-w-full text-sm relative bg-white dark:bg-[#262626] 
-           transition-all duration-300 rounded-[12px] p-4
-           hover:bg-gray-50/40 dark:hover:bg-[#303030] group"
+      <div class="content max-w-full text-sm relative bg-surface-light-elevated dark:bg-surface-dark-elevated
+           transition-all duration-300 rounded-[12px] p-4 border border-border-light-primary dark:border-border-dark-primary
+           hover:bg-interactive-light-hover dark:hover:bg-interactive-dark-hover group shadow-soft"
            :class="{ 'max-w-[80%]': isUser }">
 
         <img v-if="message.img" :src="message.img" class="rounded-lg mb-3 shadow-sm" alt="消息图片">

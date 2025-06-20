@@ -1,13 +1,13 @@
 <template>
   <div class="fixed z-50" v-show="isVisible" :style="selectorStyle">
     <div 
-      class="w-64 max-h-60 overflow-auto bg-white dark:bg-dark-base border dark:border-dark-border rounded-lg shadow-lg"
+      class="w-64 max-h-60 overflow-auto bg-surface-light-elevated dark:bg-surface-dark-elevated border border-border-light-primary dark:border-border-dark-primary rounded-lg shadow-medium"
       ref="dropdownRef"
     >
-      <div class="p-2 sticky top-0 bg-white dark:bg-dark-base border-b dark:border-dark-border z-10">
+      <div class="p-2 sticky top-0 bg-surface-light-elevated dark:bg-surface-dark-elevated border-b border-border-light-primary dark:border-border-dark-primary z-10">
         <input
           type="text"
-          class="w-full px-3 py-2 text-sm border dark:border-dark-border rounded-md focus:outline-none focus:ring-2 focus:ring-dark-blue-base dark:bg-dark-base"
+          class="w-full px-3 py-2 text-sm border border-border-light-primary dark:border-border-dark-primary rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface-light-primary dark:bg-surface-dark-primary text-text-light-primary dark:text-text-dark-primary"
           placeholder="搜索模型..."
           v-model="searchQuery"
           ref="searchInputRef"
@@ -17,12 +17,12 @@
           @keydown.escape.prevent="close"
         />
       </div>
-      <div v-if="filteredModels.length === 0" class="p-4 text-center text-gray-500">
+      <div v-if="filteredModels.length === 0" class="p-4 text-center text-text-light-tertiary dark:text-text-dark-tertiary">
         没有找到匹配的模型
       </div>
       <div v-else>
         <div v-for="(service, serviceIndex) in filteredModels" :key="service.provider" class="mb-2">
-          <div class="px-3 py-1 text-xs font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-dark-border">
+          <div class="px-3 py-1 text-xs font-bold text-text-light-tertiary dark:text-text-dark-tertiary bg-surface-light-tertiary dark:bg-surface-dark-tertiary">
             {{ service.provider }}
           </div>
           <div v-for="(group, groupIndex) in service.groups" :key="group.name">
@@ -30,8 +30,8 @@
               <div 
                 class="px-3 py-2 flex items-center cursor-pointer"
                 :class="{
-                  'bg-gray-100 dark:bg-dark-hover highlighted-item': isHighlighted(service.provider, group.name, model.id),
-                  'hover:bg-gray-100 dark:hover:bg-dark-hover': !isHighlighted(service.provider, group.name, model.id)
+                  'bg-interactive-light-selected dark:bg-interactive-dark-selected highlighted-item': isHighlighted(service.provider, group.name, model.id),
+                  'hover:bg-interactive-light-hover dark:hover:bg-interactive-dark-hover': !isHighlighted(service.provider, group.name, model.id)
                 }"
                 @click="selectModel(model.id)"
                 @mouseover="highlightIndex = getModelIndex(serviceIndex, groupIndex, modelIndex)"
@@ -323,6 +323,6 @@ defineExpose({
   top: 0;
   bottom: 0;
   width: 3px;
-  background-color: var(--color-dark-blue-base);
+  background-color: var(--border-focus);
 }
 </style> 

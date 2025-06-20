@@ -1,5 +1,5 @@
 <template>
-  <div class="w-screen h-screen bg-white dark:bg-dark-base text-light-text dark:text-dark-text">
+  <div class="w-screen h-screen bg-surface-light-primary dark:bg-surface-dark-primary text-text-light-primary dark:text-text-dark-primary">
     <div class="h-full flex flex-col-reverse md:flex-row">
       <ChatNav />
       <el-main style="padding: unset">

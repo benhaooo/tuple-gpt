@@ -42,48 +42,22 @@ const handleLeave = () => {
 onBeforeUnmount(() => clearTimeout(timeoutId));
 </script>
 
-<style lang="less" scoped>
+<style scoped>
 .expandable-btn {
-  --primary-text-color: rgba(0, 0, 0, 0.9);
-  --border-color: rgba(0, 0, 0, 0.1);
-  --hover-bg: rgba(0, 0, 0, 0.05);
-  
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--primary-text-color);
-  font-size: 12px;
-  height: 26px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-
-  &:hover {
-    background: var(--hover-bg);
-    border-color: rgba(0, 0, 0, 0.15);
-  }
-
-  .exp-text {
-    white-space: nowrap;
-    width: 0;
-    opacity: 0;
-    transform: translateX(-8px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding-left: 4px;
-    color: inherit;
-  }
+  @apply inline-flex items-center px-2 py-1 rounded-lg border transition-all duration-300 overflow-hidden cursor-pointer;
+  @apply border-border-light-primary dark:border-border-dark-primary;
+  @apply bg-transparent;
+  @apply text-text-light-primary dark:text-text-dark-primary;
+  @apply text-xs h-7;
 }
 
-.dark .expandable-btn {
-  --primary-text-color: rgba(255, 255, 255, 0.9);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --hover-bg: rgba(255, 255, 255, 0.05);
+.expandable-btn:hover {
+  @apply bg-interactive-light-hover dark:bg-interactive-dark-hover;
+  @apply border-border-light-secondary dark:border-border-dark-secondary;
+}
 
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
+.exp-text {
+  @apply whitespace-nowrap w-0 opacity-0 transition-all duration-300 pl-1;
+  transform: translateX(-8px);
 }
 </style>

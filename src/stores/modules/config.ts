@@ -3,12 +3,13 @@ import avaUrl from "@/assets/imgs/xiaoxing.png";
 import { modelService } from '@/constants/model';
 import { defaultModelConfig } from '@/constants/default'
 import { HomeIcon, TagIcon, LanguageIcon, LightBulbIcon } from '@heroicons/vue/24/outline'
+import type { Theme } from '@/composables/use-theme'
 
 interface UserConfig {
   avatar: string;
   name: string;
   script: string;
-  theme: "auto" | "dark";
+  theme: Theme;
 }
 
 interface ServerConfigItem {
@@ -80,7 +81,7 @@ const useConfigStore = defineStore("config", {
         icon: HomeIcon,
         config: {
           name: 'New Chat',
-          model: null,
+          model: 'gpt-4o', // 设置一个默认值，用户可以在设置中修改
           ...defaultModelConfig
         }
       },
@@ -121,10 +122,24 @@ const useConfigStore = defineStore("config", {
   
   getters: {
     getAvatar: (state): string => state.userConfig.avatar || avaUrl,
-    
+
+    /**
+     * 获取默认助手模型配置
+     */
+    getDefaultAssistantModel: (state): ModelConfigItem => {
+      return state.modelConfig[0]; // 默认助手模型是第一个
+    },
+
+    /**
+     * 获取默认助手模型ID
+     */
+    getDefaultModelId: (state): string | null => {
+      return state.modelConfig[0]?.config?.model || null;
+    },
+
     getModelConfig: (state) => {
       const modelMap: Record<string, { type: string; host: string; key: string }> = {};
-      
+
       state.serverConfig.forEach(config => {
         config.vendor.forEach(vendor => {
           modelMap[vendor[1]] = {
@@ -134,7 +149,7 @@ const useConfigStore = defineStore("config", {
           };
         });
       });
-      
+
       return modelMap;
     },
     
@@ -179,12 +194,47 @@ const useConfigStore = defineStore("config", {
   },
   
   actions: {
-    toggleTheme(): void {
-      this.userConfig.theme = this.userConfig.theme === "auto" ? "dark" : "auto";
+    /**
+     * 设置主题
+     */
+    setTheme(theme: Theme): void {
+      this.userConfig.theme = theme;
     },
-    
+
+    /**
+     * 切换主题（保持向后兼容）
+     */
+    toggleTheme(): void {
+      const currentTheme = this.userConfig.theme;
+      if (currentTheme === "light") {
+        this.userConfig.theme = "dark";
+      } else if (currentTheme === "dark") {
+        this.userConfig.theme = "auto";
+      } else {
+        this.userConfig.theme = "light";
+      }
+    },
+
     applyServerConfig(serverConfig: ServerConfigItem[]): void {
       this.serverConfig = serverConfig.filter(config => config.vendor.length && config.host);
+    },
+
+    /**
+     * 更新默认助手模型配置
+     */
+    updateDefaultAssistantModel(config: Partial<ModelConfigItem['config']>): void {
+      if (this.modelConfig[0]) {
+        Object.assign(this.modelConfig[0].config, config);
+      }
+    },
+
+    /**
+     * 设置默认模型ID
+     */
+    setDefaultModelId(modelId: string): void {
+      if (this.modelConfig[0]) {
+        this.modelConfig[0].config.model = modelId;
+      }
     },
   },
   
