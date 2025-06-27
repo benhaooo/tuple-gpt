@@ -282,10 +282,21 @@ httpClient.addRequestInterceptor((config) => {
 
 // 添加默认的错误拦截器
 httpClient.addErrorInterceptor((error) => {
-  console.error('API Request Error:', {
-    message: error.message,
+  // 使用统一的错误处理机制
+  const { handleError, createApiError, ErrorSeverity } = require('@/utils/error-handler');
+
+  const apiError = createApiError(
+    error.message,
+    error.status,
+    error.status >= 500 ? ErrorSeverity.HIGH : ErrorSeverity.MEDIUM
+  );
+
+  apiError.context = {
+    url: error.config?.url,
+    method: error.config?.method,
     status: error.status,
-    config: error.config,
-  });
+  };
+
+  handleError(apiError, 'HTTP Client');
   throw error;
 });

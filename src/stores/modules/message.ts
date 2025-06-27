@@ -103,19 +103,22 @@ export const useMessageStore = defineStore('message', {
     deleteMessage(sessionId: string, messageId: string): boolean {
       const sessionStore = useSessionStore();
       const session = sessionStore.getSession(sessionId);
-      
+
       if (!session) {
         logger.warn('Session not found for message deletion', { sessionId });
         return false;
       }
 
+      // 在删除消息前，先清理相关的流控制器和处理状态
+      this.completeMessage(messageId);
+
       const initialLength = session.messages.length;
       session.messages = session.messages.filter(msg => msg.id !== messageId);
-      
+
       const deleted = session.messages.length < initialLength;
       if (deleted) {
         logger.info('Message deleted', { sessionId, messageId });
-        
+
         sessionStore.emitEvent({
           type: ChatEventType.MESSAGE_DELETED,
           timestamp: Date.now(),
@@ -248,9 +251,25 @@ export const useMessageStore = defineStore('message', {
      * 完成消息处理
      */
     completeMessage(messageId: string): void {
+      // 先停止并清理流控制器
+      const controller = this.streamControllers.get(messageId);
+      if (controller) {
+        try {
+          if (typeof controller.abort === 'function') {
+            controller.abort();
+          }
+          // 如果是 ReadableStream，也要取消
+          if (typeof controller.cancel === 'function') {
+            controller.cancel();
+          }
+        } catch (error) {
+          logger.warn('Error aborting stream controller', error, { messageId });
+        }
+      }
+
       this.processingMessages.delete(messageId);
       this.streamControllers.delete(messageId);
-      
+
       logger.debug('Message processing completed', { messageId });
     },
 
@@ -374,9 +393,52 @@ export const useMessageStore = defineStore('message', {
      * 清理消息处理状态
      */
     cleanupProcessingState(): void {
+      // 先停止所有活跃的流控制器
+      for (const [messageId, controller] of this.streamControllers.entries()) {
+        try {
+          if (typeof controller.abort === 'function') {
+            controller.abort();
+          }
+          if (typeof controller.cancel === 'function') {
+            controller.cancel();
+          }
+        } catch (error) {
+          logger.warn('Error cleaning up stream controller', error, { messageId });
+        }
+      }
+
       this.processingMessages.clear();
       this.streamControllers.clear();
       logger.info('Message processing state cleaned up');
+    },
+
+    /**
+     * 清理所有流控制器和处理状态
+     * 用于组件卸载或应用关闭时的资源清理
+     */
+    cleanupAllResources(): void {
+      this.cleanupProcessingState();
+      logger.info('All message resources cleaned up');
+    },
+
+    /**
+     * 清理会话相关的资源
+     */
+    cleanupSessionResources(sessionId: string): void {
+      const sessionStore = useSessionStore();
+      const session = sessionStore.getSession(sessionId);
+
+      if (!session) {
+        return;
+      }
+
+      // 清理该会话下所有消息的流控制器
+      const messageIds = session.messages.map(msg => msg.id);
+      messageIds.forEach(messageId => {
+        this.completeMessage(messageId);
+      });
+
+      logger.info('Session resources cleaned up', { sessionId });
     },
 
     /**

@@ -185,8 +185,11 @@ export const useSessionStore = defineStore('session', {
 
       const session = this.sessions[index];
       const curIndex = this.sessions.findIndex(s => s.id === this.currentSessionId);
-      
+
       logger.info('Deleting session', { sessionId: session.id, index });
+
+      // 清理会话相关的资源
+      this.cleanupSessionResources(session.id);
 
       // 如果删除的是当前会话
       if (index === curIndex) {
@@ -196,7 +199,7 @@ export const useSessionStore = defineStore('session', {
           logger.info('Cleared last session messages instead of deleting');
           return;
         }
-        
+
         // 切换到相邻会话
         this.currentSessionId = index === this.sessions.length - 1
           ? this.sessions[index - 1].id
@@ -389,6 +392,36 @@ export const useSessionStore = defineStore('session', {
     emitEvent(event: ChatEvent): void {
       // 这里可以集成事件总线或者其他事件处理机制
       logger.debug('Event emitted', event);
+    },
+
+    /**
+     * 清理会话资源
+     */
+    cleanupSessionResources(sessionId: string): void {
+      // 导入 message store 来清理相关资源
+      const { useMessageStore } = require('./message');
+      const messageStore = useMessageStore();
+
+      messageStore.cleanupSessionResources(sessionId);
+
+      logger.info('Session resources cleaned up', { sessionId });
+    },
+
+    /**
+     * 清理所有会话资源
+     */
+    cleanupAllSessionResources(): void {
+      const { useMessageStore } = require('./message');
+      const { useStreamStore } = require('./stream');
+
+      const messageStore = useMessageStore();
+      const streamStore = useStreamStore();
+
+      // 清理所有消息和流资源
+      messageStore.cleanupAllResources();
+      streamStore.cleanupStreamState();
+
+      logger.info('All session resources cleaned up');
     },
   },
 

@@ -295,6 +295,20 @@ export const useStreamStore = defineStore('stream', {
      * 清理流状态
      */
     cleanupStreamState(): void {
+      // 先停止所有活跃的流
+      for (const [streamId, controller] of this.activeStreams.entries()) {
+        try {
+          if (typeof controller.abort === 'function') {
+            controller.abort();
+          }
+          if (typeof controller.cancel === 'function') {
+            controller.cancel();
+          }
+        } catch (error) {
+          logger.warn('Error stopping stream during cleanup', error, { streamId });
+        }
+      }
+
       this.activeStreams.clear();
       this.streamMetrics.clear();
       logger.info('Stream state cleaned up');
