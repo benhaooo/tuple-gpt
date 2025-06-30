@@ -114,17 +114,6 @@ export const NOT_SUPPORTED_REANK_PROVIDERS = ['ollama']
 export const ONLY_SUPPORTED_DIMENSION_PROVIDERS = ['ollama', 'infini']
 
 export const PROVIDER_CONFIG = {
-  '302ai': {
-    api: {
-      url: 'https://api.302.ai'
-    },
-    websites: {
-      official: 'https://302.ai',
-      apiKey: 'https://dash.302.ai/apis/list',
-      docs: 'https://302ai.apifox.cn/api-147522039',
-      models: 'https://302.ai/pricing/'
-    }
-  },
   openai: {
     api: {
       url: 'https://api.openai.com'
@@ -145,17 +134,6 @@ export const PROVIDER_CONFIG = {
       apiKey: 'https://aistudio.google.com/app/apikey',
       docs: 'https://ai.google.dev/gemini-api/docs',
       models: 'https://ai.google.dev/gemini-api/docs/models/gemini'
-    }
-  },
-  silicon: {
-    api: {
-      url: 'https://api.siliconflow.cn'
-    },
-    websites: {
-      official: 'https://www.siliconflow.cn',
-      apiKey: 'https://cloud.siliconflow.cn/i/d1nTBKXU',
-      docs: 'https://docs.siliconflow.cn/',
-      models: 'https://cloud.siliconflow.cn/models'
     }
   },
   deepseek: {
@@ -181,18 +159,6 @@ export const PROVIDER_CONFIG = {
       models: 'https://platform.moonshot.cn/docs/intro#%E6%A8%A1%E5%9E%8B%E5%88%97%E8%A1%A8'
     }
   },
-  modelscope: {
-    api: {
-      url: 'https://api-inference.modelscope.cn/v1/'
-    },
-    websites: {
-      official: 'https://modelscope.cn',
-      apiKey: 'https://modelscope.cn/my/myaccesstoken',
-      docs: 'https://modelscope.cn/docs/model-service/API-Inference/intro',
-      models: 'https://modelscope.cn/models'
-    }
-  },
- 
   doubao: {
     api: {
       url: 'https://ark.cn-beijing.volces.com/api/v3/'
@@ -204,15 +170,37 @@ export const PROVIDER_CONFIG = {
       models: 'https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint'
     }
   },
-  minimax: {
+  // modelscope: {
+  //   api: {
+  //     url: 'https://api-inference.modelscope.cn/v1/'
+  //   },
+  //   websites: {
+  //     official: 'https://modelscope.cn',
+  //     apiKey: 'https://modelscope.cn/my/myaccesstoken',
+  //     docs: 'https://modelscope.cn/docs/model-service/API-Inference/intro',
+  //     models: 'https://modelscope.cn/models'
+  //   }
+  // },
+  silicon: {
     api: {
-      url: 'https://api.minimax.chat/v1/'
+      url: 'https://api.siliconflow.cn'
     },
     websites: {
-      official: 'https://platform.minimaxi.com/',
-      apiKey: 'https://platform.minimaxi.com/user-center/basic-information/interface-key',
-      docs: 'https://platform.minimaxi.com/document/Announcement',
-      models: 'https://platform.minimaxi.com/document/Models'
+      official: 'https://www.siliconflow.cn',
+      apiKey: 'https://cloud.siliconflow.cn/i/d1nTBKXU',
+      docs: 'https://docs.siliconflow.cn/',
+      models: 'https://cloud.siliconflow.cn/models'
+    }
+  },
+  '302ai': {
+    api: {
+      url: 'https://api.302.ai'
+    },
+    websites: {
+      official: 'https://302.ai',
+      apiKey: 'https://dash.302.ai/apis/list',
+      docs: 'https://302ai.apifox.cn/api-147522039',
+      models: 'https://302.ai/pricing/'
     }
   },
   openrouter: {
@@ -226,47 +214,47 @@ export const PROVIDER_CONFIG = {
       models: 'https://openrouter.ai/models'
     }
   },
-  ollama: {
-    api: {
-      url: 'http://localhost:11434'
-    },
-    websites: {
-      official: 'https://ollama.com/',
-      docs: 'https://github.com/ollama/ollama/tree/main/docs',
-      models: 'https://ollama.com/library'
-    }
-  },
 
-  anthropic: {
-    api: {
-      url: 'https://api.anthropic.com/'
-    },
-    websites: {
-      official: 'https://anthropic.com/',
-      apiKey: 'https://console.anthropic.com/settings/keys',
-      docs: 'https://docs.anthropic.com/en/docs',
-      models: 'https://docs.anthropic.com/en/docs/about-claude/models'
-    }
-  },
-  grok: {
-    api: {
-      url: 'https://api.x.ai'
-    },
-    websites: {
-      official: 'https://x.ai/',
-      docs: 'https://docs.x.ai/',
-      models: 'https://docs.x.ai/docs/models'
-    }
-  },
-  'azure-openai': {
-    api: {
-      url: ''
-    },
-    websites: {
-      official: 'https://azure.microsoft.com/en-us/products/ai-services/openai-service',
-      apiKey: 'https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/OpenAI',
-      docs: 'https://learn.microsoft.com/en-us/azure/ai-services/openai/',
-      models: 'https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models'
-    }
-  },
+  // anthropic: {
+  //   api: {
+  //     url: 'https://api.anthropic.com/'
+  //   },
+  //   websites: {
+  //     official: 'https://anthropic.com/',
+  //     apiKey: 'https://console.anthropic.com/settings/keys',
+  //     docs: 'https://docs.anthropic.com/en/docs',
+  //     models: 'https://docs.anthropic.com/en/docs/about-claude/models'
+  //   }
+  // },
+  // grok: {
+  //   api: {
+  //     url: 'https://api.x.ai'
+  //   },
+  //   websites: {
+  //     official: 'https://x.ai/',
+  //     docs: 'https://docs.x.ai/',
+  //     models: 'https://docs.x.ai/docs/models'
+  //   }
+  // },
+  // 'azure-openai': {
+  //   api: {
+  //     url: ''
+  //   },
+  //   websites: {
+  //     official: 'https://azure.microsoft.com/en-us/products/ai-services/openai-service',
+  //     apiKey: 'https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/OpenAI',
+  //     docs: 'https://learn.microsoft.com/en-us/azure/ai-services/openai/',
+  //     models: 'https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models'
+  //   }
+  // },
+  // ollama: {
+  //   api: {
+  //     url: 'http://localhost:11434'
+  //   },
+  //   websites: {
+  //     official: 'https://ollama.com/',
+  //     docs: 'https://github.com/ollama/ollama/tree/main/docs',
+  //     models: 'https://ollama.com/library'
+  //   }
+  // },
 }

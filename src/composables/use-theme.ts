@@ -155,21 +155,14 @@ export function useTheme() {
   }
   
   /**
-   * 切换主题
+   * 切换主题（基于当前实际显示的主题进行切换）
    */
   const toggleTheme = () => {
-    const currentMode = userConfig.value.theme as Theme
-    
-    switch (currentMode) {
-      case ThemeMode.LIGHT:
-        configStore.setTheme(ThemeMode.DARK)
-        break
-      case ThemeMode.DARK:
-        configStore.setTheme(ThemeMode.AUTO)
-        break
-      case ThemeMode.AUTO:
-        configStore.setTheme(ThemeMode.LIGHT)
-        break
+    // 基于当前实际显示的主题来决定切换方向
+    if (effectiveTheme.value === ThemeMode.LIGHT) {
+      configStore.setTheme(ThemeMode.DARK)
+    } else {
+      configStore.setTheme(ThemeMode.LIGHT)
     }
   }
   

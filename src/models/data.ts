@@ -143,8 +143,20 @@ interface ParsedModelID {
 
 const parseModelID = (id?: string): ParsedModelID => {
     if (!id) return { provider: '', groupName: '', modelName: '' }
+    
+    // 检查id是否为字符串类型，如果不是则返回空值
+    if (typeof id !== 'string') {
+        console.warn('Model ID is not a string:', id);
+        return { provider: '', groupName: '', modelName: '' }
+    }
+    
+    try {
     const [provider, groupName, modelName] = id.split('/_')
-    return { provider, groupName, modelName }
+        return { provider: provider || '', groupName: groupName || '', modelName: modelName || '' }
+    } catch (error) {
+        console.error('Failed to parse model ID:', id, error)
+        return { provider: '', groupName: '', modelName: '' }
+    }
 }
 const getServiceModel = (id?: string): { service: Service; group: Group; model: Model } => {
     const { serviceConfig } = useConfigStore()

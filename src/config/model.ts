@@ -1,18 +1,143 @@
+// 导入主流AI模型logo
 import GeminiProviderLogo from '@/assets/images/models/gemini.png'
 import GptProviderLogo from '@/assets/images/models/gpt_4.png'
 import DeepseekProviderLogo from '@/assets/images/models/deepseek.png'
-import AnthropicProviderLogo from '@/assets/images/providers/anthropic.png'
+import ClaudeProviderLogo from '@/assets/images/models/claude.png'
+import DoubaoProviderLogo from '@/assets/images/models/doubao.png'
+import GrokProviderLogo from '@/assets/images/models/grok.png'
+import QwenProviderLogo from '@/assets/images/models/qwen.png'
+import ChatGLMProviderLogo from '@/assets/images/models/chatglm.png'
+import MoonshotProviderLogo from '@/assets/images/models/moonshot.png'
+import BaichuanProviderLogo from '@/assets/images/models/baichuan.png'
+import YiProviderLogo from '@/assets/images/models/yi.png'
+import HunyuanProviderLogo from '@/assets/images/models/hunyuan.png'
+import WenxinProviderLogo from '@/assets/images/models/wenxin.png'
+import SparkdeskProviderLogo from '@/assets/images/models/sparkdesk.png'
+import MinimaxProviderLogo from '@/assets/images/models/minimax.png'
+import ZhipuProviderLogo from '@/assets/images/models/zhipu.png'
+import LlamaProviderLogo from '@/assets/images/models/llama.png'
+import MixtralProviderLogo from '@/assets/images/models/mixtral.png'
+import CohereProviderLogo from '@/assets/images/models/cohere.png'
+import InternLMProviderLogo from '@/assets/images/models/internlm.png'
+import PalmProviderLogo from '@/assets/images/models/palm.png'
+import CopilotProviderLogo from '@/assets/images/models/copilot.png'
+import DalleProviderLogo from '@/assets/images/models/dalle.png'
+import MidjourneyProviderLogo from '@/assets/images/models/midjourney.png'
+import StabilityProviderLogo from '@/assets/images/models/stability.png'
+import PerplexityProviderLogo from '@/assets/images/models/perplexity.png'
+import NvidiaProviderLogo from '@/assets/images/models/nvidia.png'
+import MicrosoftProviderLogo from '@/assets/images/models/microsoft.png'
+import GemmaProviderLogo from '@/assets/images/models/gemma.png'
+import CodestralProviderLogo from '@/assets/images/models/codestral.png'
 import DefaultLogo from '@/assets/images/models/embedding.png' // 使用 embedding.png 作为默认 logo
 
 // 明确定义支持的提供商类型
-type SupportedProvider = 'gemini' | 'claude' | 'gpt' | 'deepseek';
+type SupportedProvider =
+    | 'gemini' | 'claude' | 'gpt' | 'deepseek' | 'doubao' | 'grok'
+    | 'qwen' | 'chatglm' | 'moonshot' | 'baichuan' | 'yi' | 'hunyuan'
+    | 'wenxin' | 'sparkdesk' | 'minimax' | 'zhipu' | 'llama' | 'mixtral'
+    | 'cohere' | 'openai' | 'anthropic' | 'bytedance' | 'alibaba'
+    | 'tencent' | 'baidu' | 'iflytek' | 'meta' | 'mistral' | 'internlm'
+    | 'palm' | 'copilot' | 'dalle' | 'midjourney' | 'stability' | 'perplexity'
+    | 'nvidia' | 'microsoft' | 'gemma' | 'codestral' | 'google';
 
 // 使用 Record 类型确保类型安全
 const PROVIDER_LOGO_MAP: Record<SupportedProvider, string> = {
-    'gemini': GeminiProviderLogo,
-    'claude': AnthropicProviderLogo,
+    // OpenAI系列
     'gpt': GptProviderLogo,
+    'openai': GptProviderLogo,
+
+    // Anthropic系列
+    'claude': ClaudeProviderLogo,
+    'anthropic': ClaudeProviderLogo,
+
+    // Google系列
+    'gemini': GeminiProviderLogo,
+
+    // 字节跳动系列
+    'doubao': DoubaoProviderLogo,
+    'bytedance': DoubaoProviderLogo,
+
+    // xAI系列
+    'grok': GrokProviderLogo,
+
+    // DeepSeek系列
     'deepseek': DeepseekProviderLogo,
+
+    // 阿里巴巴系列
+    'qwen': QwenProviderLogo,
+    'alibaba': QwenProviderLogo,
+
+    // 智谱AI系列
+    'chatglm': ChatGLMProviderLogo,
+    'zhipu': ZhipuProviderLogo,
+
+    // 月之暗面系列
+    'moonshot': MoonshotProviderLogo,
+
+    // 百川智能系列
+    'baichuan': BaichuanProviderLogo,
+
+    // 零一万物系列
+    'yi': YiProviderLogo,
+
+    // 腾讯系列
+    'hunyuan': HunyuanProviderLogo,
+    'tencent': HunyuanProviderLogo,
+
+    // 百度系列
+    'wenxin': WenxinProviderLogo,
+    'baidu': WenxinProviderLogo,
+
+    // 科大讯飞系列
+    'sparkdesk': SparkdeskProviderLogo,
+    'iflytek': SparkdeskProviderLogo,
+
+    // MiniMax系列
+    'minimax': MinimaxProviderLogo,
+
+    // Meta系列
+    'llama': LlamaProviderLogo,
+    'meta': LlamaProviderLogo,
+
+    // Mistral系列
+    'mixtral': MixtralProviderLogo,
+    'mistral': MixtralProviderLogo,
+
+    // Cohere系列
+    'cohere': CohereProviderLogo,
+
+    // 上海AI实验室系列
+    'internlm': InternLMProviderLogo,
+
+    // Google PaLM系列
+    'palm': PalmProviderLogo,
+    'google': GeminiProviderLogo,
+
+    // Google Gemma系列
+    'gemma': GemmaProviderLogo,
+
+    // Microsoft系列
+    'copilot': CopilotProviderLogo,
+    'microsoft': MicrosoftProviderLogo,
+
+    // OpenAI图像生成系列
+    'dalle': DalleProviderLogo,
+
+    // Midjourney系列
+    'midjourney': MidjourneyProviderLogo,
+
+    // Stability AI系列
+    'stability': StabilityProviderLogo,
+
+    // Perplexity系列
+    'perplexity': PerplexityProviderLogo,
+
+    // NVIDIA系列
+    'nvidia': NvidiaProviderLogo,
+
+    // Mistral Codestral系列
+    'codestral': CodestralProviderLogo,
 };
 
 /**
@@ -24,18 +149,155 @@ export function getModelLogo(modelId: string): string {
     if (!modelId || typeof modelId !== 'string') {
         return DefaultLogo;
     }
-    
+
     // 将 modelId 转为小写以进行不区分大小写的匹配
     const lowerModelId = modelId.toLowerCase();
-    
-    // 遍历所有支持的提供商
+
+    // 特殊匹配规则 - 优先匹配更具体的模型名称
+    const specialMatches: Array<{ pattern: string | RegExp, provider: SupportedProvider }> = [
+        // OpenAI系列
+        { pattern: /gpt-?[34]/, provider: 'gpt' },
+        { pattern: /gpt-?3\.?5/, provider: 'gpt' },
+        { pattern: /chatgpt/, provider: 'gpt' },
+        { pattern: 'openai', provider: 'openai' },
+
+        // Anthropic系列
+        { pattern: /claude-?[123]/, provider: 'claude' },
+        { pattern: /claude-?(instant|sonnet|opus|haiku)/, provider: 'claude' },
+        { pattern: 'anthropic', provider: 'anthropic' },
+
+        // Google系列
+        { pattern: /gemini-?(pro|ultra|nano)/, provider: 'gemini' },
+        { pattern: /gemini-?[12]/, provider: 'gemini' },
+
+        // 字节跳动系列
+        { pattern: 'doubao', provider: 'doubao' },
+        { pattern: 'bytedance', provider: 'bytedance' },
+
+        // xAI系列
+        { pattern: 'grok', provider: 'grok' },
+
+        // DeepSeek系列
+        { pattern: 'deepseek', provider: 'deepseek' },
+
+        // 阿里巴巴系列
+        { pattern: /qwen-?[12]/, provider: 'qwen' },
+        { pattern: /qwen-?(turbo|plus|max)/, provider: 'qwen' },
+        { pattern: 'tongyi', provider: 'qwen' },
+        { pattern: 'alibaba', provider: 'alibaba' },
+
+        // 智谱AI系列
+        { pattern: /chatglm-?[123]/, provider: 'chatglm' },
+        { pattern: /glm-?[34]/, provider: 'chatglm' },
+        { pattern: 'zhipu', provider: 'zhipu' },
+
+        // 月之暗面系列
+        { pattern: /moonshot-?v1/, provider: 'moonshot' },
+        { pattern: 'kimi', provider: 'moonshot' },
+
+        // 百川智能系列
+        { pattern: /baichuan-?[123]/, provider: 'baichuan' },
+
+        // 零一万物系列
+        { pattern: /yi-?(large|medium|small)/, provider: 'yi' },
+        { pattern: /yi-?[69]b/, provider: 'yi' },
+
+        // 腾讯系列
+        { pattern: 'hunyuan', provider: 'hunyuan' },
+        { pattern: 'tencent', provider: 'tencent' },
+
+        // 百度系列
+        { pattern: /ernie-?(bot|turbo|lite)/, provider: 'wenxin' },
+        { pattern: 'wenxin', provider: 'wenxin' },
+        { pattern: 'baidu', provider: 'baidu' },
+
+        // 科大讯飞系列
+        { pattern: /spark-?[123]/, provider: 'sparkdesk' },
+        { pattern: 'sparkdesk', provider: 'sparkdesk' },
+        { pattern: 'iflytek', provider: 'iflytek' },
+
+        // MiniMax系列
+        { pattern: 'minimax', provider: 'minimax' },
+        { pattern: 'abab', provider: 'minimax' },
+
+        // Meta系列
+        { pattern: /llama-?[23]/, provider: 'llama' },
+        { pattern: /llama-?[78]b/, provider: 'llama' },
+        { pattern: /llama-?[13]b/, provider: 'llama' },
+        { pattern: 'meta', provider: 'meta' },
+
+        // Mistral系列
+        { pattern: /mixtral-?8x/, provider: 'mixtral' },
+        { pattern: /mistral-?[78]b/, provider: 'mixtral' },
+        { pattern: 'mistral', provider: 'mistral' },
+
+        // Cohere系列
+        { pattern: /command-?r/, provider: 'cohere' },
+        { pattern: 'cohere', provider: 'cohere' },
+
+        // 上海AI实验室系列
+        { pattern: /internlm-?[12]/, provider: 'internlm' },
+        { pattern: 'internlm', provider: 'internlm' },
+
+        // Google PaLM系列
+        { pattern: /palm-?[12]/, provider: 'palm' },
+        { pattern: 'palm', provider: 'palm' },
+        { pattern: 'bison', provider: 'palm' },
+
+        // Google Gemma系列
+        { pattern: /gemma-?[27]b/, provider: 'gemma' },
+        { pattern: 'gemma', provider: 'gemma' },
+
+        // Microsoft系列
+        { pattern: /copilot/, provider: 'copilot' },
+        { pattern: /github-?copilot/, provider: 'copilot' },
+        { pattern: 'microsoft', provider: 'microsoft' },
+
+        // OpenAI图像生成系列
+        { pattern: /dall-?e/, provider: 'dalle' },
+        { pattern: 'dalle', provider: 'dalle' },
+
+        // Midjourney系列
+        { pattern: 'midjourney', provider: 'midjourney' },
+        { pattern: 'mj', provider: 'midjourney' },
+
+        // Stability AI系列
+        { pattern: /stable-?diffusion/, provider: 'stability' },
+        { pattern: 'stability', provider: 'stability' },
+        { pattern: 'sdxl', provider: 'stability' },
+
+        // Perplexity系列
+        { pattern: 'perplexity', provider: 'perplexity' },
+        { pattern: 'pplx', provider: 'perplexity' },
+
+        // NVIDIA系列
+        { pattern: 'nvidia', provider: 'nvidia' },
+        { pattern: 'nemotron', provider: 'nvidia' },
+
+        // Mistral Codestral系列
+        { pattern: 'codestral', provider: 'codestral' },
+    ];
+
+    // 首先尝试特殊匹配规则
+    for (const { pattern, provider } of specialMatches) {
+        if (typeof pattern === 'string') {
+            if (lowerModelId.includes(pattern)) {
+                return PROVIDER_LOGO_MAP[provider];
+            }
+        } else {
+            if (pattern.test(lowerModelId)) {
+                return PROVIDER_LOGO_MAP[provider];
+            }
+        }
+    }
+
+    // 如果特殊规则没有匹配，则使用通用匹配
     for (const provider of Object.keys(PROVIDER_LOGO_MAP) as SupportedProvider[]) {
-        // 只要 modelId 包含提供商名称，就返回对应的 logo
         if (lowerModelId.includes(provider)) {
             return PROVIDER_LOGO_MAP[provider];
         }
     }
-    
+
     // 没有匹配到任何提供商时，返回默认 logo
     return DefaultLogo;
 }

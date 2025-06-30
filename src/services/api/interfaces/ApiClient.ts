@@ -1,4 +1,6 @@
 // API客户端通用接口
+import { Model } from '@/types/llm';
+
 export interface ApiClient {
   // 发送文本请求
   chatCompletion(messages: any[], options?: any): Promise<any>;
@@ -12,7 +14,7 @@ export interface ApiClient {
   }): Promise<void>;
   
   // 获取模型列表
-  listModels(): Promise<any>;
+  listModels(): Promise<Model[]>;
   
   // 图像生成（如果支持）
   generateImage?(prompt: string, options?: any): Promise<any>;

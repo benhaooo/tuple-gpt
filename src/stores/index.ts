@@ -1,6 +1,8 @@
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import localforage from 'localforage'
+import { useAssistantsStore } from './modules/assistants'
+import { useMessagesStore } from './modules/messages'
 
 localforage.config({
   name: 'tuple-gpt-storage',
@@ -37,3 +39,8 @@ const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 
 export default pinia
+
+export {
+  useAssistantsStore,
+  useMessagesStore
+}

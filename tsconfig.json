@@ -34,7 +34,8 @@
     "baseUrl": ".",
     // 指定具体要解析使用的类型
     "types": [
-      "webpack-env"
+      "vite/client",
+      "element-plus/global"
     ],
     // 路径解析(类似于webpack alias)
     "paths": {
@@ -51,7 +52,16 @@
       "dom",
       "dom.iterable",
       "scripthost"
-    ]
+    ],
+    // Vue 3 + TypeScript 支持
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "useDefineForClassFields": true
   },
   "include": [
     "src/**/*.ts",
@@ -60,7 +70,8 @@
     "src/**/*.d.ts",
     "tests/**/*.ts",
     "tests/**/*.tsx",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "*.d.ts"
   ],
   "exclude": [
     "node_modules",

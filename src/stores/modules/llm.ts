@@ -1,67 +1,40 @@
 import { defineStore } from 'pinia';
 import { PROVIDER_CONFIG } from '@/config/providers';
+import { Provider, ProviderType, Model, ProviderConfigItem } from '@/types/llm';
 
-// Provider类型定义
-export type ProviderType = string; // 如'openai', 'anthropic', 'gemini'等
-
-// 模型功能类型
-export type ModelType = 'vision' | 'text' | 'embedding' | string;
-
-// 模型价格信息
-export interface ModelPricing {
-  input: number; // 输入每百万token价格
-  output: number; // 输出每百万token价格
-}
-
-// 模型定义
-export interface Model {
-  id: string; // 模型的唯一标识符，例如 gpt-4-turbo
-  provider: string; // 该模型所属的提供商的id
-  name: string; // 用户看到的模型显示名称，例如"GPT-4 Turbo"
-  group: string; // 模型所属的分组，例如"GPT-4"
-  type: ModelType[]; // 模型的能力类型数组，如 'vision', 'text', 'embedding'
-  pricing?: ModelPricing; // 模型的定价信息（可选）
-}
-
-// 提供商定义
-export interface Provider {
-  id: string; // 提供商的唯一标识符，通常是自动生成的uuid
-  type: ProviderType; // 提供商的类型，例如 'openai', 'anthropic', 'gemini' 等
-  name: string; // 用户自定义的名称，例如"My OpenAI Key"或"Local Llama3"
-  apiKey: string; // 用于API认证的密钥
-  apiHost: string; // API基础URL
-  apiVersion?: string; // 某些API（如Azure OpenAI）需要的版本号
-  models: Model[]; // 这个提供商下所有可用模型的列表
-  enabled: boolean; // 该提供商是否启用
-  isSystem: boolean; // 是否为系统内置的默认提供商
-  isAuthed: boolean; // 是否已通过认证
-  rateLimit?: number; // API请求的速率限制
-  isNotSupportArrayContent?: boolean; // 标记该提供商是否不支持特定格式的内容数组
-  isVertex?: boolean; // 标记是否为Google Vertex AI
-  notes: string; // 用户为这个提供商添加的备注
-}
-
-// PROVIDER_CONFIG 的类型
-interface ProviderConfigItem {
-  api: {
-    url: string;
-  };
-  websites: {
-    official: string;
-    apiKey?: string;
-    docs: string;
-    models: string;
-  };
-  modelList?: any[]; // 可选的默认模型列表
-}
+// 默认模型配置
+const DEFAULT_MODELS: Record<string, Model[]> = {
+  openai: [
+    { id: 'gpt-4o', provider: 'openai', name: 'GPT-4o', group: 'GPT-4', type: ['text', 'vision'] },
+    { id: 'gpt-4o-mini', provider: 'openai', name: 'GPT-4o Mini', group: 'GPT-4', type: ['text', 'vision'] },
+    { id: 'gpt-4-turbo', provider: 'openai', name: 'GPT-4 Turbo', group: 'GPT-4', type: ['text', 'vision'] },
+    { id: 'gpt-3.5-turbo', provider: 'openai', name: 'GPT-3.5 Turbo', group: 'GPT-3.5', type: ['text'] },
+    { id: 'o1-preview', provider: 'openai', name: 'o1-preview', group: 'o1', type: ['text'] },
+    { id: 'o1-mini', provider: 'openai', name: 'o1-mini', group: 'o1', type: ['text'] }
+  ],
+  anthropic: [
+    { id: 'claude-3-5-sonnet-20241022', provider: 'anthropic', name: 'Claude 3.5 Sonnet', group: 'Claude 3.5', type: ['text', 'vision'] },
+    { id: 'claude-3-5-haiku-20241022', provider: 'anthropic', name: 'Claude 3.5 Haiku', group: 'Claude 3.5', type: ['text', 'vision'] },
+    { id: 'claude-3-opus-20240229', provider: 'anthropic', name: 'Claude 3 Opus', group: 'Claude 3', type: ['text', 'vision'] }
+  ],
+  gemini: [
+    { id: 'gemini-1.5-pro', provider: 'gemini', name: 'Gemini 1.5 Pro', group: 'Gemini 1.5', type: ['text', 'vision'] },
+    { id: 'gemini-1.5-flash', provider: 'gemini', name: 'Gemini 1.5 Flash', group: 'Gemini 1.5', type: ['text', 'vision'] },
+    { id: 'gemini-2.0-flash-exp', provider: 'gemini', name: 'Gemini 2.0 Flash (Experimental)', group: 'Gemini 2.0', type: ['text', 'vision'] }
+  ],
+  deepseek: [
+    { id: 'deepseek-chat', provider: 'deepseek', name: 'DeepSeek Chat', group: 'DeepSeek', type: ['text'] },
+    { id: 'deepseek-reasoner', provider: 'deepseek', name: 'DeepSeek Reasoner', group: 'DeepSeek', type: ['text'] }
+  ]
+};
 
 export const useLlmStore = defineStore('llm', {
   state: () => ({
-    // 将PROVIDER_CONFIG对象转换为Provider数组
+    // 将PROVIDER_CONFIG对象转换为Provider数组，并添加默认模型
     providers: Object.entries(PROVIDER_CONFIG).map(([key, config]) => {
       // 确保config的类型正确
       const providerConfig = config as ProviderConfigItem;
-      
+
       return {
         id: crypto.randomUUID(), // 生成唯一ID
         type: key, // 将PROVIDER_CONFIG的key设置为type
@@ -69,7 +42,7 @@ export const useLlmStore = defineStore('llm', {
         apiKey: '', // 初始化为空
         apiHost: providerConfig.api.url || '',
         apiVersion: undefined, // 默认undefined
-        models: [], // 初始化为空数组，后续可以通过API获取
+        models: DEFAULT_MODELS[key] || [], // 使用默认模型或空数组
         enabled: true, // 默认启用
         isSystem: true, // 默认为系统提供的
         isAuthed: false, // 默认未认证
@@ -78,6 +51,40 @@ export const useLlmStore = defineStore('llm', {
       } as Provider;
     }),
   }),
+
+  getters: {
+    // 获取所有可用的模型
+    allAvailableModels: (state) => {
+      const models: Model[] = [];
+      state.providers
+        .filter(provider => provider.enabled)
+        .forEach(provider => {
+          provider.models.forEach(model => {
+            models.push({
+              ...model,
+              provider: provider.type // 确保模型有provider信息
+            });
+          });
+        });
+      return models;
+    },
+
+    // 获取启用的提供商
+    enabledProviders: (state) => {
+      return state.providers.filter(provider => provider.enabled);
+    },
+
+    // 按提供商分组的模型
+    modelsByProvider: (state) => {
+      const result: Record<string, Model[]> = {};
+      state.providers
+        .filter(provider => provider.enabled)
+        .forEach(provider => {
+          result[provider.type] = provider.models;
+        });
+      return result;
+    }
+  },
 
   actions: {
     // 添加自定义提供商
@@ -114,6 +121,27 @@ export const useLlmStore = defineStore('llm', {
       if (index >= 0 && !this.providers[index].isSystem) {
         this.providers.splice(index, 1);
       }
+    },
+
+    // 根据模型ID查找模型
+    findModelById(modelId: string): Model | null {
+      for (const provider of this.providers) {
+        const model = provider.models.find(m => m.id === modelId);
+        if (model) {
+          return model;
+        }
+      }
+      return null;
+    },
+
+    // 根据模型ID查找提供商
+    findProviderByModelId(modelId: string): Provider | null {
+      for (const provider of this.providers) {
+        if (provider.models.some(m => m.id === modelId)) {
+          return provider;
+        }
+      }
+      return null;
     }
   },
   

@@ -17,28 +17,34 @@
           @keydown.escape.prevent="close"
         />
       </div>
-      <div v-if="filteredModels.length === 0" class="p-4 text-center text-text-light-tertiary dark:text-text-dark-tertiary">
+      <div v-if="filteredProviders.length === 0" class="p-4 text-center text-text-light-tertiary dark:text-text-dark-tertiary">
         没有找到匹配的模型
       </div>
       <div v-else>
-        <div v-for="(service, serviceIndex) in filteredModels" :key="service.provider" class="mb-2">
+        <div v-for="(provider, providerIndex) in filteredProviders" :key="provider.id" class="mb-2">
           <div class="px-3 py-1 text-xs font-bold text-text-light-tertiary dark:text-text-dark-tertiary bg-surface-light-tertiary dark:bg-surface-dark-tertiary">
-            {{ service.provider }}
+            {{ provider.name }}
           </div>
-          <div v-for="(group, groupIndex) in service.groups" :key="group.name">
-            <div v-for="(model, modelIndex) in group.models" :key="model.id">
-              <div 
-                class="px-3 py-2 flex items-center cursor-pointer"
-                :class="{
-                  'bg-interactive-light-selected dark:bg-interactive-dark-selected highlighted-item': isHighlighted(service.provider, group.name, model.id),
-                  'hover:bg-interactive-light-hover dark:hover:bg-interactive-dark-hover': !isHighlighted(service.provider, group.name, model.id)
-                }"
-                @click="selectModel(model.id)"
-                @mouseover="highlightIndex = getModelIndex(serviceIndex, groupIndex, modelIndex)"
-              >
-                <div class="flex items-center w-full">
-                  <img :src="group.icon || ''" class="w-6 h-6 rounded-full mr-2" alt="" />
-                  <span class="text-sm">{{ model.name }}</span>
+          <div v-for="(model, modelIndex) in provider.models" :key="model.id">
+            <div
+              class="px-3 py-2 flex items-center cursor-pointer"
+              :class="{
+                'bg-interactive-light-selected dark:bg-interactive-dark-selected highlighted-item': isHighlighted(provider.id, model.id),
+                'hover:bg-interactive-light-hover dark:hover:bg-interactive-dark-hover': !isHighlighted(provider.id, model.id)
+              }"
+              @click="selectModel(model.id)"
+              @mouseover="highlightIndex = getModelIndex(providerIndex, modelIndex)"
+            >
+              <div class="flex items-center w-full">
+                <img
+                  :src="getProviderLogo(provider.type)"
+                  class="w-6 h-6 rounded-full mr-2"
+                  alt=""
+                  @error="$event.target.style.display='none'"
+                />
+                <div class="flex flex-col">
+                  <span class="text-sm font-medium">{{ model.name }}</span>
+                  <span v-if="model.group" class="text-xs text-text-light-tertiary dark:text-text-dark-tertiary">{{ model.group }}</span>
                 </div>
               </div>
             </div>
@@ -49,55 +55,64 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue';
-import useConfigStore from '@/stores/modules/config';
+import { useLlmStore } from '@/stores/modules/llm';
+import { getProviderLogo } from '@/config/providers';
+import type { Provider, Model } from '@/types/llm';
 
-const props = defineProps({
-  triggerText: {
-    type: String,
-    default: ''
-  },
-  position: {
-    type: String,
-    default: 'top' // 可选值: 'top', 'bottom', 'left', 'right'
-  },
-  offset: {
-    type: Number,
-    default: 5
-  }
+interface Props {
+  triggerText?: string;
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  offset?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  triggerText: '',
+  position: 'top',
+  offset: 5
 });
 
-const emit = defineEmits(['select', 'close']);
+const emit = defineEmits<{
+  select: [modelId: string];
+  close: [];
+}>();
 
-const configStore = useConfigStore();
-const dropdownRef = ref(null);
-const searchInputRef = ref(null);
+const llmStore = useLlmStore();
+const dropdownRef = ref<HTMLElement | null>(null);
+const searchInputRef = ref<HTMLInputElement | null>(null);
 const isVisible = ref(false);
 const searchQuery = ref('');
 const highlightIndex = ref(0);
-const flatModelsList = ref([]);
-const selectorStyle = ref({});
-const currentTriggerElement = ref(null); // 使用ref存储触发元素
-const currentPosition = ref(props.position); // 使用ref存储当前位置
+const flatModelsList = ref<FlatModel[]>([]);
+const selectorStyle = ref<Record<string, string>>({});
+const currentTriggerElement = ref<HTMLElement | null>(null);
+const currentPosition = ref<Props['position']>(props.position);
+
+// 扁平化模型类型定义
+interface FlatModel {
+  providerIndex: number;
+  modelIndex: number;
+  providerId: string;
+  providerName: string;
+  modelId: string;
+  modelName: string;
+}
 
 // 根据搜索查询过滤模型
-const filteredModels = computed(() => {
+const filteredProviders = computed(() => {
   const query = searchQuery.value.toLowerCase();
-  
-  return configStore.availableServices
-    .map(service => ({
-      ...service,
-      groups: service.groups
-        .map(group => ({
-          ...group,
-          models: group.models.filter(model => 
-            model.name.toLowerCase().includes(query)
-          )
-        }))
-        .filter(group => group.models.length > 0)
+
+  return llmStore.providers
+    .filter(provider => provider.enabled && provider.models.length > 0)
+    .map(provider => ({
+      ...provider,
+      models: provider.models.filter(model =>
+        model.name.toLowerCase().includes(query) ||
+        model.id.toLowerCase().includes(query)
+      )
     }))
-    .filter(service => service.groups.length > 0);
+    .filter(provider => provider.models.length > 0);
 });
 
 // 计算选择器位置
@@ -134,42 +149,38 @@ const updateSelectorPosition = () => {
 // 计算所有可见模型的平面列表，用于键盘导航
 const updateFlatModelsList = () => {
   flatModelsList.value = [];
-  
-  filteredModels.value.forEach((service, serviceIndex) => {
-    service.groups.forEach((group, groupIndex) => {
-      group.models.forEach((model, modelIndex) => {
-        flatModelsList.value.push({
-          serviceIndex,
-          groupIndex,
-          modelIndex,
-          serviceProvider: service.provider,
-          groupName: group.name,
-          modelId: model.id
-        });
+
+  filteredProviders.value.forEach((provider, providerIndex) => {
+    provider.models.forEach((model, modelIndex) => {
+      flatModelsList.value.push({
+        providerIndex,
+        modelIndex,
+        providerId: provider.id,
+        providerName: provider.name,
+        modelId: model.id,
+        modelName: model.name
       });
     });
   });
 };
 
 // 监听过滤后的模型变化，更新平面列表
-watch(filteredModels, updateFlatModelsList, { deep: true });
+watch(filteredProviders, updateFlatModelsList, { deep: true });
 
 // 获取模型的唯一索引
-const getModelIndex = (serviceIndex, groupIndex, modelIndex) => {
+const getModelIndex = (providerIndex: number, modelIndex: number): number => {
   return flatModelsList.value.findIndex(
-    item => 
-      item.serviceIndex === serviceIndex && 
-      item.groupIndex === groupIndex && 
+    item =>
+      item.providerIndex === providerIndex &&
       item.modelIndex === modelIndex
   );
 };
 
 // 判断当前模型是否高亮
-const isHighlighted = (serviceProvider, groupName, modelId) => {
+const isHighlighted = (providerId: string, modelId: string): boolean => {
   const currentModel = flatModelsList.value[highlightIndex.value];
-  return currentModel && 
-         currentModel.serviceProvider === serviceProvider &&
-         currentModel.groupName === groupName &&
+  return currentModel &&
+         currentModel.providerId === providerId &&
          currentModel.modelId === modelId;
 };
 
@@ -233,7 +244,7 @@ const selectHighlighted = () => {
 };
 
 // 选择模型
-const selectModel = (modelId) => {
+const selectModel = (modelId: string): void => {
   emit('select', modelId);
   close();
 };
@@ -244,19 +255,19 @@ const handleResize = () => {
 };
 
 // 打开下拉框
-const open = (text = '', triggerElement = null, position = null) => {
+const open = (text = '', triggerElement: HTMLElement | null = null, position: Props['position'] | null = null): void => {
   isVisible.value = true;
   searchQuery.value = text || '';
   highlightIndex.value = 0;
-  
+
   // 更新触发元素和位置
   if (triggerElement) {
     currentTriggerElement.value = triggerElement;
   }
-  
+
   // 使用传入的位置参数或默认位置
   currentPosition.value = position || props.position;
-  
+
   nextTick(() => {
     updateFlatModelsList();
     updateSelectorPosition();
@@ -264,19 +275,19 @@ const open = (text = '', triggerElement = null, position = null) => {
       searchInputRef.value.focus();
     }
   });
-  
+
   // 添加窗口大小调整监听
   window.addEventListener('resize', handleResize);
 };
 
 // 关闭下拉框
-const close = () => {
+const close = (): void => {
   isVisible.value = false;
   searchQuery.value = '';
-  
+
   // 移除窗口大小调整监听
   window.removeEventListener('resize', handleResize);
-  
+
   emit('close');
 };
 

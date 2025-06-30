@@ -11,13 +11,6 @@ import 'vue-toast-notification/dist/theme-bootstrap.css';
 
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 
-// 开发环境下导入主题测试工具
-if (import.meta.env.DEV) {
-  import('@/utils/theme-test')
-  import('@/utils/dark-theme-validator')
-  import('@/utils/theme-adaptation-checker')
-}
-
 const app = createApp(App)
 app.use(pinia)
 app.use(router)

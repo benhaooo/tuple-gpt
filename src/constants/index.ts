@@ -12,14 +12,6 @@ export * from './default';
 // 环境变量
 export * from './env';
 
-// 模型配置 (重新导出，保持向后兼容)
-export { 
-  models, 
-  modelService, 
-  mergeServiceConfigurations,
-  type Service 
-} from './model';
-
 // 常用常量组合导出
 export const CONSTANTS = {
   // 从 app.ts 导出的常量

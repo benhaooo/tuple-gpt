@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "analyzer": "vite-bundle-visualizer"
+    "analyzer": "vite-bundle-visualizer",
+    "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@heroicons/vue": "^2.2.0",
+    "@mdi/font": "^7.4.47",
     "animate.css": "^4.1.1",
     "element-plus": "^2.6.1",
     "highlight.js": "^11.9.0",
@@ -21,13 +23,16 @@
     "mermaid": "^11.4.1",
     "pinia": "^2.1.7",
     "pinia-plugin-persistedstate": "^3.2.1",
+    "uuid": "^11.1.0",
     "vite-plugin-typescript": "^1.0.4",
     "vue": "^3.4.21",
     "vue-draggable-plus": "^0.5.3",
     "vue-router": "^4.3.0",
-    "vue-toast-notification": "^3.1.2"
+    "vue-toast-notification": "^3.1.2",
+    "vuetify": "^3.8.11"
   },
   "devDependencies": {
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "autoprefixer": "^10.4.19",
     "dotenv": "^16.4.5",

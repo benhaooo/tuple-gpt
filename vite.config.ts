@@ -9,14 +9,26 @@ import type { PreRenderedAsset } from 'rollup';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    vue(),
+    vue({
+      script: {
+        defineModel: true,
+        propsDestructure: true
+      }
+    }),
     AutoImport({
       resolvers: [ElementPlusResolver()],
+      imports: [
+        'vue',
+        'vue-router',
+        'pinia'
+      ],
+      dts: true
     }),
     Components({
       resolvers: [
         ElementPlusResolver(),
       ],
+      dts: true
     }),
   ],
   build: {

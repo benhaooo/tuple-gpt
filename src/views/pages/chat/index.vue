@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted, onActivated, nextTick, watch, computed } from "vue";
-import useSessionsStore from "@/stores/modules/chat";
 import { storeToRefs } from "pinia";
 import Message from "@/views/cpnt/Message.vue";
 import SessionList from "@/views/cpnt/SessionList.vue";
@@ -8,22 +7,66 @@ import useAutoScrollToBottom from "@/hooks/scroll";
 import Editor from './cpnt/Editor.vue'
 import ConfigDialog from "./cpnt/ConfigDialog.vue";
 import { useWindowSize } from '@/hooks/size'
+import { useAssistantsStore } from '@/stores/modules/assistants';
+import { useMessagesStore } from '@/stores/modules/messages';
+import { llmService } from '@/services/LlmService';
+import { useMessageService } from '@/services/MessageService';
 
-
-const sessionsStore = useSessionsStore();
+const assistantsStore = useAssistantsStore();
+const messagesStore = useMessagesStore();
+const messageService = useMessageService();
 
 const { scrollRef, smoothScrollToBottom, scrollToBottom, scrollToButtomNearBottom } = useAutoScrollToBottom()
 
-const { sessions, currentSessionId, currentSession } =
-  storeToRefs(sessionsStore);
+const { currentAssistantId, currentAssistant } = storeToRefs(assistantsStore);
 
-const localCurrentSession = computed({
-  get() {
-    return currentSession.value;
-  },
-  set(newValue) {
-    sessionsStore.updateSession(newValue);
+// 获取当前助手的所有消息
+const currentMessages = computed(() => {
+  if (!currentAssistantId.value) return [];
+  return messagesStore.getMessagesByAssistantId(currentAssistantId.value);
+});
+
+// 分组消息：将具有相同parentMessageId的助手回复归为一组
+const groupedMessages = computed(() => {
+  const messages = currentMessages.value;
+  const grouped = [];
+
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+
+    if (message.role === 'user') {
+      // 用户消息直接添加
+      grouped.push({
+        type: 'single',
+        message: message
+      });
+    } else if (message.role === 'assistant') {
+      // 检查是否已经处理过这个parentMessageId的消息组
+      const existingGroup = grouped.find(
+        group => group.type === 'multi' && group.parentMessageId === message.parentMessageId
+      );
+
+      if (existingGroup) {
+        // 添加到现有组
+        existingGroup.messages.push(message);
+      } else if (message.parentMessageId) {
+        // 创建新的多消息组
+        grouped.push({
+          type: 'multi',
+          parentMessageId: message.parentMessageId,
+          messages: [message]
+        });
+      } else {
+        // 没有parentMessageId的助手消息，作为单独消息处理
+        grouped.push({
+          type: 'single',
+          message: message
+        });
+      }
+    }
   }
+
+  return grouped;
 });
 
 const draging = ref(false);
@@ -79,67 +122,134 @@ const lineTouchend = (e) => {
   document.removeEventListener('touchend', lineTouchend);
 };
 
+// 发送消息
+const onSendMessage = async (payload) => {
+  if (!currentAssistant.value || !payload || !payload.content) return;
 
-// 切换会话
-const handleSelectSession = async (id) => {
-  sessionsStore.setCurrentSession(id);
-  scrollToBottom()
+  const { content, file, mentionedModels } = payload;
+
+  try {
+    // 使用 MessageService 发送流式消息
+    await messageService.sendStreamMessage(
+      currentAssistant.value.id,
+      content,
+      {
+        onStart: () => {
+          console.log('开始发送消息');
+          // 滚动到底部
+          smoothScrollToBottom();
+        },
+        onChunk: (chunk) => {
+          // 流式响应会自动更新消息内容
+          console.log('接收到响应块:', chunk);
+          // 保持滚动到底部
+          scrollToButtomNearBottom();
+        },
+        onComplete: (message) => {
+          console.log('消息发送完成:', message);
+          // 最终滚动到底部
+          smoothScrollToBottom();
+        },
+        onError: (error) => {
+          console.error('消息发送失败:', error);
+        }
+      },
+      {
+        file,
+        mentionedModels
+      }
+    );
+  } catch (error) {
+    console.error('发送消息时出错:', error);
+  }
 };
 
-// 新会话
-const handleNewSession = () => {
-  sessionsStore.addSession();
-};
-
-// 删除会话
-const handleDeleteSession = (index) => {
-  sessionsStore.deleteSession(index);
-};
-
-const onSendMessage = () => {
-  smoothScrollToBottom()
-};
 
 </script>
 <template>
   <div ref="chatRef" class="h-full w-full overflow-hidden">
     <div class="flex max-md:w-[200vw] h-full max-md:-translate-x-1/2 ">
-      <SessionList ref="sessionListRef" :sessions="sessions" :currentSessionId="currentSessionId"
-        @select="handleSelectSession" @delete="handleDeleteSession" @add="handleNewSession" />
-      <div v-if="currentSession"
+      <SessionList ref="sessionListRef" />
+      <div v-if="currentAssistant"
         class="relative grow-1 max-md:shrink-0 max-md:w-screen overflow-hidden bg-surface-light-secondary dark:bg-surface-dark-secondary w-full rounded-3xl p-5 box-border max-md:pb-0 flex flex-col md:m-4">
         <div class="w-full flex-1 overflow-y-scroll" ref="scrollRef">
-          <div class="absolute w-full h-9 top-0 left-1/2 -translate-x-1/2 flex justify-evenly font-black z-10">
-            <ConfigDialog v-if="localCurrentSession.ai?.[0]" v-model="localCurrentSession.ai[0]">
-            </ConfigDialog>
-            <ConfigDialog v-model="localCurrentSession"></ConfigDialog>
-            <ConfigDialog v-if="localCurrentSession.ai?.[1]" v-model="localCurrentSession.ai[1]">
-            </ConfigDialog>
+          <div class="absolute w-full h-9 top-0 left-1/2 -translate-x-1/2 flex justify-center font-black z-10">
+            <ConfigDialog v-if="currentAssistant" :modelValue="currentAssistant" />
           </div>
 
-          <div v-if="currentSession?.clearedCtx">
-            <template v-for="(message, index) in currentSession.clearedCtx" :key="message.id">
-              <Message :message="message" :index="index" />
-            </template>
-            <div @click="sessionsStore.clearCtx()"
-              class="leading-5 text-center border-y border-border-light-secondary dark:border-border-dark-secondary hover:border-primary-500 cursor-pointer text-text-light-tertiary dark:text-text-dark-tertiary text-xs transition-colors duration-200"
-              style="mask-image: linear-gradient(90deg, transparent, #000, transparent);">上下文已清除</div>
-          </div>
+          <template v-for="(group, index) in groupedMessages" :key="group.type + '-' + index">
+            <!-- 单个消息 -->
+            <div v-if="group.type === 'single'">
+              <Message :message="group.message" :index="index" class="animate__animated animate__fadeIn duration-75" />
+            </div>
 
-          <template v-for="(message, index) in currentSession?.messages" :key="message.id">
-            <Message :message="message" :index="index" @delete="sessionsStore.deleteMessage(index)"
-              @reChat="sessionsStore.reChat(index)" class="animate__animated animate__fadeIn duration-75" />
+            <!-- 多个并列回复 -->
+            <div v-else-if="group.type === 'multi'" class="multi-response-container mb-4">
+              <div class="multi-response-header text-sm text-gray-500 mb-2 px-4">
+                {{ group.messages.length }} 个模型的回复：
+              </div>
+              <div class="multi-response-grid grid gap-4"
+                   :class="{
+                     'grid-cols-1': group.messages.length === 1,
+                     'grid-cols-2': group.messages.length === 2,
+                     'grid-cols-3': group.messages.length >= 3
+                   }">
+                <div v-for="(message, msgIndex) in group.messages" :key="message.id"
+                     class="multi-response-item border rounded-lg p-2">
+                  <div class="model-info text-xs text-gray-500 mb-2 flex items-center">
+                    <span class="font-medium">{{ message.model?.name || '未知模型' }}</span>
+                    <span class="ml-2 text-gray-400">({{ message.model?.provider || '未知提供商' }})</span>
+                  </div>
+                  <Message :message="message" :index="index * 100 + msgIndex" class="animate__animated animate__fadeIn duration-75" />
+                </div>
+              </div>
+            </div>
           </template>
         </div>
         <!-- editor -->
         <Editor @send="onSendMessage"></Editor>
       </div>
-      <div v-else>
-
+      <div v-else class="flex items-center justify-center w-full">
+        <div class="text-center">
+          <h2 class="text-2xl font-bold mb-4">欢迎使用 Tuple GPT</h2>
+          <p class="text-gray-500">请选择或创建一个助手开始对话</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
+<style lang="less" scoped>
+.multi-response-container {
+  .multi-response-header {
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
 
-<style lang="less" scoped></style>
+  .multi-response-grid {
+    .multi-response-item {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-primary);
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: var(--border-focus);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .model-info {
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-secondary);
+        margin-bottom: 8px;
+      }
+    }
+  }
+
+  // 响应式布局
+  @media (max-width: 768px) {
+    .multi-response-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+}
+</style>
