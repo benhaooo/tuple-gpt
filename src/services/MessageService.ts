@@ -2,12 +2,12 @@ import { useToast } from 'vue-toast-notification';
 import { useMessagesStore } from '@/stores/modules/messages';
 import { useAssistantsStore } from '@/stores/modules/assistants';
 import { LlmService } from '@/services/LlmService';
-import type { Message, MessageBlock } from '@/types/message';
+import type { Message, MessageBlock, ErrorBlock } from '@/types/message';
 import type { Assistant } from '@/types/assistant';
 import { generateUniqueId } from '@/utils/commonUtils';
 
 export interface SendMessageOptions {
-  file?: string; // Base64 图片
+  files?: any[]; // 多文件数组
   mentionedModels?: any[]; // @选择的模型列表
   temperature?: number;
   maxTokens?: number;
@@ -183,18 +183,44 @@ export class MessageService implements IMessageService {
     try {
       // 1. 验证要重试的消息
       const message = this.messagesStore.getMessage(assistantId, messageId);
-      if (!message || message.role !== 'user') {
-        throw new Error('只能重试用户消息');
+      if (!message) {
+        throw new Error('消息不存在');
       }
 
       // 2. 获取助手信息
       const assistant = this.getAssistant(assistantId);
 
-      // 3. 删除该用户消息之后的所有回复（保留用户消息本身）
-      this.messagesStore.deleteMessagesAfter(assistantId, messageId);
+      if (message.role === 'user') {
+        // 重试用户消息：重新生成以该用户消息为parent的助手回复
+        const childMessages = this.messagesStore.getMessagesByParentId(assistantId, message.id);
+        const assistantMessages = childMessages.filter(msg => msg.role === 'assistant');
 
-      // 4. 基于现有用户消息重新生成助手回复
-      await this.generateAssistantReply(assistantId, assistant, message.id);
+        if (assistantMessages.length > 0) {
+          // 重新生成现有的助手回复
+          for (const assistantMessage of assistantMessages) {
+            await this.regenerateAssistantMessage(assistantId, assistantMessage.id, assistant);
+          }
+        } else {
+          // 如果没有助手回复，创建新的助手回复
+          await this.generateAssistantReply(assistantId, assistant, message.id);
+        }
+      } else if (message.role === 'assistant') {
+        // 重试助手消息：使用原始模型重新生成该助手消息的内容
+        if (!message.parentMessageId) {
+          throw new Error('该助手消息没有对应的用户消息，无法重试');
+        }
+
+        const parentMessage = this.messagesStore.getMessage(assistantId, message.parentMessageId);
+        if (!parentMessage || parentMessage.role !== 'user') {
+          throw new Error('找不到对应的用户消息，无法重试');
+        }
+
+        // 使用原始消息的模型重新生成
+        const originalModel = message.model;
+        await this.regenerateAssistantMessage(assistantId, message.id, assistant, originalModel);
+      } else {
+        throw new Error('无效的消息类型');
+      }
 
     } catch (error) {
       this.handleError(error as Error, assistantId);
@@ -240,6 +266,45 @@ export class MessageService implements IMessageService {
   }
 
   /**
+   * 重新生成现有助手消息的内容
+   */
+  private async regenerateAssistantMessage(
+    assistantId: string,
+    messageId: string,
+    assistant: Assistant,
+    originalModel?: any,
+    callbacks: StreamCallbacks = {}
+  ): Promise<void> {
+    try {
+      // 1. 获取现有消息
+      const existingMessage = this.messagesStore.getMessage(assistantId, messageId);
+      if (!existingMessage || existingMessage.role !== 'assistant') {
+        throw new Error('消息不存在或不是助手消息');
+      }
+
+      // 2. 重置消息内容和状态
+      this.messagesStore.updateMessage(assistantId, messageId, {
+        status: 'sending',
+        blocks: [{ type: 'text' as const, content: '' }],
+        model: originalModel || assistant.model
+      });
+
+      // 3. 创建临时助手配置（如果有原始模型）
+      const tempAssistant = originalModel ? {
+        ...assistant,
+        model: originalModel
+      } : assistant;
+
+      // 4. 发送流式LLM请求重新生成内容
+      await this.sendStreamLlmRequest(assistantId, messageId, tempAssistant, callbacks);
+
+    } catch (error) {
+      console.error('重新生成助手消息失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 验证输入数据
    */
   private validateInput(assistantId: string, content: string): void {
@@ -276,25 +341,39 @@ export class MessageService implements IMessageService {
    * 创建用户消息
    */
   private createUserMessage(
-    assistantId: string, 
-    content: string, 
+    assistantId: string,
+    content: string,
     options: SendMessageOptions = {}
   ): Message {
     const blocks: MessageBlock[] = [
       { type: 'text', content }
     ];
-    
-    // 如果有图片，添加图片块
-    if (options.file) {
-      blocks.push({
-        type: 'image',
-        content: {
-          url: options.file,
-          alt: '用户上传的图片'
+
+    // 处理多文件格式
+    if (options.files && options.files.length > 0) {
+      options.files.forEach(file => {
+        if (file.type === 'image') {
+          blocks.push({
+            type: 'image',
+            content: {
+              url: file.data || file.preview,
+              alt: file.name || '用户上传的图片'
+            }
+          });
+        } else if (file.type === 'audio') {
+          blocks.push({
+            type: 'file',
+            content: {
+              name: file.name,
+              url: file.data,
+              size: file.size,
+              type: file.format
+            }
+          });
         }
       });
     }
-    
+
     return {
       id: generateUniqueId(),
       assistantId,
@@ -360,11 +439,9 @@ export class MessageService implements IMessageService {
 
       return response;
     } catch (error) {
-      // 更新消息状态为错误
-      this.messagesStore.updateMessage(assistantId, messageId, {
-        status: 'error'
-      });
-      throw error;
+      // 对于非流式请求，也使用统一的错误处理
+      this.handleStreamError(error, assistant, assistantId, messageId);
+      // 不再重新抛出错误，避免重复处理
     }
   }
 
@@ -497,23 +574,17 @@ export class MessageService implements IMessageService {
         onError: (error) => {
           if (controller.signal.aborted) return;
 
-          this.messagesStore.updateMessage(assistantId, messageId, {
-            status: 'error'
-          });
-
+          this.handleStreamError(error, assistant, assistantId, messageId);
           callbacks.onError?.(error);
           this.activeRequests.delete(messageId);
         }
       }, requestOptions);
 
     } catch (error) {
-      this.messagesStore.updateMessage(assistantId, messageId, {
-        status: 'error'
-      });
-
+      this.handleStreamError(error, assistant, assistantId, messageId);
       callbacks.onError?.(error as Error);
       this.activeRequests.delete(messageId);
-      throw error;
+      // 不再重新抛出错误，避免重复处理
     }
   }
 
@@ -538,11 +609,11 @@ export class MessageService implements IMessageService {
     messages
       .filter(msg => msg.status === 'success')
       .forEach(msg => {
-        const content = this.extractTextContent(msg.blocks);
-        if (content) {
+        const messageContent = this.buildMessageContent(msg.blocks);
+        if (messageContent) {
           chatMessages.push({
             role: msg.role,
-            content
+            content: messageContent
           });
         }
       });
@@ -551,7 +622,53 @@ export class MessageService implements IMessageService {
   }
 
   /**
-   * 提取文本内容
+   * 构建消息内容（支持多模态）
+   */
+  private buildMessageContent(blocks: MessageBlock[]): any {
+    const textBlocks = blocks.filter(block => block.type === 'text');
+    const imageBlocks = blocks.filter(block => block.type === 'image');
+
+    // 如果只有文本，返回字符串
+    if (imageBlocks.length === 0) {
+      return textBlocks
+        .map(block => typeof block.content === 'string' ? block.content : '')
+        .join('\n')
+        .trim();
+    }
+
+    // 如果有图片，返回多模态格式（OpenAI格式）
+    const content: any[] = [];
+
+    // 添加文本内容
+    const textContent = textBlocks
+      .map(block => typeof block.content === 'string' ? block.content : '')
+      .join('\n')
+      .trim();
+
+    if (textContent) {
+      content.push({
+        type: 'text',
+        text: textContent
+      });
+    }
+
+    // 添加图片内容
+    imageBlocks.forEach(block => {
+      if (typeof block.content === 'object' && block.content && 'url' in block.content) {
+        content.push({
+          type: 'image_url',
+          image_url: {
+            url: block.content.url
+          }
+        });
+      }
+    });
+
+    return content.length > 0 ? content : null;
+  }
+
+  /**
+   * 提取文本内容（保留用于其他地方使用）
    */
   private extractTextContent(blocks: MessageBlock[]): string {
     return blocks
@@ -600,7 +717,96 @@ export class MessageService implements IMessageService {
   }
 
   /**
-   * 统一错误处理
+   * 处理流式请求错误
+   */
+  private handleStreamError(error: any, assistant: Assistant, assistantId: string, messageId: string): void {
+    // 统一的错误记录点
+    console.error('API请求失败:', error);
+
+    // 只处理API错误，其他错误不添加错误块
+    if (!this.isApiError(error)) {
+      this.messagesStore.updateMessage(assistantId, messageId, {
+        status: 'error'
+      });
+      return;
+    }
+
+    // 检查是否已经有错误块，避免重复添加
+    const currentMessage = this.messagesStore.getMessage(assistantId, messageId);
+    const hasErrorBlock = currentMessage?.blocks?.some(block => block.type === 'error');
+
+    if (hasErrorBlock) {
+      return; // 已经有错误块，不重复添加
+    }
+
+    // 创建错误块
+    const errorBlock: MessageBlock = {
+      type: 'error',
+      content: this.createErrorBlock(error, assistant)
+    };
+
+    // 添加错误块到消息
+    const updatedBlocks = [...(currentMessage?.blocks || []), errorBlock];
+    this.messagesStore.updateMessage(assistantId, messageId, {
+      status: 'error',
+      blocks: updatedBlocks
+    });
+  }
+
+  /**
+   * 判断是否为API错误
+   */
+  private isApiError(error: any): boolean {
+    // 如果错误已经是标准化的ErrorBlock格式，说明是API错误
+    if (error.type && error.message) {
+      return true;
+    }
+
+    // 检查是否有HTTP状态码
+    if (error.status || error.response?.status) {
+      return true;
+    }
+
+    // 检查是否有API错误结构
+    if (error.error) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 创建错误块
+   */
+  private createErrorBlock(error: any, assistant: Assistant): ErrorBlock {
+    // 如果错误已经是标准化的ErrorBlock格式
+    if (error.type && error.message) {
+      return {
+        type: error.type,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        timestamp: error.timestamp || new Date().toISOString(),
+        provider: error.provider || assistant.model?.provider,
+        model: error.model || assistant.model?.id,
+        originalError: error.originalError
+      };
+    }
+
+    // 如果是普通错误，创建基本的错误块
+    return {
+      type: 'unknown',
+      message: error.message || '发生未知错误',
+      details: error.stack || String(error),
+      timestamp: new Date().toISOString(),
+      provider: assistant.model?.provider,
+      model: assistant.model?.id,
+      originalError: error
+    };
+  }
+
+  /**
+   * 统一错误处理（仅用于非流式请求）
    */
   private handleError(error: Error, assistantId?: string, messageId?: string): void {
     console.error('MessageService Error:', error);
@@ -611,21 +817,6 @@ export class MessageService implements IMessageService {
         status: 'error'
       });
     }
-
-    // 显示用户友好的错误消息
-    let userMessage = '发送消息失败';
-
-    if (error.message.includes('网络')) {
-      userMessage = '网络连接失败，请检查网络设置';
-    } else if (error.message.includes('API')) {
-      userMessage = 'AI服务暂时不可用，请稍后重试';
-    } else if (error.message.includes('余额') || error.message.includes('quota')) {
-      userMessage = 'API余额不足，请检查账户设置';
-    } else if (error.message.includes('权限') || error.message.includes('unauthorized')) {
-      userMessage = 'API密钥无效，请检查配置';
-    }
-
-    this.toast.error(userMessage);
   }
 }
 

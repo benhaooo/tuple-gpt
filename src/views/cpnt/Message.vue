@@ -23,7 +23,7 @@
         <ExpandableBtn @click="deleteMessage" text="删除">
           <i class="iconfont">&#xec7b;</i>
         </ExpandableBtn>
-        <ExpandableBtn v-if="isUser" @click="retryMessage" text="重试">
+        <ExpandableBtn v-if="canRetry" @click="retryMessage" text="重试">
           <i class="iconfont">&#xe616;</i>
         </ExpandableBtn>
         <ExpandableBtn @click="copy" text="复制">
@@ -47,7 +47,7 @@
                  class="text-block prose prose-gray dark:prose-invert text-gray-600 dark:text-gray-300"
                  :class="{ 'mb-3': index < message.blocks.length - 1 }">
               <TextContent
-                :content="getTextContent(block.content)"
+                :content="block.content as string"
                 :showTyper="shouldShowTyper()" />
             </div>
 
@@ -55,9 +55,25 @@
             <div v-else-if="block.type === 'image'"
                  class="image-block"
                  :class="{ 'mb-3': index < message.blocks.length - 1 }">
-              <img :src="getImageUrl(block.content)"
-                   :alt="getImageAlt(block.content)"
-                   class="rounded-lg shadow-sm max-w-full h-auto" />
+              <el-image
+                :src="(block.content as ImageBlock).url"
+                :alt="(block.content as ImageBlock).alt || '图片'"
+                fit="contain"
+                :preview-src-list="[(block.content as ImageBlock).url]"
+                :initial-index="0"
+                preview-teleported
+                class="rounded-lg shadow-sm max-w-sm max-h-80 cursor-pointer"
+                style="width: auto; height: auto;"
+              >
+                <template #error>
+                  <div class="image-slot flex items-center justify-center w-full h-32 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <el-icon class="text-gray-400" size="32">
+                      <Picture />
+                    </el-icon>
+                    <span class="ml-2 text-gray-500">图片加载失败</span>
+                  </div>
+                </template>
+              </el-image>
             </div>
 
             <!-- 文件块 -->
@@ -66,10 +82,12 @@
                  :class="{ 'mb-3': index < message.blocks.length - 1 }">
               <i class="iconfont text-lg">&#xe8c4;</i>
               <div class="flex-1">
-                <div class="font-medium">{{ getFileName(block.content) }}</div>
-                <div class="text-xs text-gray-500">{{ getFileSize(block.content) }}</div>
+                <div class="font-medium">{{ (block.content as FileBlock).name || '未知文件' }}</div>
+                <div class="text-xs text-gray-500">
+                  {{ (block.content as FileBlock).size ? formatFileSize((block.content as FileBlock).size!) : '未知大小' }}
+                </div>
               </div>
-              <el-button size="small" @click="downloadFile(block.content)">下载</el-button>
+              <el-button size="small" @click="downloadFile(block.content as FileBlock)">下载</el-button>
             </div>
 
             <!-- 思考块 -->
@@ -98,6 +116,33 @@
                    class="thinking-content p-3 bg-blue-25 dark:bg-blue-950/10">
                 <div class="prose prose-sm prose-blue dark:prose-invert text-gray-700 dark:text-gray-300"
                      v-html="renderThinkingContent(block.content as ThinkingBlock)">
+                </div>
+              </div>
+            </div>
+
+            <!-- 错误块 -->
+            <div v-else-if="block.type === 'error'"
+                 class="error-block bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
+                 :class="{ 'mb-3': index < message.blocks.length - 1 }">
+              <div class="flex items-start space-x-3">
+                <ExclamationTriangleIcon class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div class="flex-1">
+                  <div class="text-red-800 dark:text-red-200 font-medium">
+                    {{ (block.content as ErrorBlock).message || '发生未知错误' }}
+                  </div>
+                  <div v-if="(block.content as ErrorBlock).details"
+                       class="text-red-600 dark:text-red-300 text-sm mt-1">
+                    {{ (block.content as ErrorBlock).details }}
+                  </div>
+                  <div class="flex items-center space-x-2 mt-2">
+                    <button @click="retryMessage"
+                            class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm underline">
+                      重试
+                    </button>
+                    <span v-if="(block.content as ErrorBlock).timestamp" class="text-red-500 dark:text-red-400 text-xs">
+                      {{ new Date((block.content as ErrorBlock).timestamp!).toLocaleTimeString() }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -131,8 +176,9 @@ import ExpandableBtn from "../cpnt/ExpandableBtn.vue";
 import TextContent from "../cpnt/TextContent.vue";
 import { copyToClip } from "@/utils/commonUtils";
 import { getModelLogo } from "@/config/model";
-import type { Message, ImageBlock, FileBlock, ThinkingBlock } from "@/types/message";
-import { CpuChipIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+import type { Message, ImageBlock, FileBlock, ThinkingBlock, ErrorBlock } from "@/types/message";
+import { CpuChipIcon, ChevronUpIcon, ChevronDownIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
+import { Picture } from '@element-plus/icons-vue';
 import { messageService } from "@/services/MessageService";
 
 const configStore = useConfigStore();
@@ -197,13 +243,7 @@ const setContent = (content: string): void => {
   });
 };
 
-// 获取文本内容
-const getTextContent = (content: string | ImageBlock | FileBlock | ThinkingBlock): string => {
-  if (typeof content === 'string') {
-    return content;
-  }
-  return '';
-};
+
 
 // 判断是否应该显示打字机效果
 const shouldShowTyper = (): boolean => {
@@ -214,37 +254,11 @@ const shouldShowTyper = (): boolean => {
 };
 
 
-const getImageUrl = (content: string | ImageBlock | FileBlock | ThinkingBlock): string => {
-  if (typeof content === 'object' && content && 'url' in content) {
-    return content.url;
-  }
-  return '';
-};
-
-
-
-const getImageAlt = (content: string | ImageBlock | FileBlock | ThinkingBlock): string => {
-  if (typeof content === 'object' && content && 'alt' in content) {
-    return content.alt || '图片';
-  }
-  return '图片';
-};
-
-const getFileName = (content: string | ImageBlock | FileBlock | ThinkingBlock): string => {
-  if (typeof content === 'object' && content && 'name' in content) {
-    return content.name;
-  }
-  return '未知文件';
-};
-
-const getFileSize = (content: string | ImageBlock | FileBlock | ThinkingBlock): string => {
-  if (typeof content === 'object' && content && 'size' in content && content.size) {
-    const size = content.size;
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-  }
-  return '';
+// 文件大小格式化
+const formatFileSize = (size: number): string => {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 const getModelDisplayName = (model: any): string => {
@@ -285,31 +299,35 @@ const deleteMessage = (): void => {
   }
 };
 
+// 判断是否可以重试
+const canRetry = computed(() => {
+  if (props.message.role === 'user') {
+    return true; // 用户消息总是可以重试
+  } else if (props.message.role === 'assistant') {
+    // 助手消息需要有父消息才能重试
+    return !!props.message.parentMessageId;
+  }
+  return false;
+});
+
 const retryMessage = async (): Promise<void> => {
   try {
-    // 显示重试开始的提示
-    toast.info('正在重试...');
-
-    // 调用 MessageService 的重试方法
+    // 调用 MessageService 的重试方法，不显示toast
     await messageService.retryMessage(props.message.assistantId, props.message.id);
-
-    // 重试成功提示
-    toast.success('重试成功');
   } catch (error) {
     console.error('重试消息失败:', error);
+    // 只在真正失败时显示错误toast
     toast.error(`重试失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 };
 
-const downloadFile = (content: string | ImageBlock | FileBlock | ThinkingBlock): void => {
-  if (typeof content === 'object' && content && 'url' in content) {
-    const link = document.createElement('a');
-    link.href = content.url;
-    link.download = 'name' in content ? content.name : 'download';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+const downloadFile = (fileBlock: FileBlock): void => {
+  const link = document.createElement('a');
+  link.href = fileBlock.url;
+  link.download = fileBlock.name || 'download';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 // Thinking相关方法
@@ -374,6 +392,8 @@ const renderThinkingContent = (content: string | ThinkingBlock): string => {
     return thinkingText.replace(/\n/g, '<br>');
   }
 };
+
+
 </script>
 
 <style scoped lang="less">

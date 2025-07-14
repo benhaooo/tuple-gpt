@@ -265,6 +265,4 @@ export const useAssistantsStore = defineStore('assistants', () => {
     updateDefaultAssistant,
     getDefaultAssistantById
   };
-}, {
-  persist: true // 启用持久化
-}); 
+});

@@ -31,7 +31,6 @@ export interface Provider {
   models: Model[]; // 这个提供商下所有可用模型的列表
   enabled: boolean; // 该提供商是否启用
   isSystem: boolean; // 是否为系统内置的默认提供商
-  isAuthed: boolean; // 是否已通过认证
   rateLimit?: number; // API请求的速率限制
   isNotSupportArrayContent?: boolean; // 标记该提供商是否不支持特定格式的内容数组
   notes: string; // 用户为这个提供商添加的备注

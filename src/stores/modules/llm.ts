@@ -2,31 +2,6 @@ import { defineStore } from 'pinia';
 import { PROVIDER_CONFIG } from '@/config/providers';
 import { Provider, ProviderType, Model, ProviderConfigItem } from '@/types/llm';
 
-// 默认模型配置
-const DEFAULT_MODELS: Record<string, Model[]> = {
-  openai: [
-    { id: 'gpt-4o', provider: 'openai', name: 'GPT-4o', group: 'GPT-4', type: ['text', 'vision'] },
-    { id: 'gpt-4o-mini', provider: 'openai', name: 'GPT-4o Mini', group: 'GPT-4', type: ['text', 'vision'] },
-    { id: 'gpt-4-turbo', provider: 'openai', name: 'GPT-4 Turbo', group: 'GPT-4', type: ['text', 'vision'] },
-    { id: 'gpt-3.5-turbo', provider: 'openai', name: 'GPT-3.5 Turbo', group: 'GPT-3.5', type: ['text'] },
-    { id: 'o1-preview', provider: 'openai', name: 'o1-preview', group: 'o1', type: ['text'] },
-    { id: 'o1-mini', provider: 'openai', name: 'o1-mini', group: 'o1', type: ['text'] }
-  ],
-  anthropic: [
-    { id: 'claude-3-5-sonnet-20241022', provider: 'anthropic', name: 'Claude 3.5 Sonnet', group: 'Claude 3.5', type: ['text', 'vision'] },
-    { id: 'claude-3-5-haiku-20241022', provider: 'anthropic', name: 'Claude 3.5 Haiku', group: 'Claude 3.5', type: ['text', 'vision'] },
-    { id: 'claude-3-opus-20240229', provider: 'anthropic', name: 'Claude 3 Opus', group: 'Claude 3', type: ['text', 'vision'] }
-  ],
-  gemini: [
-    { id: 'gemini-1.5-pro', provider: 'gemini', name: 'Gemini 1.5 Pro', group: 'Gemini 1.5', type: ['text', 'vision'] },
-    { id: 'gemini-1.5-flash', provider: 'gemini', name: 'Gemini 1.5 Flash', group: 'Gemini 1.5', type: ['text', 'vision'] },
-    { id: 'gemini-2.0-flash-exp', provider: 'gemini', name: 'Gemini 2.0 Flash (Experimental)', group: 'Gemini 2.0', type: ['text', 'vision'] }
-  ],
-  deepseek: [
-    { id: 'deepseek-chat', provider: 'deepseek', name: 'DeepSeek Chat', group: 'DeepSeek', type: ['text'] },
-    { id: 'deepseek-reasoner', provider: 'deepseek', name: 'DeepSeek Reasoner', group: 'DeepSeek', type: ['text'] }
-  ]
-};
 
 export const useLlmStore = defineStore('llm', {
   state: () => ({
@@ -42,11 +17,9 @@ export const useLlmStore = defineStore('llm', {
         apiKey: '', // 初始化为空
         apiHost: providerConfig.api.url || '',
         apiVersion: undefined, // 默认undefined
-        models: DEFAULT_MODELS[key] || [], // 使用默认模型或空数组
-        enabled: true, // 默认启用
+        models: [], // 使用默认模型或空数组
+        enabled: false, // 默认启用
         isSystem: true, // 默认为系统提供的
-        isAuthed: false, // 默认未认证
-        isVertex: key === 'vertexai', // 检查是否为Google Vertex AI
         notes: '', // 默认无备注
       } as Provider;
     }),
@@ -98,7 +71,6 @@ export const useLlmStore = defineStore('llm', {
         models: provider.models || [],
         enabled: provider.enabled !== false,
         isSystem: false,
-        isAuthed: false,
         notes: provider.notes || '',
         ...provider
       } as Provider;
@@ -145,5 +117,5 @@ export const useLlmStore = defineStore('llm', {
     }
   },
   
-  persist: true,
+
 });

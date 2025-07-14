@@ -108,7 +108,7 @@
 
                     <div class="flex">
                         <textarea class="text-base bg-transparent text-text-light-primary dark:text-text-dark-primary w-full resize-none" v-model="text"
-                            @input="handleInput" @keydown="handleKeyDown" placeholder="按 Enter 发送, Shift + Enter 换行"
+                            @input="handleInput" @keydown="handleKeyDown" placeholder="按 Enter 发送, Shift + Enter 换行, Ctrl + 数字(1-9) 发送多个回复"
                             @paste="handlePaste" @focus="taFocused = true" @blur="taFocused = false" ref="taRef"
                             rows="1"></textarea>
 
@@ -255,6 +255,13 @@ const handleKeyDown = (e) => {
         e.preventDefault();
         handleSendMessage();
     }
+
+    // Ctrl+数字(1-9) 快捷发送多个回复
+    if (e.ctrlKey && /^[1-9]$/.test(e.key)) {
+        e.preventDefault();
+        const replyCount = parseInt(e.key);
+        handleShortcutSend(replyCount);
+    }
 };
 
 // 发送消息
@@ -263,18 +270,30 @@ const handleSendMessage = () => {
 
     emits("send", {
         content: text.value,
-        file: fileUrl.value, // 保留向后兼容性
-        files: uploadedFiles.value, // 新的多文件支持
+        files: uploadedFiles.value,
         mentionedModels: selectedModels.value
     });
 
     // 清空输入
     text.value = "";
-    fileUrl.value = "";
     uploadedFiles.value = [];
     selectedModels.value = [];
 
     nextTick(() => autoHeight());
+};
+
+// Ctrl+数字快捷发送多个回复
+const handleShortcutSend = (replyCount) => {
+    if (!canSend.value) return;
+
+    // 获取当前助手的默认模型
+    const defaultModel = currentAssistant.value?.model;
+    // 创建N个相同模型的数组
+    const models = Array(replyCount).fill(defaultModel);
+
+    // 设置选中的模型并发送消息
+    selectedModels.value = models;
+    handleSendMessage();
 };
 
 // 加载图片

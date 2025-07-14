@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import avaUrl from "@/assets/imgs/xiaoxing.png";
-import type { Theme } from '@/composables/use-theme'
+import type { Theme } from '@/composables/use-theme';
 
 interface UserConfig {
   avatar: string;
@@ -57,7 +57,7 @@ const useConfigStore = defineStore("config", {
     },
   },
   
-  persist: true,
+
 });
 
 export default useConfigStore;

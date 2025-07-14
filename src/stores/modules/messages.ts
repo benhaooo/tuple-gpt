@@ -47,8 +47,7 @@ export const useMessagesStore = defineStore('messages', () => {
       messages.value[newMessage.assistantId] = [];
     }
 
-    messages.value[newMessage.assistantId].push(newMessage);
-    saveToLocalStorage();
+    messages.value[newMessage.assistantId]!.push(newMessage);
 
     return newMessage;
   }
@@ -76,7 +75,6 @@ export const useMessagesStore = defineStore('messages', () => {
 
     // 直接更新现有消息的属性
     Object.assign(currentMessage, updates);
-    saveToLocalStorage();
 
     return currentMessage;
   }
@@ -95,7 +93,6 @@ export const useMessagesStore = defineStore('messages', () => {
     if (index === -1) return false;
 
     assistantMessages.splice(index, 1);
-    saveToLocalStorage();
 
     return true;
   }
@@ -107,7 +104,6 @@ export const useMessagesStore = defineStore('messages', () => {
   function clearMessages(assistantId: string): void {
     if (messages.value[assistantId]) {
       messages.value[assistantId] = [];
-      saveToLocalStorage();
     }
   }
 
@@ -118,7 +114,6 @@ export const useMessagesStore = defineStore('messages', () => {
   function deleteAssistantMessages(assistantId: string): void {
     if (assistantId in messages.value) {
       delete messages.value[assistantId];
-      saveToLocalStorage();
     }
   }
 
@@ -136,8 +131,17 @@ export const useMessagesStore = defineStore('messages', () => {
 
     // 删除该消息之后的所有消息
     messages.value[assistantId] = assistantMessages.slice(0, index + 1);
-    saveToLocalStorage();
   }
+
+  /**
+   * 获取指定父消息的所有子消息
+   * @param assistantId 助手ID
+   * @param parentMessageId 父消息ID
+   */
+  const getMessagesByParentId = (assistantId: string, parentMessageId: string): Message[] => {
+    const assistantMessages = messages.value[assistantId] || [];
+    return assistantMessages.filter(msg => msg.parentMessageId === parentMessageId);
+  };
 
   /**
    * 获取消息列表（别名方法，用于兼容）
@@ -147,33 +151,7 @@ export const useMessagesStore = defineStore('messages', () => {
     return getMessagesByAssistantId(assistantId);
   };
 
-  /**
-   * 保存到本地存储
-   */
-  function saveToLocalStorage(): void {
-    try {
-      localStorage.setItem('messages', JSON.stringify(messages.value));
-    } catch (error) {
-      console.error('保存消息数据到本地存储失败:', error);
-    }
-  }
 
-  /**
-   * 从本地存储加载
-   */
-  function loadFromLocalStorage(): void {
-    try {
-      const savedMessages = localStorage.getItem('messages');
-      if (savedMessages) {
-        messages.value = JSON.parse(savedMessages);
-      }
-    } catch (error) {
-      console.error('从本地存储加载消息数据失败:', error);
-    }
-  }
-
-  // 初始化时加载数据
-  loadFromLocalStorage();
 
   return {
     // 状态
@@ -182,6 +160,7 @@ export const useMessagesStore = defineStore('messages', () => {
     // Getters
     getMessagesByAssistantId,
     getMessage,
+    getMessagesByParentId,
     getMessages,
 
     // Actions
@@ -190,7 +169,6 @@ export const useMessagesStore = defineStore('messages', () => {
     deleteMessage,
     deleteMessagesAfter,
     clearMessages,
-    deleteAssistantMessages,
-    loadFromLocalStorage
+    deleteAssistantMessages
   };
-}); 
+});

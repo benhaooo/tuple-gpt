@@ -41,10 +41,10 @@ export interface Message {
  */
 export interface MessageBlock {
   // 块的类型
-  type: 'text' | 'image' | 'file' | 'thinking';
+  type: 'text' | 'image' | 'file' | 'thinking' | 'error';
 
   // 块的内容
-  content: string | ImageBlock | FileBlock | ThinkingBlock;
+  content: string | ImageBlock | FileBlock | ThinkingBlock | ErrorBlock;
 }
 
 /**
@@ -96,6 +96,35 @@ export interface FileBlock {
 
   // 文件类型
   type?: string;
+}
+
+/**
+ * 错误块类型
+ */
+export interface ErrorBlock {
+  // 错误类型/代码
+  type: 'network' | 'api' | 'auth' | 'quota' | 'validation' | 'timeout' | 'unknown';
+
+  // 错误代码（HTTP状态码或API特定错误码）
+  code?: string | number;
+
+  // 用户友好的错误描述
+  message: string;
+
+  // 详细的技术错误信息（可选，用于调试）
+  details?: string;
+
+  // 原始错误对象（可选）
+  originalError?: any;
+
+  // 错误发生时间
+  timestamp?: string;
+
+  // 提供商信息
+  provider?: string;
+
+  // 模型信息
+  model?: string;
 }
 
 /**

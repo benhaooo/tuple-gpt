@@ -266,7 +266,7 @@ export class LlmService {
 
       return processedResponse;
     } catch (error) {
-      console.error('LLM 请求失败:', error);
+      // 移除console.error，让上层处理错误记录
       throw error;
     }
   }
@@ -429,8 +429,7 @@ export class LlmService {
             }
           },
           onError: (error) => {
-            console.error('流式响应出错:', error);
-            
+            // 移除console.error，让上层处理错误记录
             // 调用用户的错误回调
             if (callbacks.onError) {
               callbacks.onError(error);
@@ -440,8 +439,7 @@ export class LlmService {
         }
       );
     } catch (error) {
-      console.error('流式LLM 请求失败:', error);
-      
+      // 移除console.error，让上层处理错误记录
       // 调用用户的错误回调
       if (callbacks.onError) {
         callbacks.onError(error);
@@ -467,7 +465,6 @@ export class LlmService {
     try {
       return await apiClient.generateImage(prompt, options);
     } catch (error) {
-      console.error('图像生成失败:', error);
       throw error;
     }
   }
@@ -487,7 +484,6 @@ export class LlmService {
     try {
       return await apiClient.embeddings(input);
     } catch (error) {
-      console.error('获取嵌入向量失败:', error);
       throw error;
     }
   }
@@ -507,7 +503,6 @@ export class LlmService {
     try {
       return await apiClient.transcribe(audioData);
     } catch (error) {
-      console.error('音频转录失败:', error);
       throw error;
     }
   }
@@ -522,7 +517,6 @@ export class LlmService {
     try {
       return await apiClient.listModels();
     } catch (error) {
-      console.error('获取模型列表失败:', error);
       throw error;
     }
   }

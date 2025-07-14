@@ -126,7 +126,7 @@ const lineTouchend = (e) => {
 const onSendMessage = async (payload) => {
   if (!currentAssistant.value || !payload || !payload.content) return;
 
-  const { content, file, mentionedModels } = payload;
+  const { content, files, mentionedModels } = payload;
 
   try {
     // 使用 MessageService 发送流式消息
@@ -155,7 +155,7 @@ const onSendMessage = async (payload) => {
         }
       },
       {
-        file,
+        files,
         mentionedModels
       }
     );

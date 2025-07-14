@@ -65,7 +65,7 @@ const useUserStore = defineStore("user", {
     }
   },
 
-  persist: true,
+
 });
 
 export default useUserStore;

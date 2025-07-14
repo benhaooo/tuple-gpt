@@ -1,5 +1,6 @@
 import { ApiClient } from '../interfaces/ApiClient';
 import { Provider } from '@/stores/modules/llm';
+import { ApiErrorConverter } from '@/utils/api-error-converter';
 
 // OpenAI API客户端
 export class OpenAIApiClient implements ApiClient {
@@ -35,13 +36,23 @@ export class OpenAIApiClient implements ApiClient {
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error = {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error || { message: `HTTP ${response.status}: ${response.statusText}` }
+        };
+        throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type, options?.model);
       }
 
       return await response.json();
     } catch (error) {
-      console.error('OpenAI API request failed:', error);
-      throw error;
+      // 如果已经是转换后的错误，直接抛出
+      if (error.type && error.message) {
+        throw error;
+      }
+      // 否则进行转换
+      throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type, options?.model);
     }
   }
 
@@ -77,15 +88,24 @@ export class OpenAIApiClient implements ApiClient {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        const error = new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
-        if (onError) onError(error);
-        throw error;
+        const errorData = await response.json().catch(() => ({}));
+        const error = {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error || { message: `HTTP ${response.status}: ${response.statusText}` }
+        };
+        const convertedError = ApiErrorConverter.convertToErrorBlock(error, this.provider.type, options?.model);
+        if (onError) onError(convertedError);
+        throw convertedError;
       }
 
       // 获取响应流
       if (!response.body) {
-        const error = new Error('响应中没有响应体');
+        const error = ApiErrorConverter.convertToErrorBlock(
+          new Error('响应中没有响应体'),
+          this.provider.type,
+          options?.model
+        );
         if (onError) onError(error);
         throw error;
       }
@@ -176,7 +196,7 @@ export class OpenAIApiClient implements ApiClient {
                   if (onChunk) await onChunk(chunk);
                 }
               } catch (error) {
-                console.error('处理响应块失败:', error);
+                // 忽略响应块处理错误，避免中断流式响应
               }
             }
           }
@@ -185,16 +205,30 @@ export class OpenAIApiClient implements ApiClient {
         // 完成流读取
         if (onComplete) onComplete(fullResponse);
       } catch (error) {
-        const streamError = new Error(`流读取错误: ${error}`);
-        if (onError) onError(streamError);
-        throw streamError;
+        const convertedError = ApiErrorConverter.convertToErrorBlock(
+          error,
+          this.provider.type,
+          options?.model
+        );
+        if (onError) onError(convertedError);
+        throw convertedError;
       } finally {
         reader.releaseLock();
       }
     } catch (error) {
-      console.error('OpenAI 流式 API 请求失败:', error);
-      if (onError && error instanceof Error) onError(error);
-      throw error;
+      // 如果已经是转换后的错误，直接处理
+      if (error.type && error.message) {
+        if (onError) onError(error);
+        throw error;
+      }
+      // 否则进行转换
+      const convertedError = ApiErrorConverter.convertToErrorBlock(
+        error,
+        this.provider.type,
+        options?.model
+      );
+      if (onError) onError(convertedError);
+      throw convertedError;
     }
   }
 
@@ -212,7 +246,13 @@ export class OpenAIApiClient implements ApiClient {
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error = {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error || { message: `HTTP ${response.status}: ${response.statusText}` }
+        };
+        throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type);
       }
       const result = await response.json()
       return result.data.map((item: any) => ({
@@ -221,8 +261,12 @@ export class OpenAIApiClient implements ApiClient {
         provider: this.provider.id,
       }));
     } catch (error) {
-      console.error('OpenAI API request failed:', error);
-      throw error;
+      // 如果已经是转换后的错误，直接抛出
+      if (error.type && error.message) {
+        throw error;
+      }
+      // 否则进行转换
+      throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type);
     }
   }
 
@@ -249,13 +293,23 @@ export class OpenAIApiClient implements ApiClient {
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error = {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error || { message: `HTTP ${response.status}: ${response.statusText}` }
+        };
+        throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type);
       }
 
       return await response.json();
     } catch (error) {
-      console.error('OpenAI API request failed:', error);
-      throw error;
+      // 如果已经是转换后的错误，直接抛出
+      if (error.type && error.message) {
+        throw error;
+      }
+      // 否则进行转换
+      throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type);
     }
   }
 
@@ -279,13 +333,23 @@ export class OpenAIApiClient implements ApiClient {
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error = {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error || { message: `HTTP ${response.status}: ${response.statusText}` }
+        };
+        throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type);
       }
 
       return await response.json();
     } catch (error) {
-      console.error('OpenAI API request failed:', error);
-      throw error;
+      // 如果已经是转换后的错误，直接抛出
+      if (error.type && error.message) {
+        throw error;
+      }
+      // 否则进行转换
+      throw ApiErrorConverter.convertToErrorBlock(error, this.provider.type);
     }
   }
 } 
