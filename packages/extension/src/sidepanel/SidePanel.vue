@@ -36,7 +36,6 @@ import {
   DocumentMagnifyingGlassIcon,
   CheckBadgeIcon,
   WrenchScrewdriverIcon,
-  XMarkIcon,
 } from '@heroicons/vue/24/outline';
 import ChatView from './views/chat/index.vue';
 import PlaceholderView from './views/PlaceholderView.vue';

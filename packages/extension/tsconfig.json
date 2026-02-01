@@ -1,34 +1,19 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2020",
-    "jsx": "preserve",
-    "lib": ["DOM", "ESNext"],
     "baseUrl": ".",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["src/*"]
     },
-    "plugins": [
-      {
-        "name": "@twind/typescript-plugin"
-      }
-    ],
-    "resolveJsonModule": true,
     "types": [
       "vite/client",
       "chrome"
     ],
-    "allowImportingTsExtensions": true,
     "allowJs": true,
-    "strict": true,
-    "strictNullChecks": true,
-    "noUnusedLocals": true,
-    "noEmit": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "forceConsistentCasingInFileNames": true
   },
+  "include": ["src/**/*"],
   "exclude": [
     "dist",
     "node_modules"
