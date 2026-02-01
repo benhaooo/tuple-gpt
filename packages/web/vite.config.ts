@@ -4,11 +4,13 @@ import { fileURLToPath, URL } from 'node:url';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
+import UnoCSS from 'unocss/vite';
 import type { PreRenderedAsset } from 'rollup';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    UnoCSS(),
     vue({
       script: {
         defineModel: true,

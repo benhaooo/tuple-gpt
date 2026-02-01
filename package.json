@@ -1,13 +1,41 @@
 {
   "name": "tuple-gpt",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Tuple GPT Monorepo",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:web": "pnpm --filter @tuple-gpt/web dev",
+    "dev:extension": "pnpm --filter @tuple-gpt/extension dev",
+    "build:all": "pnpm -r build",
+    "build:web": "pnpm --filter @tuple-gpt/web build",
+    "build:extension": "pnpm --filter @tuple-gpt/extension build",
+    "type-check": "pnpm -r type-check",
+    "clean": "pnpm -r clean && rm -rf node_modules"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.11.0"
+  "packageManager": "pnpm@10.11.0",
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0",
+    "vue-tsc": "^2.2.4",
+    "unplugin-auto-import": "^20.0.0",
+    "unplugin-vue-components": "^29.0.0",
+    "@unocss/reset": "^66.5.10",
+    "unocss": "^66.5.10",
+    "less": "^4.4.0"
+  },
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "element-plus": "^2.10.7",
+    "marked": "^15.0.12",
+    "pinia": "^3.0.3",
+    "uuid": "^11.1.0",
+    "vue": "^3.5.13",
+    "vue-toast-notification": "^3.1.3"
+  }
 }

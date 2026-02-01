@@ -1,67 +1,27 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // 目标代码(ts -> js(es5/6/7))
-    "target": "esnext",
-    // 目标代码需要使用的模块化方案(commonjs require/module.exports/es module import/export)
-    "module": "esnext",
-    // 严格模式检查
-    "strict": false,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    // 对jsx进行怎么样的处理
-    "jsx": "preserve",
-    // 辅助的导入功能
-    "importHelpers": true,
-    // 按照node的方式去解析模块 import "/index.node"
-    "moduleResolution": "node",
-    // 跳过一些库的类型检测 (axios -> 类型/ lodash -> @types/lodash / 其他的第三方)
-    // import { Person } from 'axios'
-    "skipLibCheck": true,
-    // export default/module.exports = {}
-    // es module 和 commonjs
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    // 要不要生成映射文件(ts -> js)
-    "sourceMap": true,
-    // 文件路径在解析时, 基本url
     "baseUrl": ".",
-    // 指定具体要解析使用的类型
+    "moduleResolution": "node",
     "types": [
       "vite/client",
       "element-plus/global"
     ],
-    // 路径解析(类似于webpack alias)
     "paths": {
-      "@/*": [
-        "src/*"
-      ],
-      "components/*": [
-        "src/components/*"
-      ]
+      "@/*": ["src/*"],
+      "components/*": ["src/components/*"]
     },
-    // 可以指定在项目中可以使用哪里库的类型(Proxy/Window/Document)
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable",
-      "scripthost"
-    ],
-    // Vue 3 + TypeScript 支持
-    "isolatedModules": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
     "verbatimModuleSyntax": false,
     "allowImportingTsExtensions": false,
-    "resolveJsonModule": true,
     "declaration": false,
     "declarationMap": false,
-    "noEmit": true,
-    "useDefineForClassFields": true
+    "useDefineForClassFields": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true
   },
   "include": [
     "src/**/*.ts",
