@@ -13,6 +13,16 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "preserve",
+    
+    "types": [
+      "vite/client"
+    ],
+
+    /* Path mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@monorepo/*": ["packages/*/src"]
+    },
 
     /* Linting */
     "strict": true,

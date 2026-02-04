@@ -1,5 +1,5 @@
 import { watch } from 'vue'
-import { useSettingsStore } from '@/stores/settingsStore'
+import { useSettingsStore } from '@tuple-gpt/shared'
 import { themes, defaultTheme, ThemeName } from '@/constants/themes'
 
 /**

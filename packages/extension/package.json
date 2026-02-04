@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@tuple-gpt/shared": "workspace:*",
     "await-to-js": "^3.0.0"
   },
   "devDependencies": {

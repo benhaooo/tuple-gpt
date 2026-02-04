@@ -1,4 +1,4 @@
-import { ErrorBlock } from '@/types/message';
+import { ErrorBlock } from '@tuple-gpt/shared';
 
 /**
  * API错误转换器
