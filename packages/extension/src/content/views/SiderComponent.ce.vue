@@ -13,8 +13,9 @@ import {
 } from '@heroicons/vue/24/outline'
 import { useThemeManager } from '@/composables/useThemeManager'
 import { createPinia, setActivePinia } from 'pinia';
-
+import { piniaChormeStorage } from '@/plugin/pinia-chrome-storage'
 const pinia = createPinia();
+pinia.use(piniaChormeStorage)
 setActivePinia(pinia);
 
 // Tab类型定义

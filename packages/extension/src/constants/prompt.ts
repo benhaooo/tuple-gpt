@@ -1,7 +1,6 @@
 /**
  * 视频总结相关提示词
  */
-
 // 视频总结提示词
 export const SUMMARY_PROMPT = `你是一位高效的知识整理专家。请将以下文本内容转化为结构清晰、重点突出、内容全面的 Markdown 笔记，便于后续复习和查阅。只返回 Markdown 格式内容，不要添加额外说明。
 <text_content>
@@ -65,4 +64,3 @@ A：回答2
 {content}
 </text_content>
 `;
-

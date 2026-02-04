@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick} from 'vue'
 import { VideoType } from '@/utils/subtitlesApi'
-import { useSettingsStore } from '@/stores/settingsStore'
+import { useSettingsStore } from '@tuple-gpt/shared'
 import {
   ClipboardDocumentIcon,
   ArrowPathIcon,

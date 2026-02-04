@@ -23,7 +23,7 @@
             <div class="flex justify-between items-center mb-8 pb-3 border-b border-gray-200 dark:border-gray-700">
                 <h1 class="text-xl font-bold">{{ currentProvider.name || currentProvider.type }}</h1>
                 <div class="flex items-center gap-3">
-                    <ElButton type="primary" size="small" @click="open使用ModelManager">
+                    <ElButton type="primary" size="small" @click="openModelManager">
                         模型管理
                     </ElButton>
                     <ElSwitch v-if="editableProvider" color="#53b672" v-model="editableProvider.enabled" class="scale-110"></ElSwitch>
@@ -199,11 +199,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import FormItem from './cpnt/FormItem.vue';
-import { useLlmStore } from '@/stores/modules/llm';
-import { getProviderLogo } from '@/config/providers';
-import { PROVIDER_CONFIG } from '@/config/providers';
-import { llmService } from '@/services/LlmService';
-import { getModelLogo } from '@/config/model';
+import { useLlmStore, getProviderLogo, PROVIDER_CONFIG, llmService, getModelLogo } from '@shared';
 import { ArrowUpRightIcon, Cog6ToothIcon, TrashIcon, PlusIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
 
 const llmStore = useLlmStore();

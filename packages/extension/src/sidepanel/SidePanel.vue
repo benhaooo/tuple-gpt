@@ -15,12 +15,21 @@
           :key="tool.id"
           @click="selectTab(tool.id)"
           :class="[
-            'flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-colors', 
+            'flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-colors',
             activeTab === tool.id ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-surface'
           ]"
         >
           <component :is="tool.icon" class="h-6 w-6" />
           <span class="text-xs mt-1">{{ tool.name }}</span>
+        </button>
+
+        <!-- 设置按钮 - 固定在底部 -->
+        <button
+          @click="openSettings"
+          class="flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-colors text-text-secondary hover:bg-surface mt-auto"
+        >
+          <Cog6ToothIcon class="h-6 w-6" />
+          <span class="text-xs mt-1">设置</span>
         </button>
       </div>
     </div>
@@ -36,12 +45,12 @@ import {
   DocumentMagnifyingGlassIcon,
   CheckBadgeIcon,
   WrenchScrewdriverIcon,
+  Cog6ToothIcon,
 } from '@heroicons/vue/24/outline';
-import ChatView from './views/chat/index.vue';
+import ChatView from '@shared/ui/views/chat/index.vue';
 import PlaceholderView from './views/PlaceholderView.vue';
 import { useThemeManager } from '@/composables/useThemeManager';
 
-// Activate theme management for the sidepanel
 useThemeManager();
 
 const activeTab = ref('chat');
@@ -90,8 +99,8 @@ const activeTool = computed(() => tools.find(tool => tool.id === activeTab.value
 function selectTab(tabId: string) {
   activeTab.value = tabId;
 }
-</script> 
 
-<style>
-/* 可以添加额外的自定义样式 */
-</style> 
+function openSettings() {
+  chrome.runtime.openOptionsPage();
+}
+</script> 

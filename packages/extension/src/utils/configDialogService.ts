@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import type { Assistant } from '@/types/assistant';
+import type { Assistant } from '@tuple-gpt/shared';
 
 export const configDialogRef = ref<{ open: (assistantData?: Partial<Assistant>, onConfirm?: (updatedAssistant: Assistant) => void) => void } | null>(null);
 

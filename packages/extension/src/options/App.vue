@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSettingsStore } from '@/stores/settingsStore'
+import { useSettingsStore } from '@tuple-gpt/shared'
 import { storeToRefs } from 'pinia'
 import { useThemeManager } from '@/composables/useThemeManager'
 import { themeNames, type ThemeName } from '@/constants/themes'
@@ -9,7 +9,6 @@ import type { Component } from 'vue';
 import Service from './service/index.vue'
 
 const settingsStore = useSettingsStore()
-// 使用 storeToRefs 来保持响应性
 const { settings } = storeToRefs(settingsStore)
 
 // Activate theme management for the options page
@@ -40,10 +39,7 @@ const showSaveMessage = (message: string, error = false) => {
   }, 3000)
 }
 
-// 保存设置 (现在通过 action 触发，并显示提示信息)
 const handleSave = () => {
-  // Pinia store的更新是同步的，并且会自动通过 watcher 持久化
-  // 我们只需要显示一个成功消息
   showSaveMessage('设置已保存')
 }
 </script>
