@@ -170,7 +170,6 @@ import { computed, ref } from "vue";
 import { marked } from 'marked';
 import { storeToRefs } from "pinia";
 import { useToast } from 'vue-toast-notification';
-import useConfigStore from "@shared/stores/modules/config";
 import { useMessagesStore } from "@shared/stores/modules/messages";
 import ExpandableBtn from "./ExpandableBtn.vue";
 import TextContent from "./TextContent.vue";
@@ -188,7 +187,6 @@ import {
 import { Picture } from '@element-plus/icons-vue';
 import { messageService } from "@shared/services/MessageService";
 
-const configStore = useConfigStore();
 const messagesStore = useMessagesStore();
 const { userConfig } = storeToRefs(configStore);
 const toast = useToast();

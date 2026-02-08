@@ -49,9 +49,9 @@ import {
 } from '@heroicons/vue/24/outline';
 import ChatView from '@shared/ui/views/chat/index.vue';
 import PlaceholderView from './views/PlaceholderView.vue';
-import { useThemeManager } from '@/composables/useThemeManager';
+import { useTheme } from '@shared/composables/useTheme';
 
-useThemeManager();
+useTheme();
 
 const activeTab = ref('chat');
 
