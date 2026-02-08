@@ -2,6 +2,8 @@ import { defineCustomElement } from 'vue'
 import { waitFor } from '@/utils/domUtils'
 import restStyles from '@unocss/reset/tailwind.css?inline'
 import themeStyles from '@/styles/variables.css?inline'
+import { createPinia } from 'pinia';
+import { piniaChormeStorage } from '@/plugin/pinia-chrome-storage'
 
 interface MyComponentElement extends HTMLElement {
   refresh: () => void;
@@ -65,6 +67,11 @@ export async function injectCustomElement(options: {
           return acc
         }, {} as Record<string, any>)
       },
+      configureApp(app) {
+        const pinia = createPinia();
+        pinia.use(piniaChormeStorage)
+        app.use(pinia)
+      }
     })
 
     customElements.define(tagName, CustomElement)

@@ -82,21 +82,6 @@
                         </p>
                     </div>
                 </div>
-                <div v-if="showOptimizedModal"
-                    class="absolute flex flex-col bg-surface-light-elevated dark:bg-surface-dark-elevated w-full h-44 -top-48 left-0 shadow-medium rounded-md p-4 border border-border-light-primary dark:border-border-dark-primary">
-                    <div class="flex justify-between">
-                        <h3 class="font-extrabold">提示词优化:</h3>
-                        <XMarkIcon @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing }"
-                            class="w-5 h-5 font-extrabold cursor-pointer text-text-light-secondary dark:text-text-dark-secondary" />
-                    </div>
-                    <div class="flex-1">
-                        <textarea class="w-full h-full resize-none" v-model="optimizedPrompt"></textarea>
-                    </div>
-                    <div class="flex flex-row-reverse">
-                        <el-button @click="applyOptimize" :loading="optimizing" type="primary" class="ml-2">应用
-                        </el-button>
-                    </div>
-                </div>
                 <div class="flex flex-wrap gap-1 mb-2">
                     <ElTag v-for="(model, index) in selectedModels" :key="model.id" closable @close="removeSelectedModel(index)">
                         {{ model.name }}
@@ -120,20 +105,6 @@
                             </el-tooltip>
                         </button>
                     </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <el-tooltip content="优化" placement="top">
-                        <SparklesIcon @click="handleOptimizePrompt" :class="{ 'cursor-not-allowed': optimizing || !canSend }"
-                            class="w-5 h-5 cursor-pointer font-extrabold text-text-light-secondary dark:text-text-dark-secondary hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200" />
-                    </el-tooltip>
-                    <button @click="handleFormat('题目：新疆是中国面积最大的省级行政区，它的面积可以装下多少个北京？')"
-                        :class="{ 'border-primary-500 border-2': activeFomat }"
-                        class="text-xs bg-transparent border border-border-light-primary dark:border-border-dark-primary text-text-light-secondary dark:text-text-dark-secondary hover:border-primary-500 rounded-md flex transition-colors duration-200"><span
-                            class="scale-75">JSON</span></button>
-                    <button @click="empowerThink = !empowerThink"
-                        :class="{ 'border-primary-500 border-2': empowerThink }"
-                        class="text-xs bg-transparent border border-border-light-primary dark:border-border-dark-primary text-text-light-secondary dark:text-text-dark-secondary hover:border-primary-500 rounded-md flex transition-colors duration-200"><span
-                            class="scale-75">🤔</span></button>
                 </div>
             </div>
         </div>
@@ -161,9 +132,6 @@ const { currentAssistant } = storeToRefs(assistantsStore);
 const fileUrl = ref(""); // 保留向后兼容性
 const formRef = ref(null);
 const text = ref("");
-const optimizedPrompt = ref('')
-const showOptimizedModal = ref(false)
-const optimizing = ref(false)
 const optimizeRef = ref(null)
 const taRef = ref(null);
 
@@ -485,14 +453,6 @@ const handleImgChange = (e) => {
     }
 };
 
-const listenClick = (e) => {
-    e.stopPropagation()
-    const isClickInsideElement = optimizeRef.value.contains(e.target)
-    if (!isClickInsideElement) {
-        showOptimizedModal.value = false
-    }
-}
-
 const handleFormat = (char) => {
     if (activeFomat.value === char) {
         activeFomat.value = ""
@@ -500,51 +460,4 @@ const handleFormat = (char) => {
         activeFomat.value = char
     }
 }
-
-const handleOptimizePrompt = async () => {
-    if (optimizing.value || !canSend.value) return
-    //防止冒泡直接触发
-    setTimeout(() => {
-        document.addEventListener('click', listenClick)
-    }, 0)
-    optimizedPrompt.value = ''
-    showOptimizedModal.value = true
-    optimizing.value = true
-
-    // 简化的优化提示词系统消息
-    const optimizeSystemPrompt = `你是一个专业的提示词优化助手。请帮助用户优化他们的提示词，使其更加清晰、具体、有效。
-优化原则：
-1. 保持原意不变
-2. 使语言更加清晰准确
-3. 添加必要的上下文信息
-4. 使指令更加具体
-5. 保持简洁性
-
-请直接输出优化后的提示词，不需要额外说明。`;
-
-    try {
-        // 这里应该调用实际的API，暂时用模拟数据
-        setTimeout(() => {
-            optimizedPrompt.value = `优化后的提示词：${text.value}
-
-请提供更详细和具体的回答，包含相关的背景信息和实例说明。`;
-            optimizing.value = false;
-        }, 1000);
-    } catch (error) {
-        console.error('优化提示词失败:', error);
-        optimizing.value = false;
-    }
-}
-const applyOptimize = () => {
-    text.value = optimizedPrompt.value
-    showOptimizedModal.value = false
-}
-
-//优化面板关闭
-watch(showOptimizedModal, () => {
-    if (!showOptimizedModal.value) {
-        optimizedPrompt.value = ''
-        document.removeEventListener('click', listenClick)
-    }
-})
 </script>

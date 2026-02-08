@@ -2,8 +2,7 @@
 import { ref } from 'vue'
 import { useSettingsStore } from '@tuple-gpt/shared'
 import { storeToRefs } from 'pinia'
-import { useThemeManager } from '@/composables/useThemeManager'
-import { themeNames, type ThemeName } from '@/constants/themes'
+import { useTheme, ThemeName } from '@shared/composables/useTheme'
 import { SunIcon, MoonIcon, ComputerDesktopIcon } from '@heroicons/vue/24/solid'
 import type { Component } from 'vue';
 import Service from './service/index.vue'
@@ -11,10 +10,9 @@ import Service from './service/index.vue'
 const settingsStore = useSettingsStore()
 const { settings } = storeToRefs(settingsStore)
 
-// Activate theme management for the options page
-useThemeManager()
+useTheme()
 
-const themeIcons: Record<ThemeName, Component> = {
+const themeIcons: Record<(typeof ThemeName)[keyof typeof ThemeName], Component> = {
   light: SunIcon,
   dark: MoonIcon,
   system: ComputerDesktopIcon,
@@ -24,7 +22,7 @@ const themeIcons: Record<ThemeName, Component> = {
 const themeOptions = [
   { label: '浅色', value: 'light' },
   { label: '深色', value: 'dark' },
-  { label: '跟随系统', value: 'system' }
+  { label: '跟随系统', value: 'system' },
 ]
 
 
@@ -58,7 +56,7 @@ const handleSave = () => {
             选择一个主题。设为"系统"将自动匹配您操作系统的外观设置。
           </p>
           <div class="grid grid-cols-3 gap-4">
-            <label v-for="theme in themeNames" :key="theme" :class="[
+            <label v-for="theme in ThemeName" :key="theme" :class="[
               'cursor-pointer rounded-lg border-2 p-4 text-center transition-all duration-200',
               settings.theme === theme
                 ? 'border-primary bg-primary/10'

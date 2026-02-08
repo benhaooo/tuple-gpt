@@ -11,12 +11,7 @@ import {
   ChatBubbleLeftIcon,
   DocumentChartBarIcon,
 } from '@heroicons/vue/24/outline'
-import { useThemeManager } from '@/composables/useThemeManager'
-import { createPinia, setActivePinia } from 'pinia';
-import { piniaChormeStorage } from '@/plugin/pinia-chrome-storage'
-const pinia = createPinia();
-pinia.use(piniaChormeStorage)
-setActivePinia(pinia);
+import { useTheme } from '@shared/composables/useTheme'
 
 // Tab类型定义
 const TabTypes = {
@@ -71,10 +66,10 @@ const loadSubtitles = async () => {
   await videoStore.initializeSubtitles()
 }
 
-const shadowRoot = useShadowRoot();
 onMounted(() => {
+  const shadowRoot = useShadowRoot();
   if (shadowRoot) {
-    useThemeManager(() => shadowRoot.host as HTMLElement);
+    useTheme(() => shadowRoot.host as HTMLElement);
   }
 
   // 添加全局点击事件监听器来关闭下拉框
@@ -107,7 +102,7 @@ defineExpose({
 <template>
   <div
     class="w-full h-full bg-surface text-foreground rounded-lg shadow-lg font-sans text-sm overflow-hidden flex flex-col">
-    <!-- 头部 -->
+    <!-- 头部ne -->
     <header class="flex justify-between items-center p-3 border-b border-border flex-shrink-0">
       <div class="flex items-center gap-2">
         <h1 class="text-lg font-bold text-foreground">Tuple</h1>
