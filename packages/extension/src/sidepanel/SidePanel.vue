@@ -47,7 +47,6 @@ import {
   WrenchScrewdriverIcon,
   Cog6ToothIcon,
 } from '@heroicons/vue/24/outline';
-import ChatView from '@shared/ui/views/chat/index.vue';
 import PlaceholderView from './views/PlaceholderView.vue';
 import { useTheme } from '@shared/composables/useTheme';
 
@@ -60,7 +59,7 @@ const tools = markRaw([
     id: 'chat',
     name: '聊天',
     icon: ChatBubbleLeftRightIcon,
-    component: ChatView
+    component: null
   },
   {
     id: 'write',
