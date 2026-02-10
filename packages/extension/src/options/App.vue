@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useSettingsStore } from '@tuple-gpt/shared'
+import { useSettingsStore } from '@shared/stores/settingsStore'
 import { storeToRefs } from 'pinia'
 import { useTheme, ThemeName } from '@shared/composables/useTheme'
 import { SunIcon, MoonIcon, ComputerDesktopIcon } from '@heroicons/vue/24/solid'
@@ -154,8 +154,6 @@ const handleSave = () => {
           保存设置
         </button>
       </div>
-
-      <Service />
     </div>
   </div>
 </template>

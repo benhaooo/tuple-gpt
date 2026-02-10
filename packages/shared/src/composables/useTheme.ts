@@ -1,5 +1,5 @@
 import { watch, onUnmounted } from 'vue'
-import { useSettingsStore } from '@tuple-gpt/shared'
+import { useSettingsStore } from '@shared/stores/settingsStore'
 
 export const ThemeName = {
   light: 'light',

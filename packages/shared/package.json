@@ -14,9 +14,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.3.2",
-    "localforage": "^1.10.0",
-    "vue-router": "^4.3.0"
+
   },
   "devDependencies": {
     "vite": "^6.4.1"
