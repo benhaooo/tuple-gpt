@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useTheme, ThemeName } from '@shared/composables/useTheme'
 import { SunIcon, MoonIcon, ComputerDesktopIcon } from '@heroicons/vue/24/solid'
 import type { Component } from 'vue';
-import Service from './service/index.vue'
+import ProviderManager from '@shared/components/chat/ProviderManager.vue'
 
 const settingsStore = useSettingsStore()
 const { settings } = storeToRefs(settingsStore)
@@ -71,6 +71,9 @@ const handleSave = () => {
           </div>
         </div>
 
+
+        <!-- AI 服务商配置 -->
+        <ProviderManager />
 
         <!-- Whisper API 设置 -->
         <div>

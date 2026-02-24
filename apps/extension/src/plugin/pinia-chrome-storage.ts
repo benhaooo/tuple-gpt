@@ -1,4 +1,3 @@
-import { toRaw } from 'vue'
 import type { PiniaPluginContext } from 'pinia'
 import { debounce } from 'lodash'
 
@@ -38,45 +37,49 @@ export function piniaChormeStorage(context: PiniaPluginContext) {
     const storage = chrome.storage[storageNamespace]
 
     function getPersistedState(state: Record<string, any>) {
+        const raw = JSON.parse(JSON.stringify(state))
         if (config.pick.length === 0) {
-            return toRaw(state)
+            return raw
         }
         return config.pick.reduce((acc, key) => {
-            acc[key] = toRaw(state[key])
+            if (key in raw) acc[key] = raw[key]
             return acc
         }, {} as Record<string, any>)
     }
-    
-    let isHydrating = false
+
+    let isHydrating = true
 
     storage.get(config.key).then((result) => {
         if (result[config.key]) {
-            isHydrating = true
             store.$patch(result[config.key])
-            isHydrating = false
         }
+        isHydrating = false
     })
 
     // 2. 监听变化并保存（防抖）
     const debouncedSave = debounce((state: Record<string, any>) => {
+        if (isHydrating) return
         storage.set({ [config.key]: getPersistedState(state) })
-    }, config.debounce)
-
-    const debouncedUpdate = debounce((newValue: Record<string, any>) => {
-        isHydrating = true
-        store.$patch(newValue)
-        isHydrating = false
     }, config.debounce)
 
     store.$subscribe((_mutation, state) => {
         if (isHydrating) return
         debouncedSave(state)
-    })
+    }, { deep: true })
 
-    chrome.storage.onChanged.addListener((changes, namespace) => {
+    const onStorageChange = (changes: Record<string, chrome.storage.StorageChange>, namespace: string) => {
         if (namespace !== storageNamespace) return
         if (!changes[config.key]?.newValue) return
 
-        debouncedUpdate(changes[config.key].newValue)
+        isHydrating = true
+        store.$patch(changes[config.key].newValue)
+        isHydrating = false
+    }
+    chrome.storage.onChanged.addListener(onStorageChange)
+    store.$dispose = new Proxy(store.$dispose, {
+        apply(target, thisArg, args) {
+            chrome.storage.onChanged.removeListener(onStorageChange)
+            return Reflect.apply(target, thisArg, args)
+        }
     })
 }

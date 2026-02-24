@@ -1,15 +1,7 @@
-import { defineConfig, presetAttributify,presetWind3, presetTypography, transformerDirectives, transformerVariantGroup } from 'unocss'
+import { mergeConfigs } from 'unocss'
+import baseConfig from '../../uno.config.base'
 
-export default defineConfig({
-  presets: [
-    presetAttributify({}),
-    presetWind3(),
-    // presetTypography()
-  ],
-  transformers: [
-    transformerDirectives(),
-    transformerVariantGroup(),
-  ],
+export default mergeConfigs([baseConfig, {
   theme: {
     colors: {
       border: 'hsl(var(--border))',
@@ -56,4 +48,4 @@ export default defineConfig({
       'text-secondary': 'hsl(var(--muted-foreground))',
     },
   },
-})
+}])
