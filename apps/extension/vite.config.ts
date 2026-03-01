@@ -8,7 +8,6 @@ import { name, version } from './package.json'
 
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import UnoCSS from 'unocss/vite'
 
 
@@ -32,9 +31,9 @@ export default defineConfig({
       }
     }),
 
-    // 实例 2：Scoped 模式（专门用于 Content Script 的 Web Component）
+    // 实例 2：Shadow DOM 模式（专门用于 Content Script 的 Web Component）
     UnoCSS({
-      mode: 'vue-scoped',
+      mode: 'shadow-dom',
       content: {
         pipeline: {
           // 【核心】只包含 Web Component 文件
@@ -50,12 +49,8 @@ export default defineConfig({
       outDir: './Out',
       outFileName: `crx-${name}-${version}.zip`,
     }),
-    AutoImport({
-      resolvers: [ElementPlusResolver()],
-    }),
-    Components({
-      resolvers: [ElementPlusResolver()],
-    }),
+    AutoImport({}),
+    Components({}),
   ],
   server: {
     cors: {

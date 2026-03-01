@@ -194,6 +194,10 @@ defineExpose({
   </div>
 </template>
 
+<style>
+@unocss-placeholder
+</style>
+
 <style scoped>
 /* 美化滚动条 */
 :deep(main::-webkit-scrollbar),
@@ -204,13 +208,13 @@ defineExpose({
 
 :deep(main::-webkit-scrollbar-track),
 :deep(*::-webkit-scrollbar-track) {
-  background: hsl(var(--muted) / 0.5);
+  background: oklch(var(--muted) / 0.5);
   border-radius: 4px;
 }
 
 :deep(main::-webkit-scrollbar-thumb),
 :deep(*::-webkit-scrollbar-thumb) {
-  background: hsl(var(--primary) / 0.5);
+  background: oklch(var(--primary) / 0.5);
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -218,7 +222,7 @@ defineExpose({
 
 :deep(main::-webkit-scrollbar-thumb:hover),
 :deep(*::-webkit-scrollbar-thumb:hover) {
-  background: hsl(var(--primary));
+  background: oklch(var(--primary));
   background-clip: content-box;
 }
 </style>

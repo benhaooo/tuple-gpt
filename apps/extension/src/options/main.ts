@@ -1,9 +1,10 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import { createPinia } from 'pinia'
-import '@/styles/variables.css'
+// import '@/styles/variables.css'
 import '@unocss/reset/tailwind.css'
 import 'virtual:uno.css'
+import '@/styles/global.css'
 import { piniaChormeStorage } from '@/plugin/pinia-chrome-storage'
 
 const pinia = createPinia()
