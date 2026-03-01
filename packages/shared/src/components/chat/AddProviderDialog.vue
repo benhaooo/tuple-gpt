@@ -1,36 +1,61 @@
 <template>
-  <el-dialog
-    :model-value="modelValue"
-    @update:model-value="$emit('update:modelValue', $event)"
-    title="添加自定义服务商"
-    width="400px"
-    :close-on-click-modal="false"
+  <Dialog
+    :open="modelValue"
+    @update:open="$emit('update:modelValue', $event)"
   >
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">服务商名称</label>
-        <el-input v-model="name" placeholder="例如: My Provider" />
+    <DialogContent
+      class="max-w-md"
+      :show-close-button="false"
+      @pointer-down-outside.prevent
+    >
+      <div class="p-6 space-y-4">
+        <h3 class="text-lg font-semibold text-foreground">添加自定义服务商</h3>
+        <div>
+          <label class="block text-sm font-medium mb-1">服务商名称</label>
+          <Input v-model="name" placeholder="例如: My Provider" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">API 格式</label>
+          <Select v-model="format">
+            <SelectTrigger class="w-full">
+              <SelectValue placeholder="选择 API 格式" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="openai">
+                OpenAI 兼容
+              </SelectItem>
+              <SelectItem value="claude">
+                Claude
+              </SelectItem>
+              <SelectItem value="gemini">
+                Gemini
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <Button variant="outline" @click="$emit('update:modelValue', false)">取消</Button>
+          <Button :disabled="!name.trim()" @click="handleCreate">创建</Button>
+        </div>
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">API 格式</label>
-        <el-select v-model="format" class="w-full">
-          <el-option label="OpenAI 兼容" value="openai" />
-          <el-option label="Claude" value="claude" />
-          <el-option label="Gemini" value="gemini" />
-        </el-select>
-      </div>
-    </div>
-    <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
-      <el-button type="primary" :disabled="!name.trim()" @click="handleCreate">创建</el-button>
-    </template>
-  </el-dialog>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useProviderStore } from '../../stores/providerStore'
 import type { ApiFormat } from '../../types'
+import { Dialog, DialogContent } from '../ui/dialog'
+import { Input } from '../ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
+import { Button } from '../ui/button'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{

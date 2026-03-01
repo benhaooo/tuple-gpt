@@ -12,28 +12,25 @@
     <div class="mb-5">
       <label class="block text-sm font-medium text-foreground mb-1.5">API Key</label>
       <div class="flex gap-2">
-        <el-input
-          v-model="localApiKey"
-          :type="showKey ? 'text' : 'password'"
-          placeholder="输入 API Key"
-          class="flex-1"
-          @change="saveApiKey"
-        >
-          <template #suffix>
-            <button @click="showKey = !showKey" class="text-muted-foreground hover:text-foreground">
-              <EyeIcon v-if="!showKey" class="h-4 w-4" />
-              <EyeSlashIcon v-else class="h-4 w-4" />
-            </button>
-          </template>
-        </el-input>
-        <el-button
-          :loading="verifying"
-          :disabled="!localApiKey"
-          @click="handleVerify"
-          size="default"
-        >
-          验证
-        </el-button>
+        <div class="relative flex-1">
+          <Input
+            v-model="localApiKey"
+            :type="showKey ? 'text' : 'password'"
+            placeholder="输入 API Key"
+            class="pr-10"
+            @change="saveApiKey"
+          />
+          <button
+            @click="showKey = !showKey"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <EyeIcon v-if="!showKey" class="h-4 w-4" />
+            <EyeSlashIcon v-else class="h-4 w-4" />
+          </button>
+        </div>
+        <Button :disabled="!localApiKey || verifying" @click="handleVerify">
+          {{ verifying ? '验证中...' : '验证' }}
+        </Button>
       </div>
       <p v-if="verifyResult" class="text-xs mt-1.5" :class="verifyResult.valid ? 'text-green-600' : 'text-red-500'">
         {{ verifyResult.valid ? '✓ 验证通过' : `✗ ${verifyResult.error}` }}
@@ -43,7 +40,7 @@
     <!-- API Host -->
     <div class="mb-5">
       <label class="block text-sm font-medium text-foreground mb-1.5">API Host</label>
-      <el-input
+      <Input
         v-model="localBaseUrl"
         placeholder="https://api.openai.com"
         @change="saveBaseUrl"
@@ -58,41 +55,44 @@
       <div class="flex items-center justify-between mb-2">
         <label class="text-sm font-medium text-foreground">模型列表</label>
         <div class="flex items-center gap-1">
-          <el-button size="small" @click="addingModel = true" :icon="PlusIcon2">新增</el-button>
-          <el-button
+          <Button size="sm" variant="outline" @click="addingModel = true">
+            <PlusIcon2 class="h-3.5 w-3.5" />
+            新增
+          </Button>
+          <Button
             v-if="provider.presetId"
-            size="small"
+            size="sm"
+            variant="outline"
             @click="handleReset"
           >
             重置
-          </el-button>
-          <el-button
-            size="small"
-            :loading="fetching"
-            :disabled="!provider.apiKey"
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            :disabled="!provider.apiKey || fetching"
             @click="handleFetch"
           >
-            获取
-          </el-button>
+            {{ fetching ? '获取中...' : '获取' }}
+          </Button>
         </div>
       </div>
 
       <!-- Add model input -->
       <div v-if="addingModel" class="flex gap-2 mb-2">
-        <el-input
+        <Input
           v-model="newModelId"
           placeholder="输入模型 ID"
-          size="small"
-          class="flex-1"
+          class="h-8 flex-1"
           @keyup.enter="confirmAddModel"
           ref="addModelInput"
         />
-        <el-button size="small" type="primary" @click="confirmAddModel" :disabled="!newModelId.trim()">
+        <Button size="sm" @click="confirmAddModel" :disabled="!newModelId.trim()">
           确定
-        </el-button>
-        <el-button size="small" @click="addingModel = false; newModelId = ''">
+        </Button>
+        <Button size="sm" variant="outline" @click="addingModel = false; newModelId = ''">
           取消
-        </el-button>
+        </Button>
       </div>
 
       <!-- Fetch error -->
@@ -126,6 +126,8 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { EyeIcon, EyeSlashIcon, XMarkIcon, PlusIcon as PlusIcon2 } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '../../stores/providerStore'
 import type { Provider, ApiFormat } from '../../types'
+import { Input } from '../ui/input'
+import { Button } from '../ui/button'
 
 const props = defineProps<{ provider: Provider }>()
 const providerStore = useProviderStore()
@@ -150,8 +152,6 @@ const addModelInput = ref<{ focus: () => void } | null>(null)
 
 // Sync local state when provider changes
 watch(() => props.provider.id, () => {
-  console.log("🚀 ~ props.provider:", props.provider)
-
   localApiKey.value = props.provider.apiKey
   localBaseUrl.value = props.provider.baseUrl
   showKey.value = false

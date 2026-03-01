@@ -1,14 +1,20 @@
-import { defineConfig, presetAttributify, presetWind3, presetTypography, transformerDirectives, transformerVariantGroup } from 'unocss'
+import { defineConfig, presetAttributify, presetWind4, presetTypography, transformerDirectives, transformerVariantGroup } from 'unocss'
 import presetAnimations from "unocss-preset-animations";
-import { presetShadcn } from "unocss-preset-shadcn";
+import presetShadcn from "unocss-preset-shadcn";
 
 export default defineConfig({
   presets: [
     presetAttributify({}),
-    presetWind3(),
+    presetWind4({
+      preflights: {
+        property: {
+          parent: false,
+        },
+      },
+    }),
     presetAnimations(),
     presetShadcn({
-      color: "zinc",
+      color: "neutral",
     }),
   ],
   transformers: [

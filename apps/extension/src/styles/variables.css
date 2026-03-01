@@ -2,47 +2,47 @@
 
 :root {
   /* 基础颜色 */
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  --background: 1 0 0;
+  --foreground: 0.145 0 0;
 
   /* Card 卡片 */
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  --card: 1 0 0;
+  --card-foreground: 0.145 0 0;
 
   /* Popover 弹出层 */
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
+  --popover: 1 0 0;
+  --popover-foreground: 0.145 0 0;
 
   /* Primary 主色 */
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
+  --primary: 0.205 0 0;
+  --primary-foreground: 0.985 0 0;
   --primary-soft: 240 100% 97%;
   --primary-soft-foreground: 240 100% 25%;
 
   /* Secondary 次要色 */
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
+  --secondary: 0.97 0 0;
+  --secondary-foreground: 0.205 0 0;
   --secondary-soft: 145 95% 96%;
   --secondary-soft-foreground: 145 95% 20%;
 
   /* Muted 柔和色 */
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
+  --muted: 0.97 0 0;
+  --muted-foreground: 0.556 0 0;
 
   /* Accent 强调色 */
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
+  --accent: 0.97 0 0;
+  --accent-foreground: 0.205 0 0;
   --accent-soft: 45 100% 96%;
   --accent-soft-foreground: 45 100% 20%;
 
   /* Destructive 破坏性操作色 */
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive: 0.577 0.245 27.325;
+  --destructive-foreground: 0.985 0 0;
 
   /* 边框和输入框 */
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 240 5% 64.9%;
+  --border: 0.922 0 0;
+  --input: 0.922 0 0;
+  --ring: 0.708 0 0;
 
   /* 圆角 */
   --radius: 0.5rem;
@@ -51,55 +51,55 @@
 /* 暗色主题 */
 .dark {
   /* 基础颜色 */
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
+  --background: 0.145 0 0;
+  --foreground: 0.985 0 0;
 
   /* Card 卡片 */
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
+  --card: 0.205 0 0;
+  --card-foreground: 0.985 0 0;
 
   /* Popover 弹出层 */
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 0.205 0 0;
+  --popover-foreground: 0.985 0 0;
 
   /* Primary 主色 */
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
+  --primary: 0.922 0 0;
+  --primary-foreground: 0.205 0 0;
   --primary-soft: 240 15% 10%;
   --primary-soft-foreground: 240 15% 90%;
 
   /* Secondary 次要色 */
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 0.269 0 0;
+  --secondary-foreground: 0.985 0 0;
   --secondary-soft: 145 25% 9%;
   --secondary-soft-foreground: 145 25% 88%;
 
   /* Muted 柔和色 */
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
+  --muted: 0.269 0 0;
+  --muted-foreground: 0.708 0 0;
 
   /* Accent 强调色 */
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
+  --accent: 0.269 0 0;
+  --accent-foreground: 0.985 0 0;
   --accent-soft: 45 30% 10%;
   --accent-soft-foreground: 45 30% 88%;
 
   /* Destructive 破坏性操作色 */
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive: 0.704 0.191 22.216;
+  --destructive-foreground: 0.985 0 0;
 
   /* 边框和输入框 */
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
+  --border: 1 0 0 / 10%;
+  --input: 1 0 0 / 15%;
+  --ring: 0.556 0 0;
 }
 
 /* 基础样式重置 */
 * {
-  border-color: hsl(var(--border));
+  border-color: oklch(var(--border));
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background-color: oklch(var(--background));
+  color: oklch(var(--foreground));
 }

@@ -118,38 +118,42 @@ const handleGenerate = () => {
   </div>
 </template> 
 
+<style>
+@unocss-placeholder
+</style>
+
 <style scoped>
 /* 自定义 prose 样式变体，确保链接颜色与主题一致 */
 .prose.prose-primary a {
-  color: hsl(var(--primary));
+  color: oklch(var(--primary));
 }
 .prose.prose-primary a:hover {
-  color: hsl(var(--primary) / 0.8);
+  color: oklch(var(--primary) / 0.8);
 }
 
 .prose.prose-secondary a {
-  color: hsl(var(--secondary));
+  color: oklch(var(--secondary));
 }
 .prose.prose-secondary a:hover {
-  color: hsl(var(--secondary) / 0.8);
+  color: oklch(var(--secondary) / 0.8);
 }
 
 .prose.prose-accent a {
-  color: hsl(var(--accent));
+  color: oklch(var(--accent));
 }
 .prose.prose-accent a:hover {
-  color: hsl(var(--accent) / 0.8);
+  color: oklch(var(--accent) / 0.8);
 }
 
 /* 暗色模式下的链接颜色调整 */
 .dark .prose.prose-primary a {
-  color: hsl(var(--primary-foreground));
+  color: oklch(var(--primary-foreground));
 }
 .dark .prose.prose-secondary a {
-  color: hsl(var(--secondary-foreground));
+  color: oklch(var(--secondary-foreground));
 }
 .dark .prose.prose-accent a {
-  color: hsl(var(--accent-foreground));
+  color: oklch(var(--accent-foreground));
 }
 
 /* 确保时间链接样式一致 */

@@ -388,5 +388,9 @@ const contentIcons = {
   </div>
 </template>
 
+<style>
+@unocss-placeholder
+</style>
+
 <style scoped>
 </style>
