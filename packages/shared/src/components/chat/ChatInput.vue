@@ -1,41 +1,59 @@
 <template>
-  <div class="px-3 py-2 border-t border-border">
-    <div class="flex items-end gap-2">
-      <textarea
-        ref="inputRef"
+  <div class="px-3 py-3">
+    <div class="overflow-hidden rounded-3xl border border-input bg-background/80 p-2 shadow-sm">
+      <Textarea
         v-model="inputText"
         :disabled="disabled"
         :placeholder="disabled ? '请先配置AI服务商' : '输入消息... (Shift+Enter 换行)'"
         rows="1"
-        class="flex-1 resize-none bg-muted rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring max-h-32"
-        @keydown.enter.exact.prevent="handleSend"
-        @input="autoResize"
-      ></textarea>
+        class="min-h-24 max-h-56 w-full resize-none overflow-y-auto rounded-2xl border-0 bg-transparent px-3 pt-3 pb-2 text-base shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm"
+        @keydown.enter.exact="handleEnter"
+      />
 
-      <button
-        v-if="isStreaming"
-        @click="$emit('stop')"
-        class="p-2 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 flex-shrink-0"
-        title="停止生成"
-      >
-        <StopIcon class="h-4 w-4" />
-      </button>
-      <button
-        v-else
-        @click="handleSend"
-        :disabled="disabled || !inputText.trim()"
-        class="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-        title="发送"
-      >
-        <PaperAirplaneIcon class="h-4 w-4" />
-      </button>
+      <div class="flex items-center justify-between px-1 py-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          class="size-8 rounded-full text-muted-foreground"
+          :disabled="disabled"
+          title="工具"
+        >
+          <PlusIcon class="h-4 w-4" />
+        </Button>
+
+        <div class="flex items-center gap-1.5">
+          <Button
+            v-if="isStreaming"
+            @click="$emit('stop')"
+            variant="destructive"
+            size="icon-sm"
+            class="size-8 rounded-full"
+            title="停止生成"
+          >
+            <StopIcon class="h-4 w-4" />
+          </Button>
+          <Button
+            v-else
+            @click="handleSend"
+            :disabled="disabled || !inputText.trim()"
+            size="icon-sm"
+            class="size-8 rounded-full"
+            title="发送"
+          >
+            <PaperAirplaneIcon class="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref } from 'vue'
 import { PaperAirplaneIcon, StopIcon } from '@heroicons/vue/24/solid'
+import { PlusIcon } from '@heroicons/vue/24/outline'
+import { Button } from '../ui/button'
+import { Textarea } from '../ui/textarea'
 
 defineProps<{
   isStreaming: boolean
@@ -48,20 +66,20 @@ const emit = defineEmits<{
 }>()
 
 const inputText = ref('')
-const inputRef = ref<HTMLTextAreaElement>()
+
+function handleEnter(event: KeyboardEvent) {
+  // IME candidate confirm also uses Enter; do not treat it as send.
+  if (event.isComposing || event.key === 'Process' || (event as KeyboardEvent & { keyCode?: number }).keyCode === 229) {
+    return
+  }
+  event.preventDefault()
+  handleSend()
+}
 
 function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
   emit('send', text)
   inputText.value = ''
-  nextTick(() => autoResize())
-}
-
-function autoResize() {
-  const el = inputRef.value
-  if (!el) return
-  el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 128) + 'px'
 }
 </script>

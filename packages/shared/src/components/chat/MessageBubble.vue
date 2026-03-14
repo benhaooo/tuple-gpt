@@ -28,12 +28,13 @@
       <!-- Error state -->
       <div v-if="message.status === 'error'" class="mt-2 pt-2 border-t border-destructive/20">
         <p class="text-xs text-destructive">{{ message.error || '请求失败' }}</p>
-        <button
+        <Button
           @click="$emit('retry')"
-          class="mt-1 text-xs underline text-destructive hover:text-destructive/80"
+          variant="link"
+          class="mt-1 h-auto p-0 text-xs text-destructive hover:text-destructive/80"
         >
           重试
-        </button>
+        </Button>
       </div>
     </div>
   </div>
@@ -41,6 +42,7 @@
 
 <script setup lang="ts">
 import type { ChatMessage } from '../../types'
+import { Button } from '../ui/button'
 
 defineProps<{
   message: ChatMessage

@@ -8,19 +8,21 @@
       :show-close-button="false"
       @pointer-down-outside.prevent
     >
-      <div class="p-6 space-y-4">
-        <h3 class="text-lg font-semibold text-foreground">添加自定义服务商</h3>
+      <DialogHeader>
+        <DialogTitle>添加自定义服务商</DialogTitle>
+      </DialogHeader>
+      <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium mb-1">服务商名称</label>
+          <Label class="mb-1.5">服务商名称</Label>
           <Input v-model="name" placeholder="例如: My Provider" />
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">API 格式</label>
+          <Label class="mb-1.5">API 格式</Label>
           <Select v-model="format">
             <SelectTrigger class="w-full">
               <SelectValue placeholder="选择 API 格式" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent alignItemWithTrigger={true}>
               <SelectItem value="openai">
                 OpenAI 兼容
               </SelectItem>
@@ -33,10 +35,10 @@
             </SelectContent>
           </Select>
         </div>
-        <div class="flex justify-end gap-2 pt-2">
+        <DialogFooter>
           <Button variant="outline" @click="$emit('update:modelValue', false)">取消</Button>
           <Button :disabled="!name.trim()" @click="handleCreate">创建</Button>
-        </div>
+        </DialogFooter>
       </div>
     </DialogContent>
   </Dialog>
@@ -46,7 +48,7 @@
 import { ref, watch } from 'vue'
 import { useProviderStore } from '../../stores/providerStore'
 import type { ApiFormat } from '../../types'
-import { Dialog, DialogContent } from '../ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Input } from '../ui/input'
 import {
   Select,
@@ -56,6 +58,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Button } from '../ui/button'
+import { Label } from '../ui/label'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{

@@ -1,124 +1,138 @@
 <template>
-  <div class="p-5 overflow-y-auto h-full">
-    <!-- Header -->
-    <div class="flex items-center gap-2 mb-5">
-      <h3 class="text-lg font-semibold text-foreground">{{ provider.name }}</h3>
-      <span class="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
-        {{ formatLabels[provider.format] }}
-      </span>
-    </div>
-
-    <!-- API Key -->
-    <div class="mb-5">
-      <label class="block text-sm font-medium text-foreground mb-1.5">API Key</label>
-      <div class="flex gap-2">
-        <div class="relative flex-1">
-          <Input
-            v-model="localApiKey"
-            :type="showKey ? 'text' : 'password'"
-            placeholder="输入 API Key"
-            class="pr-10"
-            @change="saveApiKey"
-          />
-          <button
-            @click="showKey = !showKey"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <EyeIcon v-if="!showKey" class="h-4 w-4" />
-            <EyeSlashIcon v-else class="h-4 w-4" />
-          </button>
-        </div>
-        <Button :disabled="!localApiKey || verifying" @click="handleVerify">
-          {{ verifying ? '验证中...' : '验证' }}
-        </Button>
+  <ScrollArea class="h-full">
+    <div class="space-y-5 p-5">
+      <div class="flex items-center gap-2">
+        <h3 class="text-lg font-semibold text-foreground">{{ provider.name }}</h3>
+        <Badge variant="secondary">
+          {{ formatLabels[provider.format] }}
+        </Badge>
       </div>
-      <p v-if="verifyResult" class="text-xs mt-1.5" :class="verifyResult.valid ? 'text-green-600' : 'text-red-500'">
-        {{ verifyResult.valid ? '✓ 验证通过' : `✗ ${verifyResult.error}` }}
-      </p>
-    </div>
 
-    <!-- API Host -->
-    <div class="mb-5">
-      <label class="block text-sm font-medium text-foreground mb-1.5">API Host</label>
-      <Input
-        v-model="localBaseUrl"
-        placeholder="https://api.openai.com"
-        @change="saveBaseUrl"
-      />
-      <p class="text-xs text-muted-foreground mt-1.5">
-        预览: <span class="text-foreground/70">{{ previewUrl }}</span>
-      </p>
-    </div>
+      <Separator />
 
-    <!-- Models -->
-    <div>
-      <div class="flex items-center justify-between mb-2">
-        <label class="text-sm font-medium text-foreground">模型列表</label>
-        <div class="flex items-center gap-1">
-          <Button size="sm" variant="outline" @click="addingModel = true">
-            <PlusIcon2 class="h-3.5 w-3.5" />
-            新增
-          </Button>
-          <Button
-            v-if="provider.presetId"
-            size="sm"
-            variant="outline"
-            @click="handleReset"
-          >
-            重置
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            :disabled="!provider.apiKey || fetching"
-            @click="handleFetch"
-          >
-            {{ fetching ? '获取中...' : '获取' }}
+      <div class="space-y-2">
+        <Label>API Key</Label>
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <Input
+              v-model="localApiKey"
+              :type="showKey ? 'text' : 'password'"
+              placeholder="输入 API Key"
+              class="pr-10"
+              @change="saveApiKey"
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              class="absolute top-1/2 right-1 -translate-y-1/2"
+              @click="showKey = !showKey"
+            >
+              <EyeIcon v-if="!showKey" class="h-4 w-4" />
+              <EyeSlashIcon v-else class="h-4 w-4" />
+            </Button>
+          </div>
+          <Button :disabled="!localApiKey || verifying" @click="handleVerify">
+            {{ verifying ? '验证中...' : '验证' }}
           </Button>
         </div>
-      </div>
-
-      <!-- Add model input -->
-      <div v-if="addingModel" class="flex gap-2 mb-2">
-        <Input
-          v-model="newModelId"
-          placeholder="输入模型 ID"
-          class="h-8 flex-1"
-          @keyup.enter="confirmAddModel"
-          ref="addModelInput"
-        />
-        <Button size="sm" @click="confirmAddModel" :disabled="!newModelId.trim()">
-          确定
-        </Button>
-        <Button size="sm" variant="outline" @click="addingModel = false; newModelId = ''">
-          取消
-        </Button>
-      </div>
-
-      <!-- Fetch error -->
-      <p v-if="fetchError" class="text-xs text-red-500 mb-2">{{ fetchError }}</p>
-
-      <!-- Model list -->
-      <div v-if="provider.models.length > 0" class="space-y-1">
-        <div
-          v-for="model in provider.models"
-          :key="model"
-          class="group flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-accent text-sm"
+        <p
+          v-if="verifyResult"
+          class="text-xs"
+          :class="verifyResult.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'"
         >
-          <span class="text-foreground truncate">{{ model }}</span>
-          <button
-            @click="removeModel(model)"
-            class="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <XMarkIcon class="h-3.5 w-3.5" />
-          </button>
-        </div>
+          {{ verifyResult.valid ? '✓ 验证通过' : `✗ ${verifyResult.error}` }}
+        </p>
       </div>
-      <p v-else class="text-xs text-muted-foreground py-3 text-center">
-        暂无模型，点击"获取"自动拉取或手动"新增"
-      </p>
+
+      <div class="space-y-2">
+        <Label>API Host</Label>
+        <Input
+          v-model="localBaseUrl"
+          placeholder="https://api.openai.com"
+          @change="saveBaseUrl"
+        />
+        <p class="text-xs text-muted-foreground">
+          预览: <span class="text-foreground/70">{{ previewUrl }}</span>
+        </p>
+      </div>
+
+      <Separator />
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <Label>模型列表</Label>
+          <div class="flex items-center gap-1">
+            <Button size="sm" variant="outline" @click="addingModel = true">
+              <PlusIcon2 class="h-3.5 w-3.5" />
+              新增
+            </Button>
+            <Button
+              v-if="provider.presetId"
+              size="sm"
+              variant="outline"
+              @click="handleReset"
+            >
+              重置
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              :disabled="!provider.apiKey || fetching"
+              @click="handleFetch"
+            >
+              {{ fetching ? '获取中...' : '获取' }}
+            </Button>
+          </div>
+        </div>
+
+        <div v-if="addingModel" class="flex gap-2">
+          <Input
+            ref="addModelInput"
+            v-model="newModelId"
+            placeholder="输入模型 ID"
+            class="h-8 flex-1"
+            @keyup.enter="confirmAddModel"
+          />
+          <Button size="sm" :disabled="!newModelId.trim()" @click="confirmAddModel">
+            确定
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            @click="addingModel = false; newModelId = ''"
+          >
+            取消
+          </Button>
+        </div>
+
+        <p v-if="fetchError" class="text-xs text-destructive">{{ fetchError }}</p>
+
+        <ScrollArea v-if="provider.models.length > 0" class="max-h-64 rounded-md border">
+          <div class="space-y-1 p-1">
+            <div
+              v-for="model in provider.models"
+              :key="model"
+              class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+            >
+              <span class="truncate text-foreground">{{ model }}</span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="size-6 opacity-0 group-hover:opacity-100"
+                @click="removeModel(model)"
+              >
+                <XMarkIcon class="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          </div>
+        </ScrollArea>
+
+        <p v-else class="py-3 text-center text-xs text-muted-foreground">
+          暂无模型，点击"获取"自动拉取或手动"新增"
+        </p>
+      </div>
     </div>
-  </div>
+  </ScrollArea>
 </template>
 
 <script setup lang="ts">
@@ -126,8 +140,12 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { EyeIcon, EyeSlashIcon, XMarkIcon, PlusIcon as PlusIcon2 } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '../../stores/providerStore'
 import type { Provider, ApiFormat } from '../../types'
-import { Input } from '../ui/input'
+import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
+import { ScrollArea } from '../ui/scroll-area'
+import { Separator } from '../ui/separator'
 
 const props = defineProps<{ provider: Provider }>()
 const providerStore = useProviderStore()
