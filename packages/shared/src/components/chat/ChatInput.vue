@@ -61,7 +61,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'send', content: string): void
+  (e: 'send', content: string, tabs: BrowserTab[]): void
   (e: 'stop'): void
   (e: 'tabSelected', tab: BrowserTab): void
 }>()
@@ -81,7 +81,7 @@ function handleEnter(event: KeyboardEvent) {
 function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
-  emit('send', text)
+  emit('send', text, [...selectedTabs.value])
   inputText.value = ''
   // 发送后清空附件
   selectedTabs.value = []

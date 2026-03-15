@@ -2,6 +2,13 @@ export type MessageRole = 'system' | 'user' | 'assistant'
 
 export type MessageStatus = 'pending' | 'streaming' | 'done' | 'error'
 
+export interface MessageAttachment {
+  tabId: number
+  title: string
+  url: string
+  extractedContent?: string
+}
+
 export interface ChatMessage {
   id: string
   role: MessageRole
@@ -10,6 +17,7 @@ export interface ChatMessage {
   status: MessageStatus
   error?: string
   providerId?: string
+  attachments?: MessageAttachment[]
 }
 
 export interface Conversation {
