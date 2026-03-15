@@ -9,6 +9,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.6.0",
     "@tuple-gpt/shared": "workspace:*",
     "await-to-js": "^3.0.0"
   },

@@ -7,8 +7,20 @@
         : 'bg-muted text-foreground',
     ]">
       <!-- User message -->
-      <div v-if="message.role === 'user'" class="whitespace-pre-wrap break-words">
-        {{ message.content }}
+      <div v-if="message.role === 'user'">
+        <div class="whitespace-pre-wrap break-words">{{ message.content }}</div>
+        <!-- 附件标签 -->
+        <div v-if="message.attachments?.length" class="mt-1.5 flex flex-wrap gap-1">
+          <span
+            v-for="att in message.attachments"
+            :key="att.tabId"
+            class="inline-flex items-center gap-1 rounded-md bg-primary-foreground/15 px-1.5 py-0.5 text-xs"
+            :title="att.url"
+          >
+            <LinkIcon class="h-3 w-3 shrink-0 opacity-70" />
+            <span class="max-w-32 truncate">{{ att.title }}</span>
+          </span>
+        </div>
       </div>
 
       <!-- Assistant message: rendered markdown -->
@@ -41,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import { LinkIcon } from '@heroicons/vue/24/outline'
 import type { ChatMessage } from '../../types'
 import { Button } from '../ui/button'
 

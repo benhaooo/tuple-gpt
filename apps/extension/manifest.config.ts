@@ -30,6 +30,12 @@ export default defineManifest({
   },
   content_scripts: [
     {
+      // 通用页面内容提取脚本
+      matches: ['<all_urls>'],
+      js: ['src/content/extractor.ts'],
+      run_at: 'document_idle'
+    },
+    {
       // 在哔哩哔哩视频页面注入脚本
       matches: ['https://www.bilibili.com/video/*'],
       js: ['src/content/bilibili.ts'],
