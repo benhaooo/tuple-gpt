@@ -1,6 +1,12 @@
 <template>
   <div class="px-3 py-3">
     <div class="overflow-hidden rounded-3xl border border-input bg-background/80 p-2 shadow-sm">
+      <!-- 附件预览 -->
+      <AttachmentPreview
+        :tabs="selectedTabs"
+        @remove="handleRemoveTab"
+      />
+
       <Textarea
         v-model="inputText"
         :disabled="disabled"
@@ -11,15 +17,7 @@
       />
 
       <div class="flex items-center justify-between px-1 py-1">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="size-8 rounded-full text-muted-foreground"
-          :disabled="disabled"
-          title="工具"
-        >
-          <PlusIcon class="h-4 w-4" />
-        </Button>
+        <AttachmentSelector v-model="selectedTabs" :disabled="disabled" />
 
         <div class="flex items-center gap-1.5">
           <Button
@@ -51,9 +49,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { PaperAirplaneIcon, StopIcon } from '@heroicons/vue/24/solid'
-import { PlusIcon } from '@heroicons/vue/24/outline'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
+import AttachmentSelector from './AttachmentSelector.vue'
+import AttachmentPreview from './AttachmentPreview.vue'
+import type { BrowserTab } from '../../composables/useBrowserTabs'
 
 defineProps<{
   isStreaming: boolean
@@ -63,9 +63,11 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'send', content: string): void
   (e: 'stop'): void
+  (e: 'tabSelected', tab: BrowserTab): void
 }>()
 
 const inputText = ref('')
+const selectedTabs = ref<BrowserTab[]>([])
 
 function handleEnter(event: KeyboardEvent) {
   // IME candidate confirm also uses Enter; do not treat it as send.
@@ -81,5 +83,11 @@ function handleSend() {
   if (!text) return
   emit('send', text)
   inputText.value = ''
+  // 发送后清空附件
+  selectedTabs.value = []
+}
+
+function handleRemoveTab(tabId: number) {
+  selectedTabs.value = selectedTabs.value.filter(tab => tab.id !== tabId)
 }
 </script>
