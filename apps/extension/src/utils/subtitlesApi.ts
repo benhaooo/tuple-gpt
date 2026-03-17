@@ -339,7 +339,7 @@ export async function getBilibiliVideoInfo(bvid: string): Promise<VideoInfo> {
     // 根据URL的'p'参数确定当前分p
     const urlSearchParams = new URLSearchParams(window.location.search);
     const p = parseInt(urlSearchParams.get('p') || '1');
-    const currentPageInfo = pages.find(item => item.page === p) || pages[0];
+    const currentPageInfo = pages.find((item: { page: number; cid: number }) => item.page === p) || pages[0];
     const cid = currentPageInfo ? currentPageInfo.cid : data.cid;
 
     if (!cid) {
@@ -381,7 +381,7 @@ export async function getBilibiliSubtitlesByCid(videoInfo: VideoInfo): Promise<S
  */
 export async function translateSubtitles(
   subtitles: SubtitleItem[],
-  targetLanguage: string
+  _targetLanguage: string
 ): Promise<SubtitleItem[]> {
   // 实际项目中，这里应该调用翻译API
   // 例如Google翻译、百度翻译、有道翻译等
@@ -413,8 +413,7 @@ export async function getBilibiliSubtitles(bvid: string): Promise<SubtitleItem[]
   if (!firstLanguage.subtitle_url) {
     return []
   }
-  const subtitleInfo = await getBilibiliSubtitlesByUrl(firstLanguage.subtitle_url, firstLanguage.lan)
-  return subtitleInfo.subtitles
+  return getBilibiliSubtitlesByUrl(firstLanguage.subtitle_url)
 }
 
 /**

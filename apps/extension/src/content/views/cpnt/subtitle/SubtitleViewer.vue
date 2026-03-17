@@ -10,9 +10,9 @@ import {
   SpeakerWaveIcon,
 } from '@heroicons/vue/24/outline'
 import {
-  MessageType,
-  sendMessageToBackground,
-  type TranscribeBilibiliAudioMessage
+  backgroundClient,
+  transcriptionWindowMessageType,
+  type AudioTranscriptionWindowMessage,
 } from '@/utils/messages'
 
 const props = defineProps<{
@@ -147,16 +147,14 @@ const transcribeAudio = async () => {
     isTranscribing.value = true
     transcriptionProgress.value = '获取音频并开始转录...'
 
-    // 发送转录消息到content script
-    const message: TranscribeBilibiliAudioMessage = {
-      type: MessageType.TRANSCRIBE_BILIBILI_AUDIO,
-      data: {
-        whisperApiKey: settings.whisperApiKey,
-        whisperApiEndpoint: settings.whisperApiEndpoint
-      }
-    }
+    const response = await backgroundClient.transcribeBilibiliAudio({
+      whisperApiKey: settings.whisperApiKey,
+      whisperApiEndpoint: settings.whisperApiEndpoint,
+    })
 
-    await sendMessageToBackground(message)
+    if (!response.success) {
+      throw new Error(response.error)
+    }
   } catch (error) {
     console.error('转录音频失败:', error)
     transcriptionProgress.value = '转录失败: ' + (error as Error).message
@@ -209,12 +207,12 @@ watch(() => props.activeSubtitleIndex, (newIndex) => {
 window.addEventListener('message', (event) => {
   if (event.source !== window) return
 
-  const message = event.data
+  const message = event.data as AudioTranscriptionWindowMessage
   switch (message.type) {
-    case MessageType.AUDIO_TRANSCRIPTION_COMPLETE:
+    case transcriptionWindowMessageType.complete:
       handleTranscriptionComplete(message.data)
       break
-    case MessageType.AUDIO_TRANSCRIPTION_ERROR:
+    case transcriptionWindowMessageType.error:
       handleTranscriptionError(message.data)
       break
   }

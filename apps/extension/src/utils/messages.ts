@@ -1,110 +1,247 @@
-/**
- * 消息类型常量
- */
-export enum MessageType {
-  // 导航事件
-  NAVIGATION_CHANGED = 'NAVIGATION_CHANGED',
-  // 字幕操作
-  INITIALIZE_SUBTITLES = 'INITIALIZE_SUBTITLES',
-  // 音频转录相关
-  TRANSCRIBE_BILIBILI_AUDIO = 'TRANSCRIBE_BILIBILI_AUDIO',
-  AUDIO_TRANSCRIPTION_COMPLETE = 'AUDIO_TRANSCRIPTION_COMPLETE',
-  AUDIO_TRANSCRIPTION_ERROR = 'AUDIO_TRANSCRIPTION_ERROR',
-  // 页面内容提取
-  EXTRACT_PAGE_CONTENT = 'EXTRACT_PAGE_CONTENT',
+import type { TranscriptionResult } from './audioUtils'
+import type { SubtitleItem } from './subtitlesApi'
+
+export type RpcFailure = {
+  success: false
+  error: string
 }
 
-/**
- * 消息接口
- */
-export interface Message {
-  type: MessageType;
-  data?: any;
+export type RpcAck = {
+  success: true
+} | RpcFailure
+
+export type RpcResult<T> = {
+  success: true
+  data: T
+} | RpcFailure
+
+export interface PageContentPayload {
+  title: string
+  content: string
+  excerpt: string
 }
 
-/**
- * 转录Bilibili音频消息
- */
-export interface TranscribeBilibiliAudioMessage extends Message {
-  type: MessageType.TRANSCRIBE_BILIBILI_AUDIO;
+export interface BilibiliAudioTranscriptionRequest {
+  whisperApiKey: string
+  whisperApiEndpoint?: string
+}
+
+export interface UrlChangePayload {
+  url: string
+}
+
+export interface RpcSchema {
+  extractPageContent: {
+    type: 'EXTRACT_PAGE_CONTENT'
+    req: undefined
+    res: RpcResult<PageContentPayload>
+  }
+  transcribeBilibiliAudio: {
+    type: 'TRANSCRIBE_BILIBILI_AUDIO'
+    req: BilibiliAudioTranscriptionRequest
+    res: RpcAck
+  }
+  notifyUrlChanged: {
+    type: 'URL_CHANGE_NOTIFICATION'
+    req: UrlChangePayload
+    res: RpcAck
+  }
+  openOptionsPage: {
+    type: 'OPEN_OPTIONS_PAGE'
+    req: undefined
+    res: RpcAck
+  }
+}
+
+export const rpcProtocol = {
+  extractPageContent: { type: 'EXTRACT_PAGE_CONTENT' },
+  transcribeBilibiliAudio: { type: 'TRANSCRIBE_BILIBILI_AUDIO' },
+  notifyUrlChanged: { type: 'URL_CHANGE_NOTIFICATION' },
+  openOptionsPage: { type: 'OPEN_OPTIONS_PAGE' },
+} as const satisfies {
+  [K in keyof RpcSchema]: { type: RpcSchema[K]['type'] }
+}
+
+export type RpcKey = keyof RpcSchema
+export type RequestOf<K extends RpcKey> = RpcSchema[K]['req']
+export type ResponseOf<K extends RpcKey> = RpcSchema[K]['res']
+export type RequestArgs<K extends RpcKey> =
+  [RequestOf<K>] extends [undefined] ? [] : [RequestOf<K>]
+
+export type RpcMessage<K extends RpcKey> =
+  [RequestOf<K>] extends [undefined]
+    ? { type: RpcSchema[K]['type'] }
+    : { type: RpcSchema[K]['type']; data: RequestOf<K> }
+
+export type AnyRpcMessage = {
+  [K in RpcKey]: RpcMessage<K>
+}[RpcKey]
+
+type RpcType = RpcSchema[RpcKey]['type']
+
+type RpcHandlerContext = {
+  sender: chrome.runtime.MessageSender
+}
+
+export type RpcHandlers = {
+  [K in RpcKey]?: (
+    payload: RequestOf<K>,
+    context: RpcHandlerContext,
+  ) => Promise<ResponseOf<K>> | ResponseOf<K>
+}
+
+type UnknownRpcHandler = (
+  payload: unknown,
+  context: RpcHandlerContext,
+) => Promise<unknown> | unknown
+
+export const transcriptionWindowMessageType = {
+  complete: 'AUDIO_TRANSCRIPTION_COMPLETE',
+  error: 'AUDIO_TRANSCRIPTION_ERROR',
+} as const
+
+export interface AudioTranscriptionCompleteWindowMessage {
+  type: typeof transcriptionWindowMessageType.complete
   data: {
-    whisperApiKey: string;
-    whisperApiEndpoint?: string;
-  };
+    transcriptionResult: TranscriptionResult
+    subtitles: SubtitleItem[]
+  }
 }
 
-/**
- * 音频转录完成消息
- */
-export interface AudioTranscriptionCompleteMessage extends Message {
-  type: MessageType.AUDIO_TRANSCRIPTION_COMPLETE;
+export interface AudioTranscriptionErrorWindowMessage {
+  type: typeof transcriptionWindowMessageType.error
   data: {
-    transcriptionResult: any;
-    subtitles: any[];
-  };
+    error: string
+  }
 }
 
-/**
- * 音频转录错误消息
- */
-export interface AudioTranscriptionErrorMessage extends Message {
-  type: MessageType.AUDIO_TRANSCRIPTION_ERROR;
-  data: {
-    error: string;
-  };
+export type AudioTranscriptionWindowMessage =
+  | AudioTranscriptionCompleteWindowMessage
+  | AudioTranscriptionErrorWindowMessage
+
+const rpcKeyByType = Object.fromEntries(
+  Object.entries(rpcProtocol).map(([key, value]) => [value.type, key]),
+) as Record<RpcType, RpcKey>
+
+function buildMessage<K extends RpcKey>(
+  key: K,
+  ...args: RequestArgs<K>
+): RpcMessage<K> {
+  const type = rpcProtocol[key].type
+
+  if (args.length === 0) {
+    return { type } as RpcMessage<K>
+  }
+
+  return {
+    type,
+    data: args[0],
+  } as RpcMessage<K>
 }
 
-/**
- * 发送消息到当前内容脚本
- * @param message 消息对象
- */
-export function sendMessageToContentScript(message: Message): Promise<any> {
-  return new Promise((resolve) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, message, (response) => {
-          resolve(response);
-        });
-      } else {
-        resolve(null);
+function toRpcFailure(error: unknown): RpcFailure {
+  return {
+    success: false,
+    error: error instanceof Error ? error.message : String(error),
+  }
+}
+
+function getChromeRuntimeError(): string | undefined {
+  return chrome.runtime.lastError?.message
+}
+
+export function sendToBackground<K extends RpcKey>(
+  key: K,
+  ...args: RequestArgs<K>
+): Promise<ResponseOf<K>> {
+  const message = buildMessage(key, ...args)
+
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(message, (response: ResponseOf<K>) => {
+      const runtimeError = getChromeRuntimeError()
+      if (runtimeError) {
+        reject(new Error(runtimeError))
+        return
       }
-    });
-  });
+
+      resolve(response)
+    })
+  })
 }
 
-/**
- * 发送消息到指定标签页
- * @param tabId 标签页ID
- * @param message 消息对象
- */
-export function sendMessageToTab(tabId: number, message: Message): Promise<any> {
-  return new Promise((resolve) => {
-    chrome.tabs.sendMessage(tabId, message, (response) => {
-      resolve(response);
-    });
-  });
+export function sendToTab<K extends RpcKey>(
+  tabId: number,
+  key: K,
+  ...args: RequestArgs<K>
+): Promise<ResponseOf<K>> {
+  const message = buildMessage(key, ...args)
+
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, message, (response: ResponseOf<K>) => {
+      const runtimeError = getChromeRuntimeError()
+      if (runtimeError) {
+        reject(new Error(runtimeError))
+        return
+      }
+
+      resolve(response)
+    })
+  })
 }
 
-/**
- * 发送消息到背景脚本
- * @param message 消息对象
- */
-export function sendMessageToBackground(message: Message): Promise<any> {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      resolve(response);
-    });
-  });
+export function registerRpcHandlers(handlers: RpcHandlers): void {
+  chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+    if (!message || typeof message !== 'object' || !('type' in message)) {
+      return false
+    }
+
+    const messageRecord = message as Record<string, unknown>
+    const type = messageRecord.type as RpcType
+    const key = rpcKeyByType[type]
+    const handler = key ? handlers[key] as UnknownRpcHandler | undefined : undefined
+
+    if (!handler) {
+      return false
+    }
+
+    const payload = Object.prototype.hasOwnProperty.call(messageRecord, 'data')
+      ? messageRecord.data
+      : undefined
+
+    Promise.resolve(
+      handler(payload, { sender }),
+    )
+      .then((response) => {
+        sendResponse(response)
+      })
+      .catch((error) => {
+        sendResponse(toRpcFailure(error))
+      })
+
+    return true
+  })
 }
 
-/**
- * 注册消息监听器
- * @param callback 消息处理回调
- */
-export function registerMessageListener(callback: (message: Message, sender: chrome.runtime.MessageSender) => void): void {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    callback(message, sender);
-    sendResponse({ received: true });
-    return true; // 保持消息通道开放
-  });
-} 
+export const backgroundClient = {
+  openOptionsPage() {
+    return sendToBackground('openOptionsPage')
+  },
+
+  transcribeBilibiliAudio(data: BilibiliAudioTranscriptionRequest) {
+    return sendToBackground('transcribeBilibiliAudio', data)
+  },
+}
+
+export const tabClient = {
+  extractPageContent(tabId: number) {
+    return sendToTab(tabId, 'extractPageContent')
+  },
+
+  transcribeBilibiliAudio(tabId: number, data: BilibiliAudioTranscriptionRequest) {
+    return sendToTab(tabId, 'transcribeBilibiliAudio', data)
+  },
+
+  notifyUrlChanged(tabId: number, data: UrlChangePayload) {
+    return sendToTab(tabId, 'notifyUrlChanged', data)
+  },
+}

@@ -1,5 +1,6 @@
-import { ref, type Ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { marked } from 'marked'
+import { aiStreamClient } from '@/utils/ai-stream'
 
 export interface AIContentOptions {
   processLinks?: boolean
@@ -10,99 +11,107 @@ export function useAIContent(options: AIContentOptions = {}) {
   const isGenerating = ref(false)
   const error = ref('')
   const copySuccess = ref(false)
+  let activeStream: ReturnType<typeof aiStreamClient.generateAiContent> | null = null
 
-  // 解析Markdown内容
+  const stopActiveStream = () => {
+    if (!activeStream) {
+      return
+    }
+
+    activeStream.send({ type: 'cancel' })
+    activeStream.close()
+    activeStream = null
+  }
+
   const parsedContent = () => {
-    // 如果内容为空，返回空字符串
-    if (!content.value) return ''
-    
-    // 使用 marked 解析 Markdown 内容
-    // 使用正确的 API 调用方式
+    if (!content.value) {
+      return ''
+    }
+
     const parsed = marked.parse(content.value, { async: false }) as string
-    
-    // 如果需要处理链接（概览部分），则进行特殊处理
+
     if (options.processLinks) {
-      // 这里不需要再次处理，因为已经在 generateContent 中处理过了
-      // 但我们可以确保链接有正确的类名
       return parsed.replace(/<a href="#"/g, '<a href="#" class="time-link"')
     }
-    
+
     return parsed
   }
 
-  // 使用流式API处理文本内容
   const generateContent = async (prompt: string): Promise<string> => {
+    stopActiveStream()
+
+    isGenerating.value = true
+    error.value = ''
+    content.value = ''
+
+    const stream = aiStreamClient.generateAiContent({ prompt })
+    activeStream = stream
+
     try {
-      isGenerating.value = true
-      content.value = '' // 清空之前的内容
-
-      // 创建一个 Promise 来处理流式响应
-      return new Promise((resolve, reject) => {
-        // 监听来自 background 的流式数据
-        const messageListener = (message: any) => {
-          if (message.type === 'AI_CONTENT_CHUNK') {
-            content.value += message.chunk
-          } else if (message.type === 'AI_CONTENT_COMPLETE') {
-            // 移除监听器
-            chrome.runtime.onMessage.removeListener(messageListener)
-
-            // 当内容是概览时，处理链接
-            if (options.processLinks) {
-              content.value = processOverviewLinks(content.value)
-            }
-
-            isGenerating.value = false
-            resolve(content.value)
-          }
+      for await (const event of stream) {
+        if (event.type === 'chunk') {
+          content.value += event.chunk
+          continue
         }
 
-        // 添加监听器
-        chrome.runtime.onMessage.addListener(messageListener)
+        if (event.type === 'error') {
+          throw new Error(event.error)
+        }
 
-        // 发送请求到 background script
-        chrome.runtime.sendMessage(
-          {
-            type: 'GENERATE_AI_CONTENT',
-            prompt: prompt
-          },
-          (response) => {
-            if (response && !response.success) {
-              chrome.runtime.onMessage.removeListener(messageListener)
-              isGenerating.value = false
-              reject(new Error(response.error || 'API请求失败'))
-            }
+        if (event.type === 'done') {
+          if (options.processLinks) {
+            content.value = processOverviewLinks(content.value)
           }
-        )
-      })
-    } catch (error) {
-      console.error('处理API请求失败:', error)
+
+          return content.value
+        }
+      }
+
+      if (options.processLinks) {
+        content.value = processOverviewLinks(content.value)
+      }
+
+      return content.value
+    }
+    catch (streamError) {
+      console.error('处理API请求失败:', streamError)
+      error.value = streamError instanceof Error ? streamError.message : '生成失败'
+      throw streamError
+    }
+    finally {
+      if (activeStream === stream) {
+        activeStream = null
+      }
+
+      stream.close()
       isGenerating.value = false
-      throw error
     }
   }
 
-  // 处理概览部分 - 将时间标记转换为可点击链接
-  const processOverviewLinks = (content: string) => {
-    // 替换 [标题](时间点) 格式为可点击的链接
-    return content.replace(/\[(.*?)\]\((\d+:\d+(?::\d+)?)\)/g, (match, title, time) => {
+  const processOverviewLinks = (markdownContent: string) => {
+    return markdownContent.replace(/\[(.*?)\]\((\d+:\d+(?::\d+)?)\)/g, (_match, title, time) => {
       return `<a href="#" class="time-link" data-time="${time}">${title}</a>`
     })
   }
 
-  // 复制文本到剪贴板
   const copyToClipboard = async (text: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text)
       copySuccess.value = true
+
       setTimeout(() => {
         copySuccess.value = false
       }, 2000)
-      return Promise.resolve()
-    } catch (err) {
-      console.error('复制失败:', err)
-      return Promise.reject(err)
+    }
+    catch (clipboardError) {
+      console.error('复制失败:', clipboardError)
+      throw clipboardError
     }
   }
+
+  onBeforeUnmount(() => {
+    stopActiveStream()
+  })
 
   return {
     content,
@@ -111,6 +120,6 @@ export function useAIContent(options: AIContentOptions = {}) {
     copySuccess,
     parsedContent,
     generateContent,
-    copyToClipboard
+    copyToClipboard,
   }
-} 
+}

@@ -18,14 +18,6 @@ const themeIcons: Record<(typeof ThemeName)[keyof typeof ThemeName], Component> 
   system: ComputerDesktopIcon,
 }
 
-// 主题选项
-const themeOptions = [
-  { label: '浅色', value: 'light' },
-  { label: '深色', value: 'dark' },
-  { label: '跟随系统', value: 'system' },
-]
-
-
 // 保存消息状态
 const saveMessage = ref('')
 const isError = ref(false)

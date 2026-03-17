@@ -1,4 +1,4 @@
-import { defineCustomElement } from 'vue'
+import { defineCustomElement, type App } from 'vue'
 import { waitFor } from '@/utils/domUtils'
 import restStyles from '@unocss/reset/tailwind.css?inline'
 import themeStyles from '@/styles/variables.css?inline'
@@ -67,7 +67,7 @@ export async function injectCustomElement(options: {
           return acc
         }, {} as Record<string, any>)
       },
-      configureApp(app) {
+      configureApp(app: App) {
         const pinia = createPinia();
         pinia.use(piniaChormeStorage)
         app.use(pinia)

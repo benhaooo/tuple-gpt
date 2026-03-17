@@ -22,10 +22,10 @@ export function waitFor<T extends Element>(
       return
     }
 
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: ReturnType<typeof setTimeout>
 
     // 创建 MutationObserver 监听 DOM 变化
-    const observer = new MutationObserver((mutations, obs) => {
+    const observer = new MutationObserver((_mutations, obs) => {
       const element = parent.querySelector(selector)
       if (element) {
         clearTimeout(timeoutId)
@@ -70,10 +70,10 @@ export function waitForAny<T extends Element>(
       }
     }
 
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: ReturnType<typeof setTimeout>
 
     // 创建 MutationObserver 监听 DOM 变化
-    const observer = new MutationObserver((mutations, obs) => {
+    const observer = new MutationObserver((_mutations, obs) => {
       for (const selector of selectors) {
         const element = parent.querySelector(selector)
         if (element) {

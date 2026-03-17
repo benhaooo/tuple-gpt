@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, useShadowRoot } from 'vue'
 import { VideoType } from '@/utils/subtitlesApi'
 import { useVideoStore } from '@/hooks/useVideoStore'
+import { backgroundClient } from '@/utils/messages'
 import SubtitleViewer from './cpnt/subtitle/SubtitleViewer.vue'
 import SummaryViewer from './cpnt/summary/SummaryViewer.vue'
 import {
@@ -40,8 +41,12 @@ const selectTab = (tab: TabType) => {
 }
 
 // 打开设置页面
-const openSettings = () => {
-  chrome.runtime.sendMessage({ action: 'openOptionsPage' })
+const openSettings = async () => {
+  const response = await backgroundClient.openOptionsPage()
+
+  if (!response.success) {
+    console.error('打开设置页面失败:', response.error)
+  }
 }
 
 
