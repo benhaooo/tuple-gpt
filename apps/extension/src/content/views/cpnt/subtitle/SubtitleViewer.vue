@@ -11,8 +11,7 @@ import {
 } from '@heroicons/vue/24/outline'
 import {
   backgroundClient,
-  transcriptionWindowMessageType,
-  type AudioTranscriptionWindowMessage,
+  type BilibiliAudioTranscriptionPayload,
 } from '@/utils/messages'
 
 const props = defineProps<{
@@ -155,6 +154,8 @@ const transcribeAudio = async () => {
     if (!response.success) {
       throw new Error(response.error)
     }
+
+    handleTranscriptionComplete(response.data)
   } catch (error) {
     console.error('转录音频失败:', error)
     transcriptionProgress.value = '转录失败: ' + (error as Error).message
@@ -166,7 +167,7 @@ const transcribeAudio = async () => {
 }
 
 // 处理转录完成消息
-const handleTranscriptionComplete = (data: any) => {
+const handleTranscriptionComplete = (data: BilibiliAudioTranscriptionPayload) => {
   transcriptionProgress.value = '转录完成'
   isTranscribing.value = false
   internalError.value = null // 清除错误状态，确保UI更新
@@ -183,38 +184,10 @@ const handleTranscriptionComplete = (data: any) => {
   }, 2000)
 }
 
-// 处理转录错误消息
-const handleTranscriptionError = (data: any) => {
-  const errorMessage = '转录失败: ' + data.error
-  transcriptionProgress.value = errorMessage
-  isTranscribing.value = false
-  internalError.value = errorMessage // 同时更新错误状态
-  setTimeout(() => {
-    transcriptionProgress.value = ''
-  }, 3000)
-}
-
-
-
 // 监听当前激活的字幕索引变化，自动滚动到对应字幕
 watch(() => props.activeSubtitleIndex, (newIndex) => {
   if (newIndex !== null && autoScrollEnabled.value) {
     nextTick(() => scrollToCurrentSubtitle(newIndex))
-  }
-})
-
-// 注册消息监听器 (监听来自content script的postMessage)
-window.addEventListener('message', (event) => {
-  if (event.source !== window) return
-
-  const message = event.data as AudioTranscriptionWindowMessage
-  switch (message.type) {
-    case transcriptionWindowMessageType.complete:
-      handleTranscriptionComplete(message.data)
-      break
-    case transcriptionWindowMessageType.error:
-      handleTranscriptionError(message.data)
-      break
   }
 })
 </script>

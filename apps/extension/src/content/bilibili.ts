@@ -3,9 +3,6 @@ import { injectCustomElement } from '@/content/TwindShadowWrapper'
 import { onDOMReady } from '@/utils/domUtils'
 import {
   registerRpcHandlers,
-  transcriptionWindowMessageType,
-  type AudioTranscriptionCompleteWindowMessage,
-  type AudioTranscriptionErrorWindowMessage,
   type BilibiliAudioTranscriptionRequest,
 } from '@/utils/messages'
 import { VideoType } from '@/utils/subtitlesApi'
@@ -33,15 +30,7 @@ async function injectComponent() {
   return mountPoint
 }
 
-function postTranscriptionComplete(message: AudioTranscriptionCompleteWindowMessage): void {
-  window.postMessage(message, '*')
-}
-
-function postTranscriptionError(message: AudioTranscriptionErrorWindowMessage): void {
-  window.postMessage(message, '*')
-}
-
-async function handleAudioTranscription(data: BilibiliAudioTranscriptionRequest): Promise<void> {
+async function handleAudioTranscription(data: BilibiliAudioTranscriptionRequest) {
   console.log('[Tuple-GPT] 开始处理音频转录请求:', data)
 
   const transcriptionResult = await transcribeBilibiliAudio({
@@ -51,15 +40,12 @@ async function handleAudioTranscription(data: BilibiliAudioTranscriptionRequest)
 
   const subtitles = transcriptionToSubtitles(transcriptionResult)
 
-  postTranscriptionComplete({
-    type: transcriptionWindowMessageType.complete,
-    data: {
-      transcriptionResult,
-      subtitles,
-    },
-  })
-
   console.log('[Tuple-GPT] 音频转录完成，已发送', subtitles.length, '条字幕')
+
+  return {
+    transcriptionResult,
+    subtitles,
+  }
 }
 
 let componentInstance: Awaited<ReturnType<typeof injectComponent>>
@@ -67,23 +53,17 @@ let componentInstance: Awaited<ReturnType<typeof injectComponent>>
 registerRpcHandlers({
   async transcribeBilibiliAudio(data) {
     try {
-      await handleAudioTranscription(data)
-
-      return { success: true }
-    }
-    catch (error) {
-      const message = error instanceof Error ? error.message : '音频转录失败'
-
-      postTranscriptionError({
-        type: transcriptionWindowMessageType.error,
-        data: {
-          error: message,
-        },
-      })
+      const transcription = await handleAudioTranscription(data)
 
       return {
+        success: true,
+        data: transcription,
+      }
+    }
+    catch (error) {
+      return {
         success: false,
-        error: message,
+        error: error instanceof Error ? error.message : '音频转录失败',
       }
     }
   },

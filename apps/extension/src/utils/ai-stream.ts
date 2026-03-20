@@ -1,6 +1,7 @@
+// ── Schema：新增 Stream 只需在此处添加一条 ──
+
 export interface AiStreamSchema {
   generateAiContent: {
-    portName: 'GENERATE_AI_CONTENT'
     req: {
       prompt: string
     }
@@ -13,13 +14,7 @@ export interface AiStreamSchema {
   }
 }
 
-export const streamProtocol = {
-  generateAiContent: {
-    portName: 'GENERATE_AI_CONTENT',
-  },
-} as const satisfies {
-  [K in keyof AiStreamSchema]: { portName: AiStreamSchema[K]['portName'] }
-}
+// ── 类型工具 ──
 
 export type AiStreamKey = keyof AiStreamSchema
 export type StreamRequestOf<K extends AiStreamKey> = AiStreamSchema[K]['req']
@@ -61,6 +56,8 @@ export interface TypedStream<ServerEvent, ClientEvent> extends AsyncIterable<Ser
   send(event: ClientEvent): void
   close(): void
 }
+
+// ── AsyncQueue ──
 
 function createAsyncQueue<T>() {
   const items: T[] = []
@@ -111,8 +108,10 @@ function createAsyncQueue<T>() {
   }
 }
 
+// ── 内部工具 ──
+
 function buildStartMessage<K extends AiStreamKey>(
-  args: StartArgs<K>
+  args: StartArgs<K>,
 ): StreamStartMessage<K> {
   if (args.length === 0) {
     return { type: 'start' } as StreamStartMessage<K>
@@ -124,13 +123,13 @@ function buildStartMessage<K extends AiStreamKey>(
   } as StreamStartMessage<K>
 }
 
+// ── Client 侧 ──
+
 export function openBackgroundStream<K extends AiStreamKey>(
   key: K,
   ...args: StartArgs<K>
 ): TypedStream<StreamServerEventOf<K>, StreamClientEventOf<K>> {
-  const port = chrome.runtime.connect({
-    name: streamProtocol[key].portName,
-  })
+  const port = chrome.runtime.connect({ name: key })
 
   const queue = createAsyncQueue<StreamServerEventOf<K>>()
   const listeners = new Set<(event: StreamServerEventOf<K>) => void>()
@@ -189,20 +188,26 @@ export function openBackgroundStream<K extends AiStreamKey>(
   }
 }
 
+// ── Handler 注册 ──
+
+const streamKeys = Object.keys({
+  generateAiContent: true,
+} satisfies Record<AiStreamKey, true>) as AiStreamKey[]
+
 export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void {
-  const keyByPortName = Object.fromEntries(
-    Object.entries(streamProtocol).map(([key, value]) => [value.portName, key]),
-  ) as Record<AiStreamSchema[AiStreamKey]['portName'], AiStreamKey>
+  const validKeys = new Set<string>(streamKeys)
 
   chrome.runtime.onConnect.addListener((port) => {
-    const key = keyByPortName[port.name as AiStreamSchema[AiStreamKey]['portName']]
-    const handler = key
-      ? handlers[key] as ((
-        request: unknown,
-        stream: StreamController<unknown, unknown>,
-        context: StreamHandlerContext,
-      ) => void | Promise<void>) | undefined
-      : undefined
+    if (!validKeys.has(port.name)) {
+      return
+    }
+
+    const key = port.name as AiStreamKey
+    const handler = handlers[key] as ((
+      request: unknown,
+      stream: StreamController<unknown, unknown>,
+      context: StreamHandlerContext,
+    ) => void | Promise<void>) | undefined
 
     if (!handler) {
       return
@@ -240,12 +245,6 @@ export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void
         started = true
         const request = 'data' in message ? message.data : undefined
 
-        if (request === undefined) {
-          port.postMessage({ type: 'error', error: 'Missing stream request payload' })
-          port.disconnect()
-          return
-        }
-
         Promise.resolve(
           handler(
             request,
@@ -268,10 +267,22 @@ export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void
   })
 }
 
-export const aiStreamClient = {
-  generateAiContent(request: StreamRequestOf<'generateAiContent'>) {
-    return openBackgroundStream('generateAiContent', request)
+// ── Proxy Client ──
+
+type AiStreamClient = {
+  [K in AiStreamKey]: (...args: StartArgs<K>) =>
+    TypedStream<StreamServerEventOf<K>, StreamClientEventOf<K>>
+}
+
+const baseClient = new Proxy({} as AiStreamClient, {
+  get(_, key: string) {
+    return (...args: unknown[]) =>
+      openBackgroundStream(key as AiStreamKey, ...(args as [never]))
   },
+})
+
+export const aiStreamClient = {
+  ...baseClient,
 
   async *generateAiContentText(request: StreamRequestOf<'generateAiContent'>) {
     const stream = openBackgroundStream('generateAiContent', request)

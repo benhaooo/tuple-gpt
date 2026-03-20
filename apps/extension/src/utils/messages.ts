@@ -30,37 +30,33 @@ export interface UrlChangePayload {
   url: string
 }
 
+export interface BilibiliAudioTranscriptionPayload {
+  transcriptionResult: TranscriptionResult
+  subtitles: SubtitleItem[]
+}
+
+// ── Schema：新增 RPC 只需在此处添加一条 ──
+
 export interface RpcSchema {
   extractPageContent: {
-    type: 'EXTRACT_PAGE_CONTENT'
     req: undefined
     res: RpcResult<PageContentPayload>
   }
   transcribeBilibiliAudio: {
-    type: 'TRANSCRIBE_BILIBILI_AUDIO'
     req: BilibiliAudioTranscriptionRequest
-    res: RpcAck
+    res: RpcResult<BilibiliAudioTranscriptionPayload>
   }
   notifyUrlChanged: {
-    type: 'URL_CHANGE_NOTIFICATION'
     req: UrlChangePayload
     res: RpcAck
   }
   openOptionsPage: {
-    type: 'OPEN_OPTIONS_PAGE'
     req: undefined
     res: RpcAck
   }
 }
 
-export const rpcProtocol = {
-  extractPageContent: { type: 'EXTRACT_PAGE_CONTENT' },
-  transcribeBilibiliAudio: { type: 'TRANSCRIBE_BILIBILI_AUDIO' },
-  notifyUrlChanged: { type: 'URL_CHANGE_NOTIFICATION' },
-  openOptionsPage: { type: 'OPEN_OPTIONS_PAGE' },
-} as const satisfies {
-  [K in keyof RpcSchema]: { type: RpcSchema[K]['type'] }
-}
+// ── 类型工具 ──
 
 export type RpcKey = keyof RpcSchema
 export type RequestOf<K extends RpcKey> = RpcSchema[K]['req']
@@ -68,16 +64,10 @@ export type ResponseOf<K extends RpcKey> = RpcSchema[K]['res']
 export type RequestArgs<K extends RpcKey> =
   [RequestOf<K>] extends [undefined] ? [] : [RequestOf<K>]
 
-export type RpcMessage<K extends RpcKey> =
+type RpcMessage<K extends RpcKey> =
   [RequestOf<K>] extends [undefined]
-    ? { type: RpcSchema[K]['type'] }
-    : { type: RpcSchema[K]['type']; data: RequestOf<K> }
-
-export type AnyRpcMessage = {
-  [K in RpcKey]: RpcMessage<K>
-}[RpcKey]
-
-type RpcType = RpcSchema[RpcKey]['type']
+    ? { method: K }
+    : { method: K; data: RequestOf<K> }
 
 type RpcHandlerContext = {
   sender: chrome.runtime.MessageSender
@@ -95,46 +85,18 @@ type UnknownRpcHandler = (
   context: RpcHandlerContext,
 ) => Promise<unknown> | unknown
 
-export const transcriptionWindowMessageType = {
-  complete: 'AUDIO_TRANSCRIPTION_COMPLETE',
-  error: 'AUDIO_TRANSCRIPTION_ERROR',
-} as const
-
-export interface AudioTranscriptionCompleteWindowMessage {
-  type: typeof transcriptionWindowMessageType.complete
-  data: {
-    transcriptionResult: TranscriptionResult
-    subtitles: SubtitleItem[]
-  }
-}
-
-export interface AudioTranscriptionErrorWindowMessage {
-  type: typeof transcriptionWindowMessageType.error
-  data: {
-    error: string
-  }
-}
-
-export type AudioTranscriptionWindowMessage =
-  | AudioTranscriptionCompleteWindowMessage
-  | AudioTranscriptionErrorWindowMessage
-
-const rpcKeyByType = Object.fromEntries(
-  Object.entries(rpcProtocol).map(([key, value]) => [value.type, key]),
-) as Record<RpcType, RpcKey>
+// ── 内部工具 ──
 
 function buildMessage<K extends RpcKey>(
   key: K,
   ...args: RequestArgs<K>
 ): RpcMessage<K> {
-  const type = rpcProtocol[key].type
-
   if (args.length === 0) {
-    return { type } as RpcMessage<K>
+    return { method: key } as RpcMessage<K>
   }
 
   return {
-    type,
+    method: key,
     data: args[0],
   } as RpcMessage<K>
 }
@@ -149,6 +111,8 @@ function toRpcFailure(error: unknown): RpcFailure {
 function getChromeRuntimeError(): string | undefined {
   return chrome.runtime.lastError?.message
 }
+
+// ── 发送函数 ──
 
 export function sendToBackground<K extends RpcKey>(
   key: K,
@@ -189,23 +153,23 @@ export function sendToTab<K extends RpcKey>(
   })
 }
 
+// ── Handler 注册 ──
+
 export function registerRpcHandlers(handlers: RpcHandlers): void {
   chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
-    if (!message || typeof message !== 'object' || !('type' in message)) {
+    if (!message || typeof message !== 'object' || !('method' in message)) {
       return false
     }
 
-    const messageRecord = message as Record<string, unknown>
-    const type = messageRecord.type as RpcType
-    const key = rpcKeyByType[type]
-    const handler = key ? handlers[key] as UnknownRpcHandler | undefined : undefined
+    const { method } = message as { method: string }
+    const handler = handlers[method as RpcKey] as UnknownRpcHandler | undefined
 
     if (!handler) {
       return false
     }
 
-    const payload = Object.prototype.hasOwnProperty.call(messageRecord, 'data')
-      ? messageRecord.data
+    const payload = 'data' in (message as object)
+      ? (message as Record<string, unknown>).data
       : undefined
 
     Promise.resolve(
@@ -222,26 +186,26 @@ export function registerRpcHandlers(handlers: RpcHandlers): void {
   })
 }
 
-export const backgroundClient = {
-  openOptionsPage() {
-    return sendToBackground('openOptionsPage')
-  },
+// ── Proxy Client ──
 
-  transcribeBilibiliAudio(data: BilibiliAudioTranscriptionRequest) {
-    return sendToBackground('transcribeBilibiliAudio', data)
-  },
+type BackgroundClient = {
+  [K in RpcKey]: (...args: RequestArgs<K>) => Promise<ResponseOf<K>>
 }
 
-export const tabClient = {
-  extractPageContent(tabId: number) {
-    return sendToTab(tabId, 'extractPageContent')
-  },
-
-  transcribeBilibiliAudio(tabId: number, data: BilibiliAudioTranscriptionRequest) {
-    return sendToTab(tabId, 'transcribeBilibiliAudio', data)
-  },
-
-  notifyUrlChanged(tabId: number, data: UrlChangePayload) {
-    return sendToTab(tabId, 'notifyUrlChanged', data)
-  },
+type TabClient = {
+  [K in RpcKey]: (tabId: number, ...args: RequestArgs<K>) => Promise<ResponseOf<K>>
 }
+
+export const backgroundClient = new Proxy({} as BackgroundClient, {
+  get(_, key: string) {
+    return (...args: unknown[]) =>
+      sendToBackground(key as RpcKey, ...(args as [any]))
+  },
+})
+
+export const tabClient = new Proxy({} as TabClient, {
+  get(_, key: string) {
+    return (tabId: number, ...args: unknown[]) =>
+      sendToTab(tabId, key as RpcKey, ...(args as [any]))
+  },
+})
