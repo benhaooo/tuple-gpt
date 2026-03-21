@@ -52,27 +52,12 @@ let componentInstance: Awaited<ReturnType<typeof injectComponent>>
 
 registerRpcHandlers({
   async transcribeBilibiliAudio(data) {
-    try {
-      const transcription = await handleAudioTranscription(data)
-
-      return {
-        success: true,
-        data: transcription,
-      }
-    }
-    catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '音频转录失败',
-      }
-    }
+    return handleAudioTranscription(data)
   },
 
   notifyUrlChanged(data) {
     console.log('[Tuple-GPT] URL 变化:', data.url)
     componentInstance?.refresh()
-
-    return { success: true }
   },
 })
 

@@ -1,19 +1,9 @@
 import type { TranscriptionResult } from './audioUtils'
 import type { SubtitleItem } from './subtitlesApi'
 
-export type RpcFailure = {
-  success: false
-  error: string
-}
-
-export type RpcAck = {
-  success: true
-} | RpcFailure
-
-export type RpcResult<T> = {
-  success: true
-  data: T
-} | RpcFailure
+export type RpcResponse<T = undefined> =
+  | { success: true; data: T }
+  | { success: false; error: string }
 
 export interface PageContentPayload {
   title: string
@@ -40,19 +30,19 @@ export interface BilibiliAudioTranscriptionPayload {
 export interface RpcSchema {
   extractPageContent: {
     req: undefined
-    res: RpcResult<PageContentPayload>
+    res: PageContentPayload
   }
   transcribeBilibiliAudio: {
     req: BilibiliAudioTranscriptionRequest
-    res: RpcResult<BilibiliAudioTranscriptionPayload>
+    res: BilibiliAudioTranscriptionPayload
   }
   notifyUrlChanged: {
     req: UrlChangePayload
-    res: RpcAck
+    res: void
   }
   openOptionsPage: {
     req: undefined
-    res: RpcAck
+    res: void
   }
 }
 
@@ -65,9 +55,7 @@ export type RequestArgs<K extends RpcKey> =
   [RequestOf<K>] extends [undefined] ? [] : [RequestOf<K>]
 
 type RpcMessage<K extends RpcKey> =
-  [RequestOf<K>] extends [undefined]
-    ? { method: K }
-    : { method: K; data: RequestOf<K> }
+  { method: K; data?: RequestOf<K> }
 
 type RpcHandlerContext = {
   sender: chrome.runtime.MessageSender
@@ -80,103 +68,47 @@ export type RpcHandlers = {
   ) => Promise<ResponseOf<K>> | ResponseOf<K>
 }
 
-type UnknownRpcHandler = (
-  payload: unknown,
-  context: RpcHandlerContext,
-) => Promise<unknown> | unknown
-
 // ── 内部工具 ──
 
 function buildMessage<K extends RpcKey>(
   key: K,
   ...args: RequestArgs<K>
-): RpcMessage<K> {
-  if (args.length === 0) {
-    return { method: key } as RpcMessage<K>
-  }
-
+) {
   return {
     method: key,
     data: args[0],
   } as RpcMessage<K>
 }
 
-function toRpcFailure(error: unknown): RpcFailure {
+function toRpcFailure(error: unknown): RpcResponse {
   return {
     success: false,
     error: error instanceof Error ? error.message : String(error),
   }
 }
 
-function getChromeRuntimeError(): string | undefined {
-  return chrome.runtime.lastError?.message
-}
-
-// ── 发送函数 ──
-
-export function sendToBackground<K extends RpcKey>(
-  key: K,
-  ...args: RequestArgs<K>
-): Promise<ResponseOf<K>> {
-  const message = buildMessage(key, ...args)
-
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(message, (response: ResponseOf<K>) => {
-      const runtimeError = getChromeRuntimeError()
-      if (runtimeError) {
-        reject(new Error(runtimeError))
-        return
-      }
-
-      resolve(response)
-    })
-  })
-}
-
-export function sendToTab<K extends RpcKey>(
-  tabId: number,
-  key: K,
-  ...args: RequestArgs<K>
-): Promise<ResponseOf<K>> {
-  const message = buildMessage(key, ...args)
-
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, (response: ResponseOf<K>) => {
-      const runtimeError = getChromeRuntimeError()
-      if (runtimeError) {
-        reject(new Error(runtimeError))
-        return
-      }
-
-      resolve(response)
-    })
-  })
+function toRpcSuccess<T>(result: T): RpcResponse<T> {
+  return {
+    success: true,
+    data: result,
+  }
 }
 
 // ── Handler 注册 ──
 
 export function registerRpcHandlers(handlers: RpcHandlers): void {
-  chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
-    if (!message || typeof message !== 'object' || !('method' in message)) {
-      return false
-    }
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message?.method) return false
 
-    const { method } = message as { method: string }
-    const handler = handlers[method as RpcKey] as UnknownRpcHandler | undefined
+    const { method, data } = message as { method: RpcKey; data?: unknown }
+    const handler = handlers[method] as any
 
-    if (!handler) {
-      return false
-    }
+    if (!handler) return false
 
-    const payload = 'data' in (message as object)
-      ? (message as Record<string, unknown>).data
-      : undefined
-
-    Promise.resolve(
-      handler(payload, { sender }),
-    )
-      .then((response) => {
-        sendResponse(response)
+    Promise.resolve()
+      .then(() => handler(data, { sender }))
+      .then((result) => {
+        sendResponse(toRpcSuccess(result))
       })
       .catch((error) => {
         sendResponse(toRpcFailure(error))
@@ -189,23 +121,28 @@ export function registerRpcHandlers(handlers: RpcHandlers): void {
 // ── Proxy Client ──
 
 type BackgroundClient = {
-  [K in RpcKey]: (...args: RequestArgs<K>) => Promise<ResponseOf<K>>
+  [K in RpcKey]: (...args: RequestArgs<K>) => Promise<RpcResponse<ResponseOf<K>>>
 }
 
 type TabClient = {
-  [K in RpcKey]: (tabId: number, ...args: RequestArgs<K>) => Promise<ResponseOf<K>>
+  [K in RpcKey]: (tabId: number, ...args: RequestArgs<K>) => Promise<RpcResponse<ResponseOf<K>>>
 }
 
 export const backgroundClient = new Proxy({} as BackgroundClient, {
-  get(_, key: string) {
+  get(_, key) {
     return (...args: unknown[]) =>
-      sendToBackground(key as RpcKey, ...(args as [any]))
+      chrome.runtime.sendMessage(
+        buildMessage(key as RpcKey, ...(args as [any])),
+      )
   },
 })
 
 export const tabClient = new Proxy({} as TabClient, {
-  get(_, key: string) {
+  get(_, key) {
     return (tabId: number, ...args: unknown[]) =>
-      sendToTab(tabId, key as RpcKey, ...(args as [any]))
+      chrome.tabs.sendMessage(
+        tabId,
+        buildMessage(key as RpcKey, ...(args as [any])),
+      )
   },
 })

@@ -7,7 +7,6 @@ import {
 import {
   registerRpcHandlers,
   tabClient,
-  type RpcFailure,
 } from '../utils/messages'
 
 console.log('Tuple-GPT background script loaded')
@@ -136,21 +135,22 @@ async function handleAiContentGeneration(
 registerRpcHandlers({
   openOptionsPage() {
     chrome.runtime.openOptionsPage()
-
-    return { success: true }
   },
 
   async transcribeBilibiliAudio(data, { sender }) {
     const tabId = sender.tab?.id
 
     if (!tabId) {
-      return {
-        success: false,
-        error: '无法获取当前标签页',
-      } satisfies RpcFailure
+      throw new Error('无法获取当前标签页')
     }
 
-    return tabClient.transcribeBilibiliAudio(tabId, data)
+    const response = await tabClient.transcribeBilibiliAudio(tabId, data)
+
+    if (!response.success) {
+      throw new Error(response.error)
+    }
+
+    return response.data
   },
 })
 
