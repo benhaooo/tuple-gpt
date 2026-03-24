@@ -21,19 +21,11 @@ export type StreamRequestOf<K extends AiStreamKey> = AiStreamSchema[K]['req']
 export type StreamServerEventOf<K extends AiStreamKey> = AiStreamSchema[K]['serverEvent']
 export type StreamClientEventOf<K extends AiStreamKey> = AiStreamSchema[K]['clientEvent']
 
-type StartArgs<K extends AiStreamKey> =
-  [StreamRequestOf<K>] extends [undefined] ? [] : [StreamRequestOf<K>]
-
-type StreamStartMessage<K extends AiStreamKey> =
-  [StreamRequestOf<K>] extends [undefined]
-    ? { type: 'start' }
-    : { type: 'start'; data: StreamRequestOf<K> }
-
 type StreamClientMessage<K extends AiStreamKey> =
-  | StreamStartMessage<K>
+  | { type: 'start'; data: StreamRequestOf<K> }
   | StreamClientEventOf<K>
 
-type StreamHandlerContext = {
+export type StreamHandlerContext = {
   port: chrome.runtime.Port
 }
 
@@ -52,7 +44,6 @@ type StreamHandlers = {
 }
 
 export interface TypedStream<ServerEvent, ClientEvent> extends AsyncIterable<ServerEvent> {
-  onEvent(listener: (event: ServerEvent) => void): () => void
   send(event: ClientEvent): void
   close(): void
 }
@@ -86,19 +77,19 @@ function createAsyncQueue<T>() {
 
       closed = true
 
-      while (resolvers.length > 0) {
+      while (resolvers.length) {
         const resolve = resolvers.shift()
-        resolve?.({ value: undefined as never, done: true })
+        resolve?.({ value: undefined, done: true })
       }
     },
 
     next(): Promise<IteratorResult<T>> {
-      if (items.length > 0) {
+      if (items.length) {
         return Promise.resolve({ value: items.shift()!, done: false })
       }
 
       if (closed) {
-        return Promise.resolve({ value: undefined as never, done: true })
+        return Promise.resolve({ value: undefined, done: true })
       }
 
       return new Promise((resolve) => {
@@ -108,36 +99,19 @@ function createAsyncQueue<T>() {
   }
 }
 
-// ── 内部工具 ──
-
-function buildStartMessage<K extends AiStreamKey>(
-  args: StartArgs<K>,
-): StreamStartMessage<K> {
-  if (args.length === 0) {
-    return { type: 'start' } as StreamStartMessage<K>
-  }
-
-  return {
-    type: 'start',
-    data: args[0],
-  } as StreamStartMessage<K>
-}
-
 // ── Client 侧 ──
 
 export function openBackgroundStream<K extends AiStreamKey>(
   key: K,
-  ...args: StartArgs<K>
+  request: StreamRequestOf<K>,
 ): TypedStream<StreamServerEventOf<K>, StreamClientEventOf<K>> {
   const port = chrome.runtime.connect({ name: key })
 
   const queue = createAsyncQueue<StreamServerEventOf<K>>()
-  const listeners = new Set<(event: StreamServerEventOf<K>) => void>()
   let closed = false
 
-  port.onMessage.addListener((event: StreamServerEventOf<K>) => {
+  port.onMessage.addListener((event) => {
     queue.push(event)
-    listeners.forEach(listener => listener(event))
   })
 
   port.onDisconnect.addListener(() => {
@@ -145,29 +119,17 @@ export function openBackgroundStream<K extends AiStreamKey>(
     queue.close()
   })
 
-  port.postMessage(buildStartMessage(args))
+  port.postMessage({ type: 'start', data: request })
 
   return {
-    onEvent(listener) {
-      listeners.add(listener)
-
-      return () => {
-        listeners.delete(listener)
-      }
-    },
-
     send(event) {
-      if (closed) {
-        return
-      }
+      if (closed) return
 
       port.postMessage(event)
     },
 
     close() {
-      if (closed) {
-        return
-      }
+      if (closed) return
 
       closed = true
       port.disconnect()
@@ -188,30 +150,11 @@ export function openBackgroundStream<K extends AiStreamKey>(
   }
 }
 
-// ── Handler 注册 ──
-
-const streamKeys = Object.keys({
-  generateAiContent: true,
-} satisfies Record<AiStreamKey, true>) as AiStreamKey[]
-
 export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void {
-  const validKeys = new Set<string>(streamKeys)
-
   chrome.runtime.onConnect.addListener((port) => {
-    if (!validKeys.has(port.name)) {
-      return
-    }
-
     const key = port.name as AiStreamKey
-    const handler = handlers[key] as ((
-      request: unknown,
-      stream: StreamController<unknown, unknown>,
-      context: StreamHandlerContext,
-    ) => void | Promise<void>) | undefined
-
-    if (!handler) {
-      return
-    }
+    const handler = handlers[key] as any
+    if (!handler) return
 
     const clientListeners = new Set<(event: unknown) => void>()
     let started = false
@@ -236,28 +179,28 @@ export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void
 
     port.onMessage.addListener((message: StreamClientMessage<typeof key>) => {
       if (!started) {
-        if (!message || message.type !== 'start') {
+        if (message?.type !== 'start') {
           port.postMessage({ type: 'error', error: 'First stream message must be start' })
           port.disconnect()
           return
         }
 
         started = true
-        const request = 'data' in message ? message.data : undefined
+        const request = message.data
 
-        Promise.resolve(
-          handler(
+        Promise.resolve()
+          .then(() => handler(
             request,
             stream,
             { port },
-          ),
-        ).catch((error) => {
-          port.postMessage({
-            type: 'error',
-            error: error instanceof Error ? error.message : String(error),
+          ))
+          .catch((error) => {
+            port.postMessage({
+              type: 'error',
+              error: error instanceof Error ? error.message : String(error),
+            })
+            port.disconnect()
           })
-          port.disconnect()
-        })
 
         return
       }
@@ -270,41 +213,15 @@ export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void
 // ── Proxy Client ──
 
 type AiStreamClient = {
-  [K in AiStreamKey]: (...args: StartArgs<K>) =>
+  [K in AiStreamKey]: (request: StreamRequestOf<K>) =>
     TypedStream<StreamServerEventOf<K>, StreamClientEventOf<K>>
 }
 
 const baseClient = new Proxy({} as AiStreamClient, {
-  get(_, key: string) {
-    return (...args: unknown[]) =>
-      openBackgroundStream(key as AiStreamKey, ...(args as [never]))
+  get(_, key) {
+    return (request: unknown) =>
+      openBackgroundStream(key as AiStreamKey, request as StreamRequestOf<AiStreamKey>)
   },
 })
 
-export const aiStreamClient = {
-  ...baseClient,
-
-  async *generateAiContentText(request: StreamRequestOf<'generateAiContent'>) {
-    const stream = openBackgroundStream('generateAiContent', request)
-
-    try {
-      for await (const event of stream) {
-        if (event.type === 'chunk') {
-          yield event.chunk
-          continue
-        }
-
-        if (event.type === 'error') {
-          throw new Error(event.error)
-        }
-
-        if (event.type === 'done') {
-          return
-        }
-      }
-    }
-    finally {
-      stream.close()
-    }
-  },
-}
+export const aiStreamClient = baseClient
