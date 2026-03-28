@@ -34,7 +34,7 @@
     </Sheet>
 
     <!-- Main chat area -->
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="flex-1 flex flex-col min-w-0 min-h-0">
       <!-- Header -->
       <header class="grid grid-cols-[1fr_auto_1fr] items-center px-3 py-2">
         <div class="flex min-w-0 items-center gap-2">

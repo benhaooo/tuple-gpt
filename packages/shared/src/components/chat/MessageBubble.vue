@@ -1,9 +1,9 @@
 <template>
-  <div :class="['flex', message.role === 'user' ? 'justify-end' : 'justify-start']">
+  <div :class="['flex min-w-0', message.role === 'user' ? 'justify-end' : 'justify-start']">
     <div :class="[
-      'max-w-[85%] rounded-lg px-3 py-2 text-sm',
+      'rounded-lg px-3 py-2 text-sm min-w-0',
       message.role === 'user'
-        ? 'bg-primary text-primary-foreground'
+        ? 'max-w-[85%] bg-primary text-primary-foreground'
         : 'bg-muted text-foreground',
     ]">
       <!-- User message -->

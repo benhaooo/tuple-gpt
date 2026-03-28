@@ -26,7 +26,7 @@
     </div>
 
     <!-- Conversations List -->
-    <ScrollArea class="flex-1">
+    <ScrollArea class="flex-1 min-h-0">
       <div v-if="conversations.length > 0" class="p-2 space-y-1">
         <div
           v-for="conv in conversations"
