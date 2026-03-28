@@ -20,7 +20,7 @@
 
     <!-- Chat input -->
     <ChatInput
-      @send="(content, tabs) => chat.sendMessage(content, tabs)"
+      @send="(content) => chat.sendMessage(content)"
       @stop="chat.stopStreaming"
       :is-streaming="chat.isStreaming.value"
       :disabled="!providerStore.activeModel"

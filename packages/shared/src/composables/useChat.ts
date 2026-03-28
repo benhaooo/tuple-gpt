@@ -3,12 +3,24 @@ import { marked } from 'marked'
 import { useProviderStore } from '../stores/providerStore'
 import { useConversationStore } from '../stores/conversationStore'
 import { createAdapter } from '../adapters'
-import type { BrowserTab } from './useBrowserTabs'
-import { extractMultipleTabsContent, formatTabContentsAsContext } from './useTabContent'
+import { usePlatform } from './usePlatform'
+import type { MessageAttachment } from '../types/chat'
+
+function formatAttachmentsAsContext(attachments: MessageAttachment[]): string {
+  const valid = attachments.filter(a => a.extractedContent)
+  if (valid.length === 0) return ''
+
+  const pages = valid.map(a =>
+    `<page title="${a.title}" url="${a.url ?? ''}">\n${a.extractedContent}\n</page>`,
+  ).join('\n\n')
+
+  return `\n\n<attached_pages>\n${pages}\n</attached_pages>`
+}
 
 export function useChat() {
   const providerStore = useProviderStore()
   const conversationStore = useConversationStore()
+  const platform = usePlatform()
 
   const isStreaming = ref(false)
   const abortController = ref<AbortController | null>(null)
@@ -21,7 +33,7 @@ export function useChat() {
     return marked.parse(content, { async: false }) as string
   }
 
-  async function sendMessage(content: string, tabs?: BrowserTab[]): Promise<void> {
+  async function sendMessage(content: string): Promise<void> {
     const selection = providerStore.activeModel
     const provider = providerStore.activeProvider
     if (!selection || !provider) {
@@ -37,23 +49,18 @@ export function useChat() {
     // 先快照历史消息，避免后续 addMessage 后再读 computed 的时序问题
     const historySnapshot = [...(conversationStore.getActiveConversation()?.messages ?? [])]
 
-    // 提取选中 tab 的页面内容，content 存入各自的 attachment
-    let attachments: { tabId: number; title: string; url: string; extractedContent?: string }[] | undefined
+    // 通过平台钩子收集附件上下文（如提取 tab 内容）
+    let attachments: MessageAttachment[] | undefined
     let contextStr = ''
-    if (tabs && tabs.length > 0) {
-      const tabContents = await extractMultipleTabsContent(tabs)
-      console.log('[useChat] tabContents:', tabContents)
-      attachments = tabContents.map(c => ({
-        tabId: c.tabId,
-        title: c.title,
-        url: c.url,
-        extractedContent: c.content || undefined,
-      }))
-      contextStr = formatTabContentsAsContext(tabContents.filter(c => !c.error))
-      console.log('[useChat] contextStr length:', contextStr.length)
+    if (platform.prepareContext) {
+      const result = await platform.prepareContext()
+      if (result) {
+        attachments = result.attachments
+        contextStr = result.context
+      }
     }
 
-    // Add user message（content 只存原文，attachments 存元信息+提取内容）
+    // Add user message
     conversationStore.addMessage(convId, {
       role: 'user',
       content,
@@ -69,6 +76,9 @@ export function useChat() {
       providerId: provider.id,
     })
 
+    // 发送成功后清理平台状态
+    platform.clearAfterSend?.()
+
     isStreaming.value = true
     abortController.value = new AbortController()
     let accumulated = ''
@@ -78,11 +88,7 @@ export function useChat() {
       // 用快照拼接历史，再加上当前携带上下文的用户消息
       const apiMessages = [
         ...historySnapshot.map(msg => {
-          const msgContextStr = formatTabContentsAsContext(
-            (msg.attachments ?? [])
-              .filter(a => a.extractedContent)
-              .map(a => ({ tabId: a.tabId, title: a.title, url: a.url, content: a.extractedContent! })),
-          )
+          const msgContextStr = formatAttachmentsAsContext(msg.attachments ?? [])
           return msgContextStr ? { ...msg, content: msg.content + msgContextStr } : msg
         }),
         { role: 'user' as const, content: contextStr ? content + contextStr : content },

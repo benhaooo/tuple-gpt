@@ -133,7 +133,7 @@ export const backgroundClient = new Proxy({} as BackgroundClient, {
     return (...args: unknown[]) =>
       chrome.runtime.sendMessage(
         buildMessage(key as RpcKey, ...(args as [any])),
-      )
+      ).catch(toRpcFailure)
   },
 })
 
@@ -143,6 +143,6 @@ export const tabClient = new Proxy({} as TabClient, {
       chrome.tabs.sendMessage(
         tabId,
         buildMessage(key as RpcKey, ...(args as [any])),
-      )
+      ).catch(toRpcFailure)
   },
 })

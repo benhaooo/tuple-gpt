@@ -3,9 +3,11 @@ export type MessageRole = 'system' | 'user' | 'assistant'
 export type MessageStatus = 'pending' | 'streaming' | 'done' | 'error'
 
 export interface MessageAttachment {
-  tabId: number
+  id: number | string
+  type: string
   title: string
-  url: string
+  url?: string
+  icon?: string
   extractedContent?: string
 }
 

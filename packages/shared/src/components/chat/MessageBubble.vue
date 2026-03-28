@@ -13,7 +13,7 @@
         <div v-if="message.attachments?.length" class="mt-1.5 flex flex-wrap gap-1">
           <span
             v-for="att in message.attachments"
-            :key="att.tabId"
+            :key="att.id"
             class="inline-flex items-center gap-1 rounded-md bg-primary-foreground/15 px-1.5 py-0.5 text-xs"
             :title="att.url"
           >

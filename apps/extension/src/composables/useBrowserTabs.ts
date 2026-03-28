@@ -1,12 +1,6 @@
 import { ref, onMounted } from 'vue'
-
-export interface BrowserTab {
-  id: number
-  title: string
-  url: string
-  favIconUrl?: string
-  windowId: number
-}
+import type { BrowserTab } from './useSelectedTabs'
+import { getErrorMessage } from '@tuple-gpt/shared'
 
 export function useBrowserTabs() {
   const tabs = ref<BrowserTab[]>([])
@@ -19,31 +13,26 @@ export function useBrowserTabs() {
 
     try {
       const allTabs = await chrome.tabs.query({})
-      tabs.value = allTabs.map(tab => ({
-        id: tab.id!,
-        title: tab.title || '无标题',
+      tabs.value = allTabs.flatMap(tab => tab.id && tab.id !== chrome.tabs.TAB_ID_NONE ? [{
+        id: tab.id,
+        title: tab.title || '',
         url: tab.url || '',
         favIconUrl: tab.favIconUrl,
-        windowId: tab.windowId!,
-      }))
+        windowId: tab.windowId,
+      }] : [])
     } catch (err) {
-      error.value = err instanceof Error ? err.message : '获取标签页失败'
+      error.value = getErrorMessage(err, '获取标签页失败')
       console.error('Failed to fetch tabs:', err)
     } finally {
       loading.value = false
     }
   }
 
-  // 监听标签页变化
-  function setupTabListeners() {
+  onMounted(() => {
+    fetchTabs()
     chrome.tabs.onCreated.addListener(() => fetchTabs())
     chrome.tabs.onRemoved.addListener(() => fetchTabs())
     chrome.tabs.onUpdated.addListener(() => fetchTabs())
-  }
-
-  onMounted(() => {
-    fetchTabs()
-    setupTabListeners()
   })
 
   return {

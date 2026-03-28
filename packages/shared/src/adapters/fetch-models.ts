@@ -1,4 +1,5 @@
 import type { ApiFormat } from '../types/provider'
+import { getErrorMessage } from '../utils/error'
 
 export interface FetchModelsOptions {
   baseUrl: string
@@ -73,7 +74,7 @@ export async function fetchModels(options: FetchModelsOptions): Promise<FetchMod
         return { success: false, models: [], error: `Unknown format: ${options.format}` }
     }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
+    const message = getErrorMessage(err)
     return { success: false, models: [], error: message }
   }
 }

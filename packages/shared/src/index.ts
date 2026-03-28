@@ -12,12 +12,16 @@ export { useConversationStore } from './stores/conversationStore'
 // Composables
 export { useTheme, ThemeName } from './composables/useTheme'
 export { useChat } from './composables/useChat'
+export { providePlatform, usePlatform } from './composables/usePlatform'
 
 // Adapters
 export { createAdapter } from './adapters'
 export type { AIAdapter, AdapterSendOptions } from './adapters'
 export { fetchModels, validateApiKey } from './adapters/fetch-models'
 export type { FetchModelsOptions, FetchModelsResult } from './adapters/fetch-models'
+
+// Utils
+export { getErrorMessage } from './utils/error'
 
 // Components
 export { default as ChatLayout } from './components/chat/ChatLayout.vue'

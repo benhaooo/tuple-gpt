@@ -53,7 +53,7 @@ registerBackgroundStreamHandlers({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': 'sk-8d47de117a1a7e9db9827885b52c0cfef43f33f1462c45893b368d16a0a53367',
+          'x-api-key': 'sk-ae9864f2181002d22bf44f755055e0209dd062e8bccff88c028b6a8756d8c723',
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5-20250929',

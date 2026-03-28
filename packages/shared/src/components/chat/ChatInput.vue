@@ -1,11 +1,8 @@
 <template>
   <div class="px-3 py-3">
     <div class="overflow-hidden rounded-3xl border border-input bg-background/80 p-2 shadow-sm">
-      <!-- 附件预览 -->
-      <AttachmentPreview
-        :tabs="selectedTabs"
-        @remove="handleRemoveTab"
-      />
+      <!-- 平台附件预览（如已选 tab 列表） -->
+      <component :is="platform.InputPreview" v-if="platform.InputPreview" />
 
       <Textarea
         v-model="inputText"
@@ -17,7 +14,9 @@
       />
 
       <div class="flex items-center justify-between px-1 py-1">
-        <AttachmentSelector v-model="selectedTabs" :disabled="disabled" />
+        <!-- 平台操作按钮（如 tab 选择器） -->
+        <component :is="platform.InputActions" v-if="platform.InputActions" :disabled="disabled" />
+        <div v-else />
 
         <div class="flex items-center gap-1.5">
           <Button
@@ -51,9 +50,7 @@ import { ref } from 'vue'
 import { PaperAirplaneIcon, StopIcon } from '@heroicons/vue/24/solid'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
-import AttachmentSelector from './AttachmentSelector.vue'
-import AttachmentPreview from './AttachmentPreview.vue'
-import type { BrowserTab } from '../../composables/useBrowserTabs'
+import { usePlatform } from '../../composables/usePlatform'
 
 defineProps<{
   isStreaming: boolean
@@ -61,19 +58,15 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'send', content: string, tabs: BrowserTab[]): void
+  (e: 'send', content: string): void
   (e: 'stop'): void
-  (e: 'tabSelected', tab: BrowserTab): void
 }>()
 
+const platform = usePlatform()
 const inputText = ref('')
-const selectedTabs = ref<BrowserTab[]>([])
 
 function handleEnter(event: KeyboardEvent) {
-  // IME candidate confirm also uses Enter; do not treat it as send.
-  if (event.isComposing || event.key === 'Process' || (event as KeyboardEvent & { keyCode?: number }).keyCode === 229) {
-    return
-  }
+  if (event.isComposing) return
   event.preventDefault()
   handleSend()
 }
@@ -81,13 +74,7 @@ function handleEnter(event: KeyboardEvent) {
 function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
-  emit('send', text, [...selectedTabs.value])
+  emit('send', text)
   inputText.value = ''
-  // 发送后清空附件
-  selectedTabs.value = []
-}
-
-function handleRemoveTab(tabId: number) {
-  selectedTabs.value = selectedTabs.value.filter(tab => tab.id !== tabId)
 }
 </script>

@@ -1,9 +1,9 @@
 <template>
-  <div v-if="tabs.length > 0" class="px-1 py-2 w-full overflow-hidden">
+  <div v-if="selectedTabs.length > 0" class="px-1 py-2 w-full overflow-hidden">
     <ScrollArea class="w-full">
       <div class="flex items-center gap-2 flex-nowrap">
         <div
-          v-for="tab in tabs"
+          v-for="tab in selectedTabs"
           :key="tab.id"
           class="group relative flex items-center gap-2 rounded-md border bg-muted/50 px-2.5 py-1.5 text-sm hover:bg-muted transition-colors flex-shrink-0 max-w-[200px]"
         >
@@ -22,7 +22,7 @@
 
           <!-- 删除按钮 -->
           <button
-            @click="$emit('remove', tab.id)"
+            @click="remove(tab.id)"
             class="flex-shrink-0 rounded-full p-0.5 hover:bg-destructive/10 transition-colors"
             title="移除"
           >
@@ -37,16 +37,10 @@
 
 <script setup lang="ts">
 import { GlobeAltIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import { ScrollArea, ScrollBar } from '../ui/scroll-area'
-import type { BrowserTab } from '../../composables/useBrowserTabs'
+import { ScrollArea, ScrollBar } from '@shared/components/ui/scroll-area'
+import { useSelectedTabs } from '../composables/useSelectedTabs'
 
-defineProps<{
-  tabs: BrowserTab[]
-}>()
-
-defineEmits<{
-  (e: 'remove', tabId: number): void
-}>()
+const { selectedTabs, remove } = useSelectedTabs()
 
 function handleImageError(event: Event) {
   const img = event.target as HTMLImageElement

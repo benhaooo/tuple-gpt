@@ -1,17 +1,15 @@
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <slot name="trigger">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          class="size-8 rounded-full text-muted-foreground"
-          :disabled="disabled"
-          title="添加附件"
-        >
-          <PlusIcon class="h-4 w-4" />
-        </Button>
-      </slot>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        class="size-8 rounded-full text-muted-foreground"
+        :disabled="disabled"
+        title="添加附件"
+      >
+        <PlusIcon class="h-4 w-4" />
+      </Button>
     </DropdownMenuTrigger>
 
     <DropdownMenuContent align="start" class="w-56">
@@ -34,8 +32,8 @@
         <DropdownMenuSubTrigger>
           <GlobeAltIcon class="h-4 w-4" />
           <span>浏览器标签页</span>
-          <span v-if="modelValue.length > 0" class="ml-auto text-xs text-primary">
-            {{ modelValue.length }}
+          <span v-if="selectedTabs.length > 0" class="ml-auto text-xs text-primary">
+            {{ selectedTabs.length }}
           </span>
         </DropdownMenuSubTrigger>
 
@@ -55,11 +53,11 @@
               <!-- 标签页列表 -->
               <div v-else class="flex flex-col gap-1">
                 <button
-                  v-for="tab in tabs"
+                  v-for="tab in allTabs"
                   :key="tab.id"
-                  @click="handleToggleTab(tab)"
+                  @click="toggle(tab)"
                   class="flex w-full items-center gap-2.5 cursor-pointer px-2.5 py-2.5 rounded-md transition-colors"
-                  :class="isTabSelected(tab.id)
+                  :class="isSelected(tab.id)
                     ? 'bg-primary/15'
                     : 'hover:bg-accent'"
                 >
@@ -87,7 +85,7 @@
                 </button>
 
                 <!-- 空状态 -->
-                <div v-if="tabs.length === 0" class="px-3 py-10 text-center">
+                <div v-if="allTabs.length === 0" class="px-3 py-10 text-center">
                   <div class="text-sm text-muted-foreground">没有打开的标签页</div>
                 </div>
               </div>
@@ -101,8 +99,8 @@
 
 <script setup lang="ts">
 import { PlusIcon, DocumentIcon, PhotoIcon, GlobeAltIcon } from '@heroicons/vue/24/outline'
-import { Button } from '../ui/button'
-import { ScrollArea } from '../ui/scroll-area'
+import { Button } from '@shared/components/ui/button'
+import { ScrollArea } from '@shared/components/ui/scroll-area'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -111,35 +109,19 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from '../ui/dropdown-menu'
-import { useBrowserTabs, type BrowserTab } from '../../composables/useBrowserTabs'
+} from '@shared/components/ui/dropdown-menu'
+import { useBrowserTabs } from '../composables/useBrowserTabs'
+import { useSelectedTabs } from '../composables/useSelectedTabs'
 
-const props = defineProps<{
+defineProps<{
   disabled?: boolean
-  modelValue: BrowserTab[]
 }>()
 
-const emit = defineEmits<{
-  (e: 'update:modelValue', tabs: BrowserTab[]): void
-}>()
+const { tabs: allTabs, loading, error } = useBrowserTabs()
+const { selectedTabs, toggle } = useSelectedTabs()
 
-const { tabs, loading, error } = useBrowserTabs()
-
-function isTabSelected(tabId: number): boolean {
-  return (props.modelValue || []).some(tab => tab.id === tabId)
-}
-
-function handleToggleTab(tab: BrowserTab) {
-  const currentTabs = [...props.modelValue]
-  const index = currentTabs.findIndex(t => t.id === tab.id)
-
-  if (index > -1) {
-    currentTabs.splice(index, 1)
-  } else {
-    currentTabs.push(tab)
-  }
-
-  emit('update:modelValue', currentTabs)
+function isSelected(tabId: number): boolean {
+  return selectedTabs.value.some(tab => tab.id === tabId)
 }
 
 function handleImageError(event: Event) {
