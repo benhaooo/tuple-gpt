@@ -8,16 +8,30 @@
     ]">
       <!-- User message -->
       <div v-if="message.role === 'user'">
-        <div class="whitespace-pre-wrap break-words">{{ message.content }}</div>
-        <!-- 附件标签 -->
-        <div v-if="message.attachments?.length" class="mt-1.5 flex flex-wrap gap-1">
+        <!-- Image attachments -->
+        <div v-if="imageAttachments.length" class="mb-1.5 flex flex-wrap gap-1.5">
+          <img
+            v-for="att in imageAttachments"
+            :key="att.id"
+            :src="`data:${att.mimeType};base64,${att.base64Data}`"
+            :alt="att.title"
+            class="max-h-40 max-w-[200px] rounded-md object-cover"
+          />
+        </div>
+
+        <div v-if="message.content" class="whitespace-pre-wrap break-words">{{ message.content }}</div>
+
+        <!-- Non-image attachments -->
+        <div v-if="nonImageAttachments.length" class="mt-1.5 flex flex-wrap gap-1">
           <span
-            v-for="att in message.attachments"
+            v-for="att in nonImageAttachments"
             :key="att.id"
             class="inline-flex items-center gap-1 rounded-md bg-primary-foreground/15 px-1.5 py-0.5 text-xs"
-            :title="att.url"
+            :title="att.url || att.title"
           >
-            <LinkIcon class="h-3 w-3 shrink-0 opacity-70" />
+            <DocumentIcon v-if="att.category === 'pdf'" class="h-3 w-3 shrink-0 opacity-70" />
+            <DocumentTextIcon v-else-if="att.category === 'text'" class="h-3 w-3 shrink-0 opacity-70" />
+            <LinkIcon v-else class="h-3 w-3 shrink-0 opacity-70" />
             <span class="max-w-32 truncate">{{ att.title }}</span>
           </span>
         </div>
@@ -53,11 +67,12 @@
 </template>
 
 <script setup lang="ts">
-import { LinkIcon } from '@heroicons/vue/24/outline'
+import { computed } from 'vue'
+import { LinkIcon, DocumentIcon, DocumentTextIcon } from '@heroicons/vue/24/outline'
 import type { ChatMessage } from '../../types'
 import { Button } from '../ui/button'
 
-defineProps<{
+const props = defineProps<{
   message: ChatMessage
   parseMarkdown: (content: string) => string
 }>()
@@ -65,4 +80,12 @@ defineProps<{
 defineEmits<{
   (e: 'retry'): void
 }>()
+
+const imageAttachments = computed(() =>
+  props.message.attachments?.filter(a => a.category === 'image' && a.base64Data) ?? [],
+)
+
+const nonImageAttachments = computed(() =>
+  props.message.attachments?.filter(a => a.category !== 'image') ?? [],
+)
 </script>

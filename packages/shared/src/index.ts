@@ -13,6 +13,7 @@ export { useConversationStore } from './stores/conversationStore'
 export { useTheme, ThemeName } from './composables/useTheme'
 export { useChat } from './composables/useChat'
 export { providePlatform, usePlatform } from './composables/usePlatform'
+export { useFileAttachments } from './composables/useFileAttachments'
 
 // Adapters
 export { createAdapter } from './adapters'

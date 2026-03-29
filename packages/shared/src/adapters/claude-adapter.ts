@@ -1,4 +1,5 @@
 import type { AIAdapter, AdapterSendOptions } from './types'
+import { getBinaryAttachments } from './multimodal'
 
 export class ClaudeAdapter implements AIAdapter {
   async *sendMessage(options: AdapterSendOptions): AsyncGenerator<string, void, unknown> {
@@ -7,10 +8,30 @@ export class ClaudeAdapter implements AIAdapter {
     // Claude Messages API: system is a top-level field, not in messages array
     const apiMessages = messages
       .filter(msg => msg.role !== 'system')
-      .map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }))
+      .map(msg => {
+        const binaries = getBinaryAttachments(msg.attachments)
+        if (binaries.length === 0) {
+          return { role: msg.role, content: msg.content }
+        }
+        const content: any[] = []
+        if (msg.content) {
+          content.push({ type: 'text', text: msg.content })
+        }
+        for (const att of binaries) {
+          if (att.category === 'image') {
+            content.push({
+              type: 'image',
+              source: { type: 'base64', media_type: att.mimeType, data: att.base64Data },
+            })
+          } else if (att.category === 'pdf') {
+            content.push({
+              type: 'document',
+              source: { type: 'base64', media_type: 'application/pdf', data: att.base64Data },
+            })
+          }
+        }
+        return { role: msg.role, content }
+      })
 
     const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/messages`
 

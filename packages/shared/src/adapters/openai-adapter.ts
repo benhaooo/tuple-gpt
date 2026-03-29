@@ -1,15 +1,34 @@
 import type { AIAdapter, AdapterSendOptions } from './types'
+import { getBinaryAttachments } from './multimodal'
 
 export class OpenAIAdapter implements AIAdapter {
   async *sendMessage(options: AdapterSendOptions): AsyncGenerator<string, void, unknown> {
     const { messages, provider, model, signal, systemPrompt, maxTokens } = options
 
-    const apiMessages: Array<{ role: string; content: string }> = []
+    const apiMessages: Array<{ role: string; content: string | any[] }> = []
     if (systemPrompt) {
       apiMessages.push({ role: 'system', content: systemPrompt })
     }
     for (const msg of messages) {
-      apiMessages.push({ role: msg.role, content: msg.content })
+      const binaries = getBinaryAttachments(msg.attachments)
+      if (binaries.length === 0) {
+        apiMessages.push({ role: msg.role, content: msg.content })
+      } else {
+        const content: any[] = []
+        if (msg.content) {
+          content.push({ type: 'text', text: msg.content })
+        }
+        for (const att of binaries) {
+          if (att.category === 'image') {
+            content.push({
+              type: 'image_url',
+              image_url: { url: `data:${att.mimeType};base64,${att.base64Data}` },
+            })
+          }
+          // OpenAI does not support PDF content parts — skipped
+        }
+        apiMessages.push({ role: msg.role, content })
+      }
     }
 
     const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/chat/completions`

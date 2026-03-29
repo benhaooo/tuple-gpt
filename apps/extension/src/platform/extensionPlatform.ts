@@ -13,12 +13,13 @@ export function createExtensionPlatform(): PlatformConfig {
     InputPreview: TabPreview,
 
     async prepareContext() {
-      if (selectedTabs.value.length) return null
+      if (!selectedTabs.value.length) return null
 
       const tabContents = await extractMultipleTabsContent(selectedTabs.value)
+      console.log("🚀 ~ createExtensionPlatform ~ tabContents:", tabContents)
       const validContents = tabContents.filter(c => !c.error)
 
-      if (validContents.length) return null
+      if (!validContents.length) return null
 
       const pages = validContents.map(c =>
         `<page title="${c.title}" url="${c.url}">\n${c.content}\n</page>`,

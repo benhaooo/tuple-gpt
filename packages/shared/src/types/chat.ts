@@ -2,6 +2,8 @@ export type MessageRole = 'system' | 'user' | 'assistant'
 
 export type MessageStatus = 'pending' | 'streaming' | 'done' | 'error'
 
+export type AttachmentCategory = 'text' | 'image' | 'pdf'
+
 export interface MessageAttachment {
   id: number | string
   type: string
@@ -9,6 +11,10 @@ export interface MessageAttachment {
   url?: string
   icon?: string
   extractedContent?: string
+  category?: AttachmentCategory
+  mimeType?: string
+  base64Data?: string
+  fileSize?: number
 }
 
 export interface ChatMessage {

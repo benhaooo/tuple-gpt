@@ -1,15 +1,26 @@
 import type { AIAdapter, AdapterSendOptions } from './types'
+import { getBinaryAttachments } from './multimodal'
 
 export class GeminiAdapter implements AIAdapter {
   async *sendMessage(options: AdapterSendOptions): AsyncGenerator<string, void, unknown> {
     const { messages, provider, model, signal, systemPrompt, maxTokens } = options
 
-    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = []
+    const contents: Array<{ role: string; parts: any[] }> = []
     for (const msg of messages) {
       if (msg.role === 'system') continue
+      const parts: any[] = []
+      if (msg.content) {
+        parts.push({ text: msg.content })
+      }
+      for (const att of getBinaryAttachments(msg.attachments)) {
+        parts.push({
+          inline_data: { mime_type: att.mimeType, data: att.base64Data },
+        })
+      }
+      if (parts.length === 0) parts.push({ text: '' })
       contents.push({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
+        parts,
       })
     }
 

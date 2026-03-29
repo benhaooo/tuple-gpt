@@ -4,6 +4,7 @@ import { useProviderStore } from '../stores/providerStore'
 import { useConversationStore } from '../stores/conversationStore'
 import { createAdapter } from '../adapters'
 import { usePlatform } from './usePlatform'
+import { useFileAttachments } from './useFileAttachments'
 import type { MessageAttachment } from '../types/chat'
 
 function formatAttachmentsAsContext(attachments: MessageAttachment[]): string {
@@ -21,6 +22,7 @@ export function useChat() {
   const providerStore = useProviderStore()
   const conversationStore = useConversationStore()
   const platform = usePlatform()
+  const { attachments: fileAttachments, clear: clearFiles } = useFileAttachments()
 
   const isStreaming = ref(false)
   const abortController = ref<AbortController | null>(null)
@@ -33,7 +35,7 @@ export function useChat() {
     return marked.parse(content, { async: false }) as string
   }
 
-  async function sendMessage(content: string): Promise<void> {
+  async function sendMessage(content: string, extraAttachments?: MessageAttachment[]): Promise<void> {
     const selection = providerStore.activeModel
     const provider = providerStore.activeProvider
     if (!selection || !provider) {
@@ -49,23 +51,35 @@ export function useChat() {
     // 先快照历史消息，避免后续 addMessage 后再读 computed 的时序问题
     const historySnapshot = [...(conversationStore.getActiveConversation()?.messages ?? [])]
 
+    // 收集文件附件（来自 useFileAttachments 或 retry 传入的 extraAttachments）
+    const currentFileAttachments = extraAttachments ?? [...fileAttachments.value]
+
     // 通过平台钩子收集附件上下文（如提取 tab 内容）
-    let attachments: MessageAttachment[] | undefined
+    let platformAttachments: MessageAttachment[] = []
     let contextStr = ''
     if (platform.prepareContext) {
       const result = await platform.prepareContext()
       if (result) {
-        attachments = result.attachments
+        platformAttachments = result.attachments
         contextStr = result.context
       }
     }
+
+    // 合并所有附件
+    const allAttachments = [...platformAttachments, ...currentFileAttachments]
+
+    // 文本文件的上下文也注入 contextStr
+    const textFileContext = formatAttachmentsAsContext(
+      currentFileAttachments.filter(a => a.category === 'text'),
+    )
+    contextStr += textFileContext
 
     // Add user message
     conversationStore.addMessage(convId, {
       role: 'user',
       content,
       status: 'done',
-      attachments,
+      attachments: allAttachments.length > 0 ? allAttachments : undefined,
     })
 
     // Add placeholder assistant message
@@ -76,8 +90,9 @@ export function useChat() {
       providerId: provider.id,
     })
 
-    // 发送成功后清理平台状态
+    // 发送成功后清理状态
     platform.clearAfterSend?.()
+    if (!extraAttachments) clearFiles()
 
     isStreaming.value = true
     abortController.value = new AbortController()
@@ -91,8 +106,12 @@ export function useChat() {
           const msgContextStr = formatAttachmentsAsContext(msg.attachments ?? [])
           return msgContextStr ? { ...msg, content: msg.content + msgContextStr } : msg
         }),
-        { role: 'user' as const, content: contextStr ? content + contextStr : content },
-      ]
+        {
+          role: 'user' as const,
+          content: contextStr ? content + contextStr : content,
+          attachments: currentFileAttachments.filter(a => a.category !== 'text'),
+        },
+      ] as any[]
       const stream = adapter.sendMessage({
         messages: apiMessages,
         provider,
@@ -143,8 +162,9 @@ export function useChat() {
     const lastUserMsg = conv.messages[conv.messages.length - 1]
     if (lastUserMsg?.role === 'user') {
       const content = lastUserMsg.content
+      const savedAttachments = lastUserMsg.attachments ?? []
       conv.messages.pop()
-      await sendMessage(content)
+      await sendMessage(content, savedAttachments)
     }
   }
 
