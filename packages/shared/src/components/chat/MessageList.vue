@@ -7,6 +7,7 @@
         :message="message"
         :parse-markdown="parseMarkdown"
         @retry="$emit('retry')"
+        @delete="(id) => $emit('delete', id)"
       />
     </div>
   </ScrollArea>
@@ -27,6 +28,7 @@ const props = defineProps<{
 
 defineEmits<{
   (e: 'retry'): void
+  (e: 'delete', messageId: string): void
 }>()
 
 const listRef = ref<ComponentPublicInstance | null>(null)

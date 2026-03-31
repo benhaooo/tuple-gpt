@@ -88,6 +88,16 @@ export const useConversationStore = defineStore('conversations', () => {
     }
   }
 
+  function deleteMessage(conversationId: string, messageId: string) {
+    const conv = conversations.value.find(c => c.id === conversationId)
+    if (!conv) return
+    const index = conv.messages.findIndex(m => m.id === messageId)
+    if (index !== -1) {
+      conv.messages.splice(index, 1)
+      conv.updatedAt = new Date().toISOString()
+    }
+  }
+
   function clearAll() {
     conversations.value.splice(0, conversations.value.length)
     activeConversationId.value = null
@@ -104,6 +114,7 @@ export const useConversationStore = defineStore('conversations', () => {
     addMessage,
     updateMessageContent,
     updateMessageStatus,
+    deleteMessage,
     clearAll,
   }
 }, {
