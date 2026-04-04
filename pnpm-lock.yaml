@@ -116,6 +116,8 @@ importers:
         specifier: ^1.2.4
         version: 1.2.4(vite@6.4.1(@types/node@22.19.7)(jiti@2.6.1)(less@4.5.1))
 
+  packages/ai-core: {}
+
   packages/shared:
     dependencies:
       '@radix-icons/vue':
