@@ -1,4 +1,11 @@
-export type Role = 'system' | 'user' | 'assistant' | 'tool'
+export const Role = {
+  System: 'system',
+  User: 'user',
+  Assistant: 'assistant',
+  Tool: 'tool',
+} as const
+
+export type Role = (typeof Role)[keyof typeof Role]
 
 export interface TextContentPart {
   type: 'text'

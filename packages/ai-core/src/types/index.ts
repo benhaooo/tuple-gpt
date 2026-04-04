@@ -1,5 +1,5 @@
+export { Role } from './message'
 export type {
-  Role,
   ContentPart,
   TextContentPart,
   ImageContentPart,
@@ -14,12 +14,13 @@ export type {
   ToolResult,
 } from './tool'
 
+export { FinishReason, StreamEventType } from './stream'
 export type {
-  FinishReason,
   Usage,
   StreamEvent,
 } from './stream'
 
+export { ProviderType } from './provider'
 export type { ProviderConfig } from './provider'
 
 export type {

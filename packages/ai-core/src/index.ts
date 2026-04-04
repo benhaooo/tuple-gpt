@@ -1,6 +1,6 @@
 // Types
+export { ProviderType, Role, FinishReason, StreamEventType } from './types'
 export type {
-  Role,
   ContentPart,
   TextContentPart,
   ImageContentPart,
@@ -10,7 +10,6 @@ export type {
   ToolDefinition,
   ToolCall,
   ToolResult,
-  FinishReason,
   Usage,
   StreamEvent,
   ProviderConfig,

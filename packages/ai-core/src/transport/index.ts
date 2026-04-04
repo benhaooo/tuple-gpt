@@ -9,13 +9,15 @@ import { createOpenAITransport } from './providers/openai'
 import { createAnthropicTransport } from './providers/anthropic'
 import { createGeminiTransport } from './providers/gemini'
 
-export function createTransport(type: 'openai' | 'anthropic' | 'gemini'): Transport {
+import { ProviderType } from '../types/provider'
+
+export function createTransport(type: ProviderType): Transport {
   switch (type) {
-    case 'openai':
+    case ProviderType.OpenAI:
       return createOpenAITransport()
-    case 'anthropic':
+    case ProviderType.Anthropic:
       return createAnthropicTransport()
-    case 'gemini':
+    case ProviderType.Gemini:
       return createGeminiTransport()
   }
 }

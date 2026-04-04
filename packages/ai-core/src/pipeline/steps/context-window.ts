@@ -1,4 +1,5 @@
 import type { Message } from '../../types'
+import { Role } from '../../types'
 import type { PipelineStep } from '../pipeline'
 
 export interface ContextWindowOptions {
@@ -27,7 +28,7 @@ export function contextWindow(options: ContextWindowOptions): PipelineStep {
     let messages = input.messages
 
     // Separate system message if present
-    const hasSystem = messages.length > 0 && messages[0].role === 'system'
+    const hasSystem = messages.length > 0 && messages[0].role === Role.System
     const systemMsg = hasSystem ? messages[0] : null
     let rest = hasSystem ? messages.slice(1) : messages
 

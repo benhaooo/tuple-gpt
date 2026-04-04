@@ -1,4 +1,5 @@
 import type { PipelineOutput, StreamEvent, Message, ContentPart, ToolDefinition } from '../../types'
+import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 
 function formatMessages(messages: Message[]): {
@@ -11,7 +12,7 @@ function formatMessages(messages: Message[]): {
   const toolCallIdToName = new Map<string, string>()
 
   for (const msg of messages) {
-    if (msg.role === 'system') {
+    if (msg.role === Role.System) {
       const text = typeof msg.content === 'string'
         ? msg.content
         : (msg.content as ContentPart[])
@@ -22,7 +23,7 @@ function formatMessages(messages: Message[]): {
       continue
     }
 
-    const geminiRole = msg.role === 'assistant' ? 'model' : msg.role === 'tool' ? 'function' : 'user'
+    const geminiRole = msg.role === Role.Assistant ? 'model' : msg.role === Role.Tool ? 'function' : 'user'
 
     if (typeof msg.content === 'string') {
       contents.push({
@@ -118,12 +119,12 @@ export function createGeminiTransport(): Transport {
 
       if (!response.ok) {
         const text = await response.text()
-        yield { type: 'error', error: new Error(`Gemini API error ${response.status}: ${text}`) }
+        yield { type: StreamEventType.Error, error: new Error(`Gemini API error ${response.status}: ${text}`) }
         return
       }
 
       if (!response.body) {
-        yield { type: 'error', error: new Error('No response body') }
+        yield { type: StreamEventType.Error, error: new Error('No response body') }
         return
       }
 
@@ -174,22 +175,22 @@ export function createGeminiTransport(): Transport {
               if (cParts) {
                 for (const p of cParts) {
                   if (typeof p.text === 'string') {
-                    yield { type: 'text_delta', text: p.text }
+                    yield { type: StreamEventType.TextDelta, text: p.text }
                   }
                   if (p.functionCall) {
                     hasToolCall = true
                     const fc = p.functionCall as Record<string, unknown>
                     const callId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
                     yield {
-                      type: 'tool_call_start',
+                      type: StreamEventType.ToolCallStart,
                       toolCall: { id: callId, name: fc.name as string },
                     }
                     yield {
-                      type: 'tool_call_delta',
+                      type: StreamEventType.ToolCallDelta,
                       toolCallId: callId,
                       arguments: JSON.stringify(fc.args ?? {}),
                     }
-                    yield { type: 'tool_call_end', toolCallId: callId }
+                    yield { type: StreamEventType.ToolCallEnd, toolCallId: callId }
                   }
                 }
               }
@@ -198,13 +199,13 @@ export function createGeminiTransport(): Transport {
             if (finishReason) {
               const usageMeta = chunk.usageMetadata as Record<string, number> | undefined
               // Gemini uses STOP even for tool calls, so check if we saw any function calls
-              const mappedReason = hasToolCall ? 'tool_calls'
-                : finishReason === 'STOP' ? 'stop'
-                : finishReason === 'MAX_TOKENS' ? 'length'
-                : finishReason === 'SAFETY' ? 'content_filter'
-                : 'stop'
+              const mappedReason = hasToolCall ? FinishReason.ToolCalls
+                : finishReason === 'STOP' ? FinishReason.Stop
+                : finishReason === 'MAX_TOKENS' ? FinishReason.Length
+                : finishReason === 'SAFETY' ? FinishReason.ContentFilter
+                : FinishReason.Stop
               yield {
-                type: 'finish',
+                type: StreamEventType.Finish,
                 finishReason: mappedReason,
                 usage: usageMeta
                   ? {

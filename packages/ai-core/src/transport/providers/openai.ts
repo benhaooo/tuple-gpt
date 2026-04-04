@@ -1,4 +1,5 @@
 import type { PipelineOutput, StreamEvent, Message, ContentPart, ToolDefinition } from '../../types'
+import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 import { parseSSE } from '../sse-parser'
 
@@ -43,7 +44,7 @@ function formatMessages(messages: Message[]): unknown[] {
 
     const result: Record<string, unknown> = { role: msg.role }
 
-    if (msg.role === 'tool') {
+    if (msg.role === Role.Tool) {
       // OpenAI expects tool role messages with tool_call_id
       const toolResult = (msg.content as ContentPart[]).find(
         (p) => p.type === 'tool_result',
@@ -114,12 +115,12 @@ export function createOpenAITransport(): Transport {
 
       if (!response.ok) {
         const text = await response.text()
-        yield { type: 'error', error: new Error(`OpenAI API error ${response.status}: ${text}`) }
+        yield { type: StreamEventType.Error, error: new Error(`OpenAI API error ${response.status}: ${text}`) }
         return
       }
 
       if (!response.body) {
-        yield { type: 'error', error: new Error('No response body') }
+        yield { type: StreamEventType.Error, error: new Error('No response body') }
         return
       }
 
@@ -145,7 +146,7 @@ export function createOpenAITransport(): Transport {
           if (delta) {
             // Text content
             if (typeof delta.content === 'string' && delta.content) {
-              yield { type: 'text_delta', text: delta.content }
+              yield { type: StreamEventType.TextDelta, text: delta.content }
             }
 
             // Tool calls
@@ -159,7 +160,7 @@ export function createOpenAITransport(): Transport {
                   // Track id by index for subsequent delta chunks
                   if (index !== undefined) toolCallIdByIndex.set(index, id)
                   yield {
-                    type: 'tool_call_start',
+                    type: StreamEventType.ToolCallStart,
                     toolCall: { id, name: fn.name as string },
                   }
                 }
@@ -167,7 +168,7 @@ export function createOpenAITransport(): Transport {
                   // Resolve toolCallId: use tc.id if present, otherwise look up by index
                   const toolCallId = (tc.id as string) || (index !== undefined ? toolCallIdByIndex.get(index) ?? '' : '')
                   yield {
-                    type: 'tool_call_delta',
+                    type: StreamEventType.ToolCallDelta,
                     toolCallId,
                     arguments: fn.arguments,
                   }
@@ -180,12 +181,12 @@ export function createOpenAITransport(): Transport {
             // Emit tool_call_end for each pending tool call
             if (finishReason === 'tool_calls') {
               for (const id of toolCallIdByIndex.values()) {
-                yield { type: 'tool_call_end', toolCallId: id }
+                yield { type: StreamEventType.ToolCallEnd, toolCallId: id }
               }
             }
             yield {
-              type: 'finish',
-              finishReason: finishReason === 'tool_calls' ? 'tool_calls' : finishReason as 'stop' | 'length' | 'content_filter',
+              type: StreamEventType.Finish,
+              finishReason: finishReason === 'tool_calls' ? FinishReason.ToolCalls : finishReason as 'stop' | 'length' | 'content_filter',
               usage: usage
                 ? {
                     promptTokens: usage.prompt_tokens,

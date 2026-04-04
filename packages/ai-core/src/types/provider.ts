@@ -1,5 +1,13 @@
+export const ProviderType = {
+  OpenAI: 'openai',
+  Anthropic: 'anthropic',
+  Gemini: 'gemini',
+} as const
+
+export type ProviderType = (typeof ProviderType)[keyof typeof ProviderType]
+
 export interface ProviderConfig {
-  type: 'openai' | 'anthropic' | 'gemini'
+  type: ProviderType
   apiKey: string
   baseUrl?: string
   model: string

@@ -1,4 +1,5 @@
 import type { PipelineOutput, StreamEvent, Message, ContentPart, ToolDefinition } from '../../types'
+import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 import { parseSSE } from '../sse-parser'
 
@@ -7,7 +8,7 @@ function formatMessages(messages: Message[]): { system?: string; messages: unkno
   const formatted: unknown[] = []
 
   for (const msg of messages) {
-    if (msg.role === 'system') {
+    if (msg.role === Role.System) {
       system = typeof msg.content === 'string'
         ? msg.content
         : (msg.content as ContentPart[])
@@ -55,7 +56,7 @@ function formatMessages(messages: Message[]): { system?: string; messages: unkno
       }
     }
 
-    formatted.push({ role: msg.role === 'tool' ? 'user' : msg.role, content })
+    formatted.push({ role: msg.role === Role.Tool ? 'user' : msg.role, content })
   }
 
   return { system, messages: formatted }
@@ -103,12 +104,12 @@ export function createAnthropicTransport(): Transport {
 
       if (!response.ok) {
         const text = await response.text()
-        yield { type: 'error', error: new Error(`Anthropic API error ${response.status}: ${text}`) }
+        yield { type: StreamEventType.Error, error: new Error(`Anthropic API error ${response.status}: ${text}`) }
         return
       }
 
       if (!response.body) {
-        yield { type: 'error', error: new Error('No response body') }
+        yield { type: StreamEventType.Error, error: new Error('No response body') }
         return
       }
 
@@ -130,7 +131,7 @@ export function createAnthropicTransport(): Transport {
             if (block?.type === 'tool_use') {
               currentToolId = block.id as string
               yield {
-                type: 'tool_call_start',
+                type: StreamEventType.ToolCallStart,
                 toolCall: { id: block.id as string, name: block.name as string },
               }
             }
@@ -140,10 +141,10 @@ export function createAnthropicTransport(): Transport {
           case 'content_block_delta': {
             const delta = data.delta as Record<string, unknown>
             if (delta?.type === 'text_delta') {
-              yield { type: 'text_delta', text: delta.text as string }
+              yield { type: StreamEventType.TextDelta, text: delta.text as string }
             } else if (delta?.type === 'input_json_delta') {
               yield {
-                type: 'tool_call_delta',
+                type: StreamEventType.ToolCallDelta,
                 toolCallId: currentToolId,
                 arguments: delta.partial_json as string,
               }
@@ -153,7 +154,7 @@ export function createAnthropicTransport(): Transport {
 
           case 'content_block_stop': {
             if (currentToolId) {
-              yield { type: 'tool_call_end', toolCallId: currentToolId }
+              yield { type: StreamEventType.ToolCallEnd, toolCallId: currentToolId }
               currentToolId = ''
             }
             break
@@ -165,8 +166,8 @@ export function createAnthropicTransport(): Transport {
             const usage = data.usage as Record<string, number> | undefined
             if (stopReason) {
               yield {
-                type: 'finish',
-                finishReason: stopReason === 'tool_use' ? 'tool_calls' : stopReason === 'end_turn' ? 'stop' : stopReason as 'length',
+                type: StreamEventType.Finish,
+                finishReason: stopReason === 'tool_use' ? FinishReason.ToolCalls : stopReason === 'end_turn' ? FinishReason.Stop : stopReason as 'length',
                 usage: usage
                   ? {
                       promptTokens: usage.input_tokens ?? 0,
@@ -181,7 +182,7 @@ export function createAnthropicTransport(): Transport {
 
           case 'error': {
             yield {
-              type: 'error',
+              type: StreamEventType.Error,
               error: new Error(`Anthropic stream error: ${JSON.stringify(data)}`),
             }
             break

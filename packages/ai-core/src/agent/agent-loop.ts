@@ -1,4 +1,5 @@
 import type { Message, StreamEvent, ToolCall, ToolDefinition, ProviderConfig, RequestOptions, PipelineOutput } from '../types'
+import { Role, FinishReason, StreamEventType } from '../types'
 import type { Transport } from '../transport/transport'
 import type { PipelineStep } from '../pipeline/pipeline'
 import { createPipeline } from '../pipeline/pipeline'
@@ -53,10 +54,10 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
       yield event
 
       switch (event.type) {
-        case 'text_delta':
+        case StreamEventType.TextDelta:
           textContent += event.text
           break
-        case 'tool_call_start':
+        case StreamEventType.ToolCallStart:
           pendingToolCalls.push({
             id: event.toolCall.id,
             name: event.toolCall.name,
@@ -64,12 +65,12 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
           })
           toolCallArgs.set(event.toolCall.id, '')
           break
-        case 'tool_call_delta': {
+        case StreamEventType.ToolCallDelta: {
           const existing = toolCallArgs.get(event.toolCallId) ?? ''
           toolCallArgs.set(event.toolCallId, existing + event.arguments)
           break
         }
-        case 'tool_call_end':
+        case StreamEventType.ToolCallEnd:
           // Finalize arguments for this tool call
           for (const tc of pendingToolCalls) {
             if (tc.id === event.toolCallId) {
@@ -77,10 +78,10 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
             }
           }
           break
-        case 'finish':
+        case StreamEventType.Finish:
           finishReason = event.finishReason
           break
-        case 'error':
+        case StreamEventType.Error:
           // Error already yielded, stop the loop
           return
       }
@@ -99,7 +100,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
         })
       }
       messages.push({
-        role: 'assistant',
+        role: Role.Assistant,
         content: assistantContent.length === 1 && assistantContent[0].type === 'text'
           ? textContent
           : assistantContent,
@@ -107,7 +108,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     }
 
     // 4. Check termination
-    if (finishReason !== 'tool_calls' || pendingToolCalls.length === 0 || !toolExecutor) {
+    if (finishReason !== FinishReason.ToolCalls || pendingToolCalls.length === 0 || !toolExecutor) {
       break
     }
 
@@ -122,7 +123,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     // 6. Append tool results to messages
     for (const result of results) {
       messages.push({
-        role: 'tool',
+        role: Role.Tool,
         content: [
           {
             type: 'tool_result',
