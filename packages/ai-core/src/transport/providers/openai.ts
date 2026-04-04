@@ -84,6 +84,7 @@ export function createOpenAITransport(): Transport {
     async *stream(request: PipelineOutput): AsyncIterable<StreamEvent> {
       const { messages, tools, provider, options } = request
       const baseUrl = provider.baseUrl ?? 'https://api.openai.com/v1'
+      const toolCallIdByIndex = new Map<number, string>()
 
       const body: Record<string, unknown> = {
         model: provider.model,
@@ -152,19 +153,22 @@ export function createOpenAITransport(): Transport {
             if (toolCalls) {
               for (const tc of toolCalls) {
                 const fn = tc.function as Record<string, unknown> | undefined
+                const index = tc.index as number | undefined
                 if (fn?.name) {
+                  const id = tc.id as string
+                  // Track id by index for subsequent delta chunks
+                  if (index !== undefined) toolCallIdByIndex.set(index, id)
                   yield {
                     type: 'tool_call_start',
-                    toolCall: {
-                      id: tc.id as string,
-                      name: fn.name as string,
-                    },
+                    toolCall: { id, name: fn.name as string },
                   }
                 }
                 if (fn?.arguments && typeof fn.arguments === 'string') {
+                  // Resolve toolCallId: use tc.id if present, otherwise look up by index
+                  const toolCallId = (tc.id as string) || (index !== undefined ? toolCallIdByIndex.get(index) ?? '' : '')
                   yield {
                     type: 'tool_call_delta',
-                    toolCallId: (tc.id as string) ?? '',
+                    toolCallId,
                     arguments: fn.arguments,
                   }
                 }
@@ -173,9 +177,11 @@ export function createOpenAITransport(): Transport {
           }
 
           if (finishReason) {
-            // Emit tool_call_end for any pending tool calls
+            // Emit tool_call_end for each pending tool call
             if (finishReason === 'tool_calls') {
-              // The finish event will carry the reason
+              for (const id of toolCallIdByIndex.values()) {
+                yield { type: 'tool_call_end', toolCallId: id }
+              }
             }
             yield {
               type: 'finish',
@@ -188,6 +194,7 @@ export function createOpenAITransport(): Transport {
                   }
                 : undefined,
             }
+            toolCallIdByIndex.clear()
           }
         }
 

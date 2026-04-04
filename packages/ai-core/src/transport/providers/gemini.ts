@@ -7,6 +7,8 @@ function formatMessages(messages: Message[]): {
 } {
   let systemInstruction: unknown
   const contents: unknown[] = []
+  // Map toolCallId -> function name for resolving tool results
+  const toolCallIdToName = new Map<string, string>()
 
   for (const msg of messages) {
     if (msg.role === 'system') {
@@ -46,6 +48,7 @@ function formatMessages(messages: Message[]): {
           }
           break
         case 'tool_call':
+          toolCallIdToName.set(part.toolCall.id, part.toolCall.name)
           parts.push({
             functionCall: {
               name: part.toolCall.name,
@@ -56,7 +59,7 @@ function formatMessages(messages: Message[]): {
         case 'tool_result':
           parts.push({
             functionResponse: {
-              name: part.toolCallId,
+              name: toolCallIdToName.get(part.toolCallId) ?? part.toolCallId,
               response: { result: part.result },
             },
           })
@@ -164,6 +167,7 @@ export function createGeminiTransport(): Transport {
             const candidate = candidates[0]
             const content = candidate.content as Record<string, unknown> | undefined
             const finishReason = candidate.finishReason as string | undefined
+            let hasToolCall = false
 
             if (content) {
               const cParts = content.parts as Array<Record<string, unknown>> | undefined
@@ -173,6 +177,7 @@ export function createGeminiTransport(): Transport {
                     yield { type: 'text_delta', text: p.text }
                   }
                   if (p.functionCall) {
+                    hasToolCall = true
                     const fc = p.functionCall as Record<string, unknown>
                     const callId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
                     yield {
@@ -192,12 +197,15 @@ export function createGeminiTransport(): Transport {
 
             if (finishReason) {
               const usageMeta = chunk.usageMetadata as Record<string, number> | undefined
+              // Gemini uses STOP even for tool calls, so check if we saw any function calls
+              const mappedReason = hasToolCall ? 'tool_calls'
+                : finishReason === 'STOP' ? 'stop'
+                : finishReason === 'MAX_TOKENS' ? 'length'
+                : finishReason === 'SAFETY' ? 'content_filter'
+                : 'stop'
               yield {
                 type: 'finish',
-                finishReason: finishReason === 'STOP' ? 'stop'
-                  : finishReason === 'MAX_TOKENS' ? 'length'
-                  : finishReason === 'SAFETY' ? 'content_filter'
-                  : 'stop',
+                finishReason: mappedReason,
                 usage: usageMeta
                   ? {
                       promptTokens: usageMeta.promptTokenCount ?? 0,
