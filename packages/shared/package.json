@@ -18,6 +18,7 @@
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@tuple-gpt/ai-core": "workspace:*",
     "@radix-icons/vue": "^1.0.0",
     "@vueuse/core": "^14.2.1",
     "class-variance-authority": "^0.7.1",

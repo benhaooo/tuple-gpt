@@ -96,6 +96,9 @@ importers:
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
+      '@tuple-gpt/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@tuple-gpt/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -127,6 +130,9 @@ importers:
       '@radix-icons/vue':
         specifier: ^1.0.0
         version: 1.0.0(vue@3.5.27(typescript@5.7.3))
+      '@tuple-gpt/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.27(typescript@5.7.3))

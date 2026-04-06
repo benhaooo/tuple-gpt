@@ -1,8 +1,9 @@
 import { ref, computed } from 'vue'
 import { marked } from 'marked'
+import { ChatClient } from '@tuple-gpt/ai-core'
 import { useProviderStore } from '../stores/providerStore'
 import { useConversationStore } from '../stores/conversationStore'
-import { createAdapter } from '../adapters'
+import { toProviderConfig, toMessages } from '../adapters/ai-core-adapter'
 import { usePlatform } from './usePlatform'
 import { useFileAttachments } from './useFileAttachments'
 import type { MessageAttachment } from '../types/chat'
@@ -99,7 +100,6 @@ export function useChat() {
     let accumulated = ''
 
     try {
-      const adapter = createAdapter(provider.format)
       // 用快照拼接历史，再加上当前携带上下文的用户消息
       const apiMessages = [
         ...historySnapshot.map(msg => {
@@ -111,18 +111,20 @@ export function useChat() {
           content: contextStr ? content + contextStr : content,
           attachments: currentFileAttachments.filter(a => a.category !== 'text'),
         },
-      ] as any[]
-      const stream = adapter.sendMessage({
-        messages: apiMessages,
-        provider,
-        model: selection.model,
-        signal: abortController.value.signal,
-        maxTokens: 4096,
+      ]
+      const aiMessages = toMessages(apiMessages)
+      const events = ChatClient.chat(aiMessages, {
+        provider: toProviderConfig(provider, selection.model),
+        defaults: { maxTokens: 4096, signal: abortController.value.signal },
       })
 
-      for await (const chunk of stream) {
-        accumulated += chunk
-        conversationStore.updateMessageContent(convId!, assistantMsg.id, accumulated)
+      for await (const event of events) {
+        if (event.type === 'text_delta') {
+          accumulated += event.text
+          conversationStore.updateMessageContent(convId!, assistantMsg.id, accumulated)
+        } else if (event.type === 'error') {
+          throw event.error
+        }
       }
 
       conversationStore.updateMessageStatus(convId!, assistantMsg.id, 'done')

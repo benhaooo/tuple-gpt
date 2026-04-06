@@ -5,6 +5,7 @@ import {
   registerRpcHandlers,
   tabClient,
 } from '../utils/messages'
+import { ChatClient } from '@tuple-gpt/ai-core'
 
 console.log('Tuple-GPT background script loaded')
 
@@ -49,70 +50,31 @@ registerBackgroundStreamHandlers({
     })
 
     try {
-      const response = await fetch('https://pikachu.claudecode.love/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': 'sk-ae9864f2181002d22bf44f755055e0209dd062e8bccff88c028b6a8756d8c723',
+      const events = ChatClient.chat(
+        [{ role: 'user', content: request.prompt }],
+        {
+          provider: {
+            type: 'anthropic',
+            apiKey: 'sk-ae9864f2181002d22bf44f755055e0209dd062e8bccff88c028b6a8756d8c723',
+            baseUrl: 'https://pikachu.claudecode.love/v1',
+            model: 'claude-sonnet-4-5-20250929',
+          },
+          defaults: {
+            maxTokens: 4096,
+            signal: abortController.signal,
+          },
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-5-20250929',
-          max_tokens: 4096,
-          messages: [
-            { role: 'user', content: request.prompt },
-          ],
-          stream: true,
-        }),
-        signal: abortController.signal,
-      })
+      )
 
-      if (!response.ok) {
-        stream.send({ type: 'error', error: `API请求失败: ${response.status}` })
-        return
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        stream.send({ type: 'error', error: '无法获取响应流' })
-        return
-      }
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) {
-          break
-        }
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) {
-            continue
-          }
-
-          try {
-            const jsonText = line.slice(6).trim()
-            if (!jsonText) {
-              continue
-            }
-
-            const data = JSON.parse(jsonText)
-
-            if (data.type === 'content_block_delta' && data.delta?.type === 'text_delta' && data.delta?.text) {
-              stream.send({
-                type: 'chunk',
-                chunk: data.delta.text,
-              })
-            }
-          }
-          catch (error) {
-            console.error('解析流数据失败', error, line)
-          }
+      for await (const event of events) {
+        if (event.type === 'text_delta') {
+          stream.send({ type: 'chunk', chunk: event.text })
+        } else if (event.type === 'error') {
+          stream.send({
+            type: 'error',
+            error: event.error.message,
+          })
+          return
         }
       }
 

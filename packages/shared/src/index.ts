@@ -16,8 +16,7 @@ export { providePlatform, usePlatform } from './composables/usePlatform'
 export { useFileAttachments } from './composables/useFileAttachments'
 
 // Adapters
-export { createAdapter } from './adapters'
-export type { AIAdapter, AdapterSendOptions } from './adapters'
+export { toProviderConfig, toMessages } from './adapters'
 export { fetchModels, validateApiKey } from './adapters/fetch-models'
 export type { FetchModelsOptions, FetchModelsResult } from './adapters/fetch-models'
 
