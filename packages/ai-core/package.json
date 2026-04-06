@@ -10,7 +10,8 @@
     "./types": "./src/types/index.ts",
     "./pipeline": "./src/pipeline/index.ts",
     "./transport": "./src/transport/index.ts",
-    "./agent": "./src/agent/index.ts"
+    "./agent": "./src/agent/index.ts",
+    "./client": "./src/client/index.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

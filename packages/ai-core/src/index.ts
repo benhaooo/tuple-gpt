@@ -32,3 +32,7 @@ export { parseSSE, type SSEEvent } from './transport'
 // Agent
 export { runAgentLoop, type AgentLoopOptions } from './agent'
 export { executeToolCall, type ToolExecutor } from './agent'
+
+// Client
+export { ChatClient, createClient, mergeTools } from './client'
+export type { ClientConfig, ChatOptions } from './client'
