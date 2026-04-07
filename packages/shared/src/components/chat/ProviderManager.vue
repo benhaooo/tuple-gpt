@@ -1,22 +1,9 @@
 <template>
-  <div class="space-y-4">
-    <div>
-      <h2 class="text-xl font-semibold text-foreground">AI 服务商配置</h2>
-      <p class="mt-1 text-sm text-muted-foreground">
-        管理你的 AI 服务商和模型。支持 OpenAI / Claude / Gemini 格式。
-      </p>
-    </div>
-
-    <Card class="gap-0 overflow-hidden py-0">
-      <div class="flex min-h-[520px]">
-        <div class="flex w-56 flex-shrink-0 flex-col border-r border-border">
-          <div class="px-3 py-2">
-            <p class="text-xs font-medium text-muted-foreground">服务商</p>
-          </div>
-
-          <Separator />
-
-          <ScrollArea class="flex-1">
+  <div class="flex flex-col gap-4">
+    <Card class="min-h-0 flex-1 gap-0 overflow-hidden py-0">
+      <div class="flex h-full">
+        <div class="flex w-56 flex-shrink-0 flex-col overflow-hidden border-r border-border">
+          <ScrollArea class="min-h-0 flex-1">
             <div class="space-y-3 p-2">
               <div>
                 <p class="px-2 py-1 text-xs font-medium text-muted-foreground">默认服务商</p>

@@ -150,7 +150,6 @@ export const useProviderStore = defineStore('providers', () => {
     const result = await fetchModels({
       baseUrl: provider.baseUrl,
       apiKey: provider.apiKey,
-      format: provider.format,
     })
     if (result.success) {
       updateProvider(providerId, { models: result.models })
@@ -165,7 +164,6 @@ export const useProviderStore = defineStore('providers', () => {
     return validateApiKey({
       baseUrl: provider.baseUrl,
       apiKey: provider.apiKey,
-      format: provider.format,
     })
   }
 

@@ -1,6 +1,7 @@
 <template>
-  <ScrollArea class="h-full">
-    <div class="space-y-5 p-5">
+  <div class="flex h-full flex-col overflow-hidden p-5">
+    <!-- 固定区域：标题 + API 配置 -->
+    <div class="space-y-5">
       <div class="flex items-center gap-2">
         <h3 class="text-lg font-semibold text-foreground">{{ provider.name }}</h3>
         <Badge variant="secondary">
@@ -58,81 +59,83 @@
 
       <Separator />
 
-      <div class="space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <Label>模型列表</Label>
-          <div class="flex items-center gap-1">
-            <Button size="sm" variant="outline" @click="addingModel = true">
-              <PlusIcon2 class="h-3.5 w-3.5" />
-              新增
-            </Button>
-            <Button
-              v-if="provider.presetId"
-              size="sm"
-              variant="outline"
-              @click="handleReset"
-            >
-              重置
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              :disabled="!provider.apiKey || fetching"
-              @click="handleFetch"
-            >
-              {{ fetching ? '获取中...' : '获取' }}
-            </Button>
-          </div>
-        </div>
-
-        <div v-if="addingModel" class="flex gap-2">
-          <Input
-            ref="addModelInput"
-            v-model="newModelId"
-            placeholder="输入模型 ID"
-            class="h-8 flex-1"
-            @keyup.enter="confirmAddModel"
-          />
-          <Button size="sm" :disabled="!newModelId.trim()" @click="confirmAddModel">
-            确定
+      <div class="flex items-center justify-between gap-2">
+        <Label>模型列表</Label>
+        <div class="flex items-center gap-1">
+          <Button size="sm" variant="outline" @click="addingModel = true">
+            <PlusIcon2 class="h-3.5 w-3.5" />
+            新增
+          </Button>
+          <Button
+            v-if="provider.presetId"
+            size="sm"
+            variant="outline"
+            @click="handleReset"
+          >
+            重置
           </Button>
           <Button
             size="sm"
             variant="outline"
-            @click="addingModel = false; newModelId = ''"
+            :disabled="!provider.apiKey"
+            @click="handleFetch"
           >
-            取消
+            获取
           </Button>
         </div>
+      </div>
 
-        <p v-if="fetchError" class="text-xs text-destructive">{{ fetchError }}</p>
-
-        <ScrollArea v-if="provider.models.length > 0" class="max-h-64 rounded-md border">
-          <div class="space-y-1 p-1">
-            <div
-              v-for="model in provider.models"
-              :key="model"
-              class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent"
-            >
-              <span class="truncate text-foreground">{{ model }}</span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                class="size-6 opacity-0 group-hover:opacity-100"
-                @click="removeModel(model)"
-              >
-                <XMarkIcon class="h-3.5 w-3.5 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        </ScrollArea>
-
-        <p v-else class="py-3 text-center text-xs text-muted-foreground">
-          暂无模型，点击"获取"自动拉取或手动"新增"
-        </p>
+      <div v-if="addingModel" class="flex gap-2">
+        <Input
+          ref="addModelInput"
+          v-model="newModelId"
+          placeholder="输入模型 ID"
+          class="h-8 flex-1"
+          @keyup.enter="confirmAddModel"
+        />
+        <Button size="sm" :disabled="!newModelId.trim()" @click="confirmAddModel">
+          确定
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          @click="addingModel = false; newModelId = ''"
+        >
+          取消
+        </Button>
       </div>
     </div>
-  </ScrollArea>
+
+    <!-- 模型列表：占满剩余空间，超出滚动 -->
+    <ScrollArea v-if="provider.models.length > 0" class="mt-2 min-h-0 flex-1 rounded-md border">
+      <div class="space-y-1 p-1">
+        <div
+          v-for="model in provider.models"
+          :key="model"
+          class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent"
+        >
+          <span class="truncate text-foreground">{{ model }}</span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="size-6 opacity-0 group-hover:opacity-100"
+            @click="removeModel(model)"
+          >
+            <XMarkIcon class="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        </div>
+      </div>
+    </ScrollArea>
+
+    <p v-else class="py-3 text-center text-xs text-muted-foreground">
+      暂无模型，点击"获取"自动拉取或手动"新增"
+    </p>
+  </div>
+  <FetchModelsDialog
+    v-model:open="showFetchDialog"
+    :provider="provider"
+    @confirm="onFetchConfirm"
+  />
 </template>
 
 <script setup lang="ts">
@@ -146,12 +149,13 @@ import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { ScrollArea } from '../ui/scroll-area'
 import { Separator } from '../ui/separator'
+import FetchModelsDialog from './FetchModelsDialog.vue'
 
 const props = defineProps<{ provider: Provider }>()
 const providerStore = useProviderStore()
 
 const formatLabels: Record<ApiFormat, string> = {
-  openai: 'OpenAI 兼容',
+  openai: 'OpenAI',
   claude: 'Claude',
   gemini: 'Gemini',
 }
@@ -162,8 +166,7 @@ const localBaseUrl = ref(props.provider.baseUrl)
 const showKey = ref(false)
 const verifying = ref(false)
 const verifyResult = ref<{ valid: boolean; error?: string } | null>(null)
-const fetching = ref(false)
-const fetchError = ref('')
+const showFetchDialog = ref(false)
 const addingModel = ref(false)
 const newModelId = ref('')
 const addModelInput = ref<{ focus: () => void } | null>(null)
@@ -174,7 +177,6 @@ watch(() => props.provider.id, () => {
   localBaseUrl.value = props.provider.baseUrl
   showKey.value = false
   verifyResult.value = null
-  fetchError.value = ''
   addingModel.value = false
   newModelId.value = ''
 })
@@ -210,17 +212,12 @@ async function handleVerify() {
   }
 }
 
-async function handleFetch() {
-  fetching.value = true
-  fetchError.value = ''
-  try {
-    const result = await providerStore.fetchModelsForProvider(props.provider.id)
-    if (!result.success) {
-      fetchError.value = result.error || '获取失败'
-    }
-  } finally {
-    fetching.value = false
-  }
+function handleFetch() {
+  showFetchDialog.value = true
+}
+
+function onFetchConfirm(models: string[]) {
+  providerStore.updateProvider(props.provider.id, { models })
 }
 
 function handleReset() {
