@@ -7,7 +7,7 @@
         'rounded-lg px-3 py-2 text-sm min-w-0',
         isUser
           ? 'bg-primary text-primary-foreground'
-          : 'bg-muted text-foreground',
+          : 'text-foreground',
       ]">
         <!-- User message -->
         <div v-if="isUser">
@@ -41,11 +41,10 @@
         </div>
 
         <!-- Assistant message: rendered markdown -->
-        <div
+        <MarkdownRenderer
           v-else-if="message.content"
-          class="prose prose-sm max-w-none break-words [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-background/50 [&_pre]:p-2 [&_pre]:text-xs [&_code]:text-xs [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1"
-          v-html="parseMarkdown(message.content)"
-        ></div>
+          :content="message.content"
+        />
 
         <!-- Streaming placeholder -->
         <div v-else-if="message.status === 'streaming'" class="flex gap-1 items-center py-1">
@@ -115,13 +114,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { LinkIcon, DocumentIcon, DocumentTextIcon, TrashIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/vue/24/outline'
+import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import type { ChatMessage } from '../../types'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
 
 const props = defineProps<{
   message: ChatMessage
-  parseMarkdown: (content: string) => string
 }>()
 
 defineEmits<{

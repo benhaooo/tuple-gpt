@@ -5,7 +5,6 @@
         v-for="message in messages"
         :key="message.id"
         :message="message"
-        :parse-markdown="parseMarkdown"
         @retry="$emit('retry')"
         @delete="(id) => $emit('delete', id)"
       />
@@ -23,7 +22,6 @@ import { ScrollArea } from '../ui/scroll-area'
 const props = defineProps<{
   messages: ChatMessage[]
   isStreaming: boolean
-  parseMarkdown: (content: string) => string
 }>()
 
 defineEmits<{

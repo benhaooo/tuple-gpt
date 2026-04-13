@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue'
-import { marked } from 'marked'
 import { ChatClient } from '@tuple-gpt/ai-core'
 import { useProviderStore } from '../stores/providerStore'
 import { useConversationStore } from '../stores/conversationStore'
@@ -30,11 +29,6 @@ export function useChat() {
 
   const activeConversation = computed(() => conversationStore.getActiveConversation())
   const messages = computed(() => activeConversation.value?.messages ?? [])
-
-  function parseMarkdown(content: string): string {
-    if (!content) return ''
-    return marked.parse(content, { async: false }) as string
-  }
 
   async function sendMessage(content: string, extraAttachments?: MessageAttachment[]): Promise<void> {
     const selection = providerStore.activeModel
@@ -178,6 +172,5 @@ export function useChat() {
     stopStreaming,
     newConversation,
     retryLastMessage,
-    parseMarkdown,
   }
 }

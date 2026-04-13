@@ -13,7 +13,6 @@
       v-else
       :messages="chat.messages.value"
       :is-streaming="chat.isStreaming.value"
-      :parse-markdown="chat.parseMarkdown"
       @retry="chat.retryLastMessage"
       @delete="handleDeleteMessage"
       class="flex-1 min-h-0"
