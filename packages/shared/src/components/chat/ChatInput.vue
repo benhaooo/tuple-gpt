@@ -25,7 +25,7 @@
         :disabled="disabled"
         :placeholder="disabled ? '请先配置AI服务商' : '输入消息... (Shift+Enter 换行)'"
         rows="1"
-        class="min-h-24 max-h-56 w-full resize-none overflow-y-auto rounded-2xl border-0 bg-transparent px-3 pt-3 pb-2 text-base shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm"
+        class="min-h-24 max-h-56 w-full resize-none overflow-y-auto rounded-2xl border-0 bg-transparent dark:bg-transparent px-3 pt-3 pb-2 text-base shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm"
         @keydown.enter.exact="handleEnter"
         @paste="handlePaste"
       />
