@@ -70,42 +70,24 @@
       <div
         v-if="message.status !== 'streaming'"
         :class="[
-          'mt-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100',
+          'mt-0.5 ml-2 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100',
           isUser ? 'justify-end' : 'justify-start',
         ]"
       >
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <button
-                @click="copyContent"
-                class="inline-flex items-center justify-center rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <CheckIcon v-if="copied" class="h-3.5 w-3.5 text-green-500" />
-                <ClipboardDocumentIcon v-else class="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" :side-offset="4">
-              <p>{{ copied ? '已复制' : '复制' }}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <button
+          @click="copyContent"
+          class="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <CheckIcon v-if="copied" class="h-3.5 w-3.5 text-green-500" />
+          <ClipboardDocumentIcon v-else class="h-3.5 w-3.5" />
+        </button>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <button
-                @click="$emit('delete', message.id)"
-                class="inline-flex items-center justify-center rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              >
-                <TrashIcon class="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" :side-offset="4">
-              <p>删除</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <button
+          @click="$emit('delete', message.id)"
+          class="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        >
+          <TrashIcon class="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   </div>
@@ -117,7 +99,6 @@ import { LinkIcon, DocumentIcon, DocumentTextIcon, TrashIcon, ClipboardDocumentI
 import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import type { ChatMessage } from '../../types'
 import { Button } from '../ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
 
 const props = defineProps<{
   message: ChatMessage
