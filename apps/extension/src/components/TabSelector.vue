@@ -4,8 +4,8 @@
       <button
         type="button"
         :disabled="disabled"
-        class="relative inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
-        :class="isOpen ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'"
+        class="relative inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
+        :class="isOpen ? 'bg-muted text-foreground' : 'hover:bg-muted hover:text-foreground'"
         title="浏览器标签页"
       >
         <GlobeAltIcon class="h-4 w-4" />

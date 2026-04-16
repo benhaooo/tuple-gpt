@@ -3,7 +3,7 @@
     type="button"
     @click="openFilePicker"
     :disabled="disabled"
-    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
+    class="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
     title="添加文件"
   >
     <PaperClipIcon class="h-4 w-4" />
