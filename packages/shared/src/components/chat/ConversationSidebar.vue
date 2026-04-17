@@ -40,7 +40,7 @@
             :class="conv.id === activeId ? 'bg-accent' : ''"
           >
             <div class="w-full min-w-0">
-              <div class="truncate text-sm font-medium">{{ conv.title }}</div>
+              <div class="truncate text-xs font-normal">{{ conv.title }}</div>
               <div class="mt-0.5 truncate text-xs text-muted-foreground">
                 {{ formatTime(conv.updatedAt) }}
               </div>
