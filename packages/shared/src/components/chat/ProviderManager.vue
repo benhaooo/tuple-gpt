@@ -13,7 +13,10 @@
                     :key="p.id"
                     variant="ghost"
                     class="h-9 w-full justify-start gap-2 px-3 text-sm font-normal"
-                    :class="providerStore.selectedProviderId === p.id && 'bg-accent text-accent-foreground hover:bg-accent'"
+                    :class="
+                      providerStore.selectedProviderId === p.id &&
+                      'bg-accent text-accent-foreground hover:bg-accent'
+                    "
                     @click="providerStore.selectProvider(p.id)"
                   >
                     <span
@@ -36,7 +39,10 @@
                     <Button
                       variant="ghost"
                       class="h-9 min-w-0 flex-1 justify-start gap-2 px-3 text-sm font-normal"
-                      :class="providerStore.selectedProviderId === p.id && 'bg-accent text-accent-foreground hover:bg-accent'"
+                      :class="
+                        providerStore.selectedProviderId === p.id &&
+                        'bg-accent text-accent-foreground hover:bg-accent'
+                      "
                       @click="providerStore.selectProvider(p.id)"
                     >
                       <span
@@ -125,7 +131,6 @@ import {
 import { Button } from '../ui/button'
 import { Card } from '../ui/card'
 import { ScrollArea } from '../ui/scroll-area'
-import { Separator } from '../ui/separator'
 
 const providerStore = useProviderStore()
 const showAddDialog = ref(false)
