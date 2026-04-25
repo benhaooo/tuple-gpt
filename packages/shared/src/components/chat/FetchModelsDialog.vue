@@ -1,6 +1,9 @@
 <template>
   <Dialog :open="open" @update:open="$emit('update:open', $event)">
-    <DialogContent class="!grid !grid-rows-[auto_auto_1fr_auto] max-h-[80vh] max-w-lg gap-0 overflow-hidden p-0" :show-close-button="false">
+    <DialogContent
+      class="!grid !grid-rows-[auto_auto_1fr_auto] max-h-[80vh] max-w-lg gap-0 overflow-hidden p-0"
+      :show-close-button="false"
+    >
       <DialogHeader class="px-4 pt-4 pb-3">
         <DialogTitle>选择模型</DialogTitle>
       </DialogHeader>
@@ -12,13 +15,19 @@
 
       <!-- Model list -->
       <ScrollArea class="overflow-hidden">
-        <div v-if="fetching" class="flex items-center justify-center py-12 text-sm text-muted-foreground">
+        <div
+          v-if="fetching"
+          class="flex items-center justify-center py-12 text-sm text-muted-foreground"
+        >
           获取中...
         </div>
         <div v-else-if="fetchError" class="px-4 py-12 text-center text-sm text-destructive">
           {{ fetchError }}
         </div>
-        <div v-else-if="filteredModels.length === 0 && search" class="px-4 py-12 text-center text-sm text-muted-foreground">
+        <div
+          v-else-if="filteredModels.length === 0 && search"
+          class="px-4 py-12 text-center text-sm text-muted-foreground"
+        >
           无匹配结果
         </div>
         <div v-else class="p-1">
@@ -27,7 +36,10 @@
             :key="model"
             class="flex items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-accent"
           >
-            <span class="truncate text-foreground">{{ model }}</span>
+            <div class="flex min-w-0 items-center gap-2">
+              <ModelAvatar :model-id="model" :size="16" />
+              <span class="truncate text-foreground">{{ model }}</span>
+            </div>
             <Button
               v-if="selectedModels.has(model)"
               variant="ghost"
@@ -69,6 +81,7 @@ import { ref, computed, watch } from 'vue'
 import { PlusIcon, MinusIcon } from '@heroicons/vue/24/outline'
 import { fetchModels } from '../../adapters/fetch-models'
 import type { Provider } from '../../types'
+import ModelAvatar from './ModelAvatar.vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -81,7 +94,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  'confirm': [models: string[]]
+  confirm: [models: string[]]
 }>()
 
 const search = ref('')
@@ -111,25 +124,28 @@ function handleConfirm() {
   emit('update:open', false)
 }
 
-watch(() => props.open, async (open) => {
-  if (!open) return
-  search.value = ''
-  fetchError.value = ''
-  remoteModels.value = []
-  selectedModels.value = new Set(props.provider.models)
-  fetching.value = true
-  try {
-    const result = await fetchModels({
-      baseUrl: props.provider.baseUrl,
-      apiKey: props.provider.apiKey,
-    })
-    if (result.success) {
-      remoteModels.value = result.models
-    } else {
-      fetchError.value = result.error || '获取失败'
+watch(
+  () => props.open,
+  async open => {
+    if (!open) return
+    search.value = ''
+    fetchError.value = ''
+    remoteModels.value = []
+    selectedModels.value = new Set(props.provider.models)
+    fetching.value = true
+    try {
+      const result = await fetchModels({
+        baseUrl: props.provider.baseUrl,
+        apiKey: props.provider.apiKey,
+      })
+      if (result.success) {
+        remoteModels.value = result.models
+      } else {
+        fetchError.value = result.error || '获取失败'
+      }
+    } finally {
+      fetching.value = false
     }
-  } finally {
-    fetching.value = false
-  }
-})
+  },
+)
 </script>

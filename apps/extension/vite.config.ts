@@ -10,12 +10,12 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import UnoCSS from 'unocss/vite'
 
-
 export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
       '@shared': path.resolve(__dirname, '../../packages/shared/src'),
+      '#': path.resolve(__dirname, '../../packages/shared/src'),
     },
   },
   plugins: [
@@ -26,9 +26,9 @@ export default defineConfig({
           // 扫描所有 Vue 和 TS/JS 文件
           include: [/\.vue$/, /\.vue\?vue/, /\.ts$/, /\.html$/],
           // 【核心】排除掉所有的 Web Component 组件文件
-          exclude: [/\.ce\.vue($|\?)/, /src\/content.*\.vue$/]
-        }
-      }
+          exclude: [/\.ce\.vue($|\?)/, /src\/content.*\.vue$/],
+        },
+      },
     }),
 
     // 实例 2：Shadow DOM 模式（专门用于 Content Script 的 Web Component）
@@ -37,9 +37,9 @@ export default defineConfig({
       content: {
         pipeline: {
           // 【核心】只包含 Web Component 文件
-          include: [/\.ce\.vue($|\?)/, /src\/content.*\.vue$/]
-        }
-      }
+          include: [/\.ce\.vue($|\?)/, /src\/content.*\.vue$/],
+        },
+      },
     }),
     vue({
       customElement: true,
@@ -54,9 +54,7 @@ export default defineConfig({
   ],
   server: {
     cors: {
-      origin: [
-        /chrome-extension:\/\//,
-      ],
+      origin: [/chrome-extension:\/\//],
     },
   },
 })

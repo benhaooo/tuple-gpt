@@ -19,11 +19,12 @@
                     "
                     @click="providerStore.selectProvider(p.id)"
                   >
+                    <ProviderAvatar :provider="p" :size="18" />
+                    <span class="min-w-0 flex-1 truncate">{{ p.name }}</span>
                     <span
-                      class="h-2 w-2 flex-shrink-0 rounded-full"
+                      class="ml-auto h-2 w-2 flex-shrink-0 rounded-full"
                       :class="p.apiKey ? 'bg-emerald-500' : 'bg-muted-foreground/30'"
                     />
-                    <span class="truncate">{{ p.name }}</span>
                   </Button>
                 </div>
               </div>
@@ -45,11 +46,12 @@
                       "
                       @click="providerStore.selectProvider(p.id)"
                     >
+                      <ProviderAvatar :provider="p" :size="18" />
+                      <span class="min-w-0 flex-1 truncate">{{ p.name }}</span>
                       <span
-                        class="h-2 w-2 flex-shrink-0 rounded-full"
+                        class="ml-auto h-2 w-2 flex-shrink-0 rounded-full"
                         :class="p.apiKey ? 'bg-emerald-500' : 'bg-muted-foreground/30'"
                       />
-                      <span class="truncate">{{ p.name }}</span>
                     </Button>
 
                     <AlertDialog>
@@ -115,6 +117,7 @@
 import { ref, onMounted } from 'vue'
 import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '../../stores/providerStore'
+import ProviderAvatar from './ProviderAvatar.vue'
 import ProviderDetailPanel from './ProviderDetailPanel.vue'
 import AddProviderDialog from './AddProviderDialog.vue'
 import {

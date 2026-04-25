@@ -4,9 +4,12 @@
       <Button
         variant="ghost"
         size="sm"
-        class="h-8 max-w-40 justify-between gap-1 px-2 text-xs font-medium text-muted-foreground"
+        class="h-8 max-w-56 justify-between gap-2 px-2 text-xs font-medium text-muted-foreground"
       >
-        <span class="truncate">{{ displayLabel }}</span>
+        <span class="flex min-w-0 items-center gap-2">
+          <ModelAvatar :model-id="activeModelId" :size="16" />
+          <span class="truncate">{{ displayLabel }}</span>
+        </span>
         <ChevronDownIcon class="h-3.5 w-3.5 shrink-0" />
       </Button>
     </PopoverTrigger>
@@ -32,6 +35,7 @@
                 class="h-3.5 w-3.5"
                 :class="isActive(item.providerId, item.model) ? 'opacity-100' : 'opacity-0'"
               />
+              <ModelAvatar :model-id="item.model" :size="16" />
               <span class="truncate">{{ item.model }}</span>
             </CommandItem>
           </CommandGroup>
@@ -45,6 +49,7 @@
 import { ref, computed } from 'vue'
 import { CheckIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '../../stores/providerStore'
+import ModelAvatar from './ModelAvatar.vue'
 import { Button } from '../ui/button'
 import {
   Command,
@@ -83,6 +88,8 @@ const displayLabel = computed(() => {
   if (!sel) return '选择模型'
   return sel.model
 })
+
+const activeModelId = computed(() => providerStore.activeModel?.model ?? '')
 
 function modelKey(providerId: string, model: string) {
   return `${providerId}-${model}`

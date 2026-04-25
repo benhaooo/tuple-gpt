@@ -2,8 +2,9 @@
   <div class="flex h-full flex-col overflow-hidden p-5">
     <!-- 固定区域：标题 + API 配置 -->
     <div class="space-y-5">
-      <div class="flex items-center gap-2">
-        <h3 class="text-lg font-semibold text-foreground">{{ provider.name }}</h3>
+      <div class="flex items-center gap-3">
+        <ProviderAvatar :provider="provider" :size="28" />
+        <h3 class="min-w-0 truncate text-lg font-semibold text-foreground">{{ provider.name }}</h3>
         <Badge variant="secondary">
           {{ formatLabels[provider.format] }}
         </Badge>
@@ -39,7 +40,9 @@
         <p
           v-if="verifyResult"
           class="text-xs"
-          :class="verifyResult.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'"
+          :class="
+            verifyResult.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'
+          "
         >
           {{ verifyResult.valid ? '✓ 验证通过' : `✗ ${verifyResult.error}` }}
         </p>
@@ -47,11 +50,7 @@
 
       <div class="space-y-2">
         <Label>API Host</Label>
-        <Input
-          v-model="localBaseUrl"
-          placeholder="https://api.openai.com"
-          @change="saveBaseUrl"
-        />
+        <Input v-model="localBaseUrl" placeholder="https://api.openai.com" @change="saveBaseUrl" />
         <p class="text-xs text-muted-foreground">
           预览: <span class="text-foreground/70">{{ previewUrl }}</span>
         </p>
@@ -66,20 +65,10 @@
             <PlusIcon2 class="h-3.5 w-3.5" />
             新增
           </Button>
-          <Button
-            v-if="provider.presetId"
-            size="sm"
-            variant="outline"
-            @click="handleReset"
-          >
+          <Button v-if="provider.presetId" size="sm" variant="outline" @click="handleReset">
             重置
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            :disabled="!provider.apiKey"
-            @click="handleFetch"
-          >
+          <Button size="sm" variant="outline" :disabled="!provider.apiKey" @click="handleFetch">
             获取
           </Button>
         </div>
@@ -93,16 +82,8 @@
           class="h-8 flex-1"
           @keyup.enter="confirmAddModel"
         />
-        <Button size="sm" :disabled="!newModelId.trim()" @click="confirmAddModel">
-          确定
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          @click="addingModel = false; newModelId = ''"
-        >
-          取消
-        </Button>
+        <Button size="sm" :disabled="!newModelId.trim()" @click="confirmAddModel"> 确定 </Button>
+        <Button size="sm" variant="outline" @click="cancelAddModel"> 取消 </Button>
       </div>
     </div>
 
@@ -114,7 +95,10 @@
           :key="model"
           class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent"
         >
-          <span class="truncate text-foreground">{{ model }}</span>
+          <div class="flex min-w-0 items-center gap-2">
+            <ModelAvatar :model-id="model" :size="18" />
+            <span class="truncate text-foreground">{{ model }}</span>
+          </div>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -143,6 +127,8 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { EyeIcon, EyeSlashIcon, XMarkIcon, PlusIcon as PlusIcon2 } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '../../stores/providerStore'
 import type { Provider, ApiFormat } from '../../types'
+import ProviderAvatar from './ProviderAvatar.vue'
+import ModelAvatar from './ModelAvatar.vue'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -172,23 +158,30 @@ const newModelId = ref('')
 const addModelInput = ref<{ focus: () => void } | null>(null)
 
 // Sync local state when provider changes
-watch(() => props.provider.id, () => {
-  localApiKey.value = props.provider.apiKey
-  localBaseUrl.value = props.provider.baseUrl
-  showKey.value = false
-  verifyResult.value = null
-  addingModel.value = false
-  newModelId.value = ''
-})
+watch(
+  () => props.provider.id,
+  () => {
+    localApiKey.value = props.provider.apiKey
+    localBaseUrl.value = props.provider.baseUrl
+    showKey.value = false
+    verifyResult.value = null
+    addingModel.value = false
+    newModelId.value = ''
+  },
+)
 
 // URL preview
 const previewUrl = computed(() => {
   const base = localBaseUrl.value.replace(/\/+$/, '')
   switch (props.provider.format) {
-    case 'openai': return `${base}/v1/chat/completions`
-    case 'claude': return `${base}/v1/messages`
-    case 'gemini': return `${base}/v1beta/models/{model}:generateContent`
-    default: return base
+    case 'openai':
+      return `${base}/v1/chat/completions`
+    case 'claude':
+      return `${base}/v1/messages`
+    case 'gemini':
+      return `${base}/v1beta/models/{model}:generateContent`
+    default:
+      return base
   }
 })
 
@@ -233,13 +226,18 @@ function confirmAddModel() {
   newModelId.value = ''
 }
 
+function cancelAddModel() {
+  addingModel.value = false
+  newModelId.value = ''
+}
+
 function removeModel(model: string) {
   providerStore.updateProvider(props.provider.id, {
     models: props.provider.models.filter(m => m !== model),
   })
 }
 
-watch(addingModel, (v) => {
+watch(addingModel, v => {
   if (v) nextTick(() => addModelInput.value?.focus())
 })
 </script>
