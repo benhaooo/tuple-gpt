@@ -3,9 +3,11 @@
     <!-- Desktop sidebar -->
     <div
       class="hidden overflow-hidden transition-[width,opacity,transform,border-color] duration-250 ease-out md:flex"
-      :class="desktopSidebarOpen
-        ? 'w-56 translate-x-0 opacity-100 border-r border-border'
-        : 'w-0 -translate-x-1 opacity-0 border-r border-transparent pointer-events-none'"
+      :class="
+        desktopSidebarOpen
+          ? 'w-56 translate-x-0 opacity-100 border-r border-border'
+          : 'w-0 -translate-x-1 opacity-0 border-r border-transparent pointer-events-none'
+      "
     >
       <ConversationSidebar
         :conversations="conversationStore.conversations"
@@ -47,9 +49,7 @@
         </div>
 
         <div class="justify-self-center">
-          <div class="rounded-full border border-border/70 bg-background/90 px-1.5 py-0.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/70">
-            <ModelSelector />
-          </div>
+          <ModelSelector />
         </div>
 
         <div class="flex justify-end">

@@ -4,7 +4,7 @@
       <Button
         variant="ghost"
         size="sm"
-        class="h-8 max-w-56 justify-between gap-2 px-2 text-xs font-medium text-muted-foreground"
+        class="h-8 max-w-56 rounded-full border border-border/70 bg-background/90 justify-between gap-2 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur transition-[background-color,color,box-shadow] supports-[backdrop-filter]:bg-background/70 hover:bg-accent/80 hover:text-accent-foreground data-[state=open]:bg-accent/80 data-[state=open]:text-accent-foreground"
       >
         <span class="flex min-w-0 items-center gap-2">
           <ModelAvatar :model-id="activeModelId" :size="16" />
@@ -15,7 +15,7 @@
     </PopoverTrigger>
 
     <PopoverContent align="center" class="w-64 p-0">
-      <Command>
+      <Command :model-value="selectedModelKey">
         <CommandInput placeholder="搜索模型..." />
         <CommandList>
           <CommandEmpty>暂无可用模型，请先配置服务商</CommandEmpty>
@@ -27,14 +27,10 @@
             <CommandItem
               v-for="item in group.models"
               :key="modelKey(item.providerId, item.model)"
-              :value="`${group.providerName} ${item.model} ${item.providerId}`"
+              :value="modelKey(item.providerId, item.model)"
               @select="selectModel(item.providerId, item.model)"
               class="text-xs"
             >
-              <CheckIcon
-                class="h-3.5 w-3.5"
-                :class="isActive(item.providerId, item.model) ? 'opacity-100' : 'opacity-0'"
-              />
               <ModelAvatar :model-id="item.model" :size="16" />
               <span class="truncate">{{ item.model }}</span>
             </CommandItem>
@@ -47,7 +43,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { CheckIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
+import { ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '../../stores/providerStore'
 import ModelAvatar from './ModelAvatar.vue'
 import { Button } from '../ui/button'
@@ -90,14 +86,13 @@ const displayLabel = computed(() => {
 })
 
 const activeModelId = computed(() => providerStore.activeModel?.model ?? '')
+const selectedModelKey = computed(() => {
+  const sel = providerStore.activeModel
+  return sel ? modelKey(sel.providerId, sel.model) : undefined
+})
 
 function modelKey(providerId: string, model: string) {
   return `${providerId}-${model}`
-}
-
-function isActive(providerId: string, model: string): boolean {
-  const sel = providerStore.activeModel
-  return sel?.providerId === providerId && sel?.model === model
 }
 
 function selectModel(providerId: string, model: string) {
