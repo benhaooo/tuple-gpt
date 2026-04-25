@@ -28,11 +28,7 @@
     <!-- Conversations List -->
     <ScrollArea class="flex-1 min-h-0">
       <div v-if="conversations.length > 0" class="p-2 space-y-1">
-        <div
-          v-for="conv in conversations"
-          :key="conv.id"
-          class="group relative"
-        >
+        <div v-for="conv in conversations" :key="conv.id" class="group relative">
           <Button
             variant="ghost"
             @click="$emit('select', conv.id)"
@@ -41,9 +37,6 @@
           >
             <div class="w-full min-w-0">
               <div class="truncate text-xs font-normal">{{ conv.title }}</div>
-              <div class="mt-0.5 truncate text-xs text-muted-foreground">
-                {{ formatTime(conv.updatedAt) }}
-              </div>
             </div>
           </Button>
 
@@ -67,12 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  ChatBubbleLeftRightIcon,
-  XMarkIcon,
-  TrashIcon,
-  PlusIcon
-} from '@heroicons/vue/24/outline'
+import { ChatBubbleLeftRightIcon, XMarkIcon, TrashIcon, PlusIcon } from '@heroicons/vue/24/outline'
 import type { Conversation } from '../../types'
 import { Button } from '../ui/button'
 import { ScrollArea } from '../ui/scroll-area'
@@ -88,14 +76,4 @@ defineEmits<{
   (e: 'new'): void
   (e: 'close'): void
 }>()
-
-function formatTime(iso: string): string {
-  const date = new Date(iso)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  return `${date.getMonth() + 1}/${date.getDate()}`
-}
 </script>
