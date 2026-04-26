@@ -2,21 +2,17 @@
   <div class="h-full flex bg-background text-foreground">
     <!-- Desktop sidebar -->
     <div
-      class="hidden overflow-hidden transition-[width,opacity,transform,border-color] duration-250 ease-out md:flex"
-      :class="
-        desktopSidebarOpen
-          ? 'w-56 translate-x-0 opacity-100 border-r border-border'
-          : 'w-0 -translate-x-1 opacity-0 border-r border-transparent pointer-events-none'
-      "
+      class="hidden w-16 flex-shrink-0 overflow-hidden border-r border-border transition-[width] duration-250 ease-out md:flex"
+      :class="desktopSidebarOpen ? 'w-56' : 'w-16'"
     >
       <ConversationSidebar
         :conversations="conversationStore.conversations"
         :active-id="conversationStore.activeConversationId"
+        :collapsed="!desktopSidebarOpen"
         @select="conversationStore.setActiveConversation"
         @delete="conversationStore.deleteConversation"
         @new="chat.newConversation"
-        @close="closeSidebar"
-        class="w-56 flex-shrink-0 border-r-0"
+        class="w-full flex-shrink-0 border-r-0"
       />
     </div>
 
@@ -29,7 +25,6 @@
           @select="handleMobileSelect"
           @delete="handleMobileDelete"
           @new="handleMobileNew"
-          @close="closeSidebar"
           class="h-full border-r-0"
         />
       </SheetContent>
@@ -41,7 +36,11 @@
       <header class="grid grid-cols-[1fr_auto_1fr] items-center px-3 py-2">
         <div class="flex min-w-0 items-center gap-2">
           <Button variant="ghost" size="icon-sm" class="flex-shrink-0" @click="toggleSidebar">
-            <Bars3Icon class="h-5 w-5 text-muted-foreground" />
+            <template v-if="isDesktop">
+              <PanelLeftClose v-if="desktopSidebarOpen" class="h-5 w-5 text-muted-foreground" />
+              <PanelLeftOpen v-else class="h-5 w-5 text-muted-foreground" />
+            </template>
+            <Bars3Icon v-else class="h-5 w-5 text-muted-foreground" />
           </Button>
           <h2 class="text-sm font-medium truncate">
             {{ chat.activeConversation.value?.title || 'Tuple Chat' }}
@@ -76,6 +75,7 @@
 import { computed, ref } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import { Bars3Icon, PlusIcon } from '@heroicons/vue/24/outline'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import { useConversationStore } from '../../stores/conversationStore'
 import { useChat } from '../../composables/useChat'
 import ConversationSidebar from './ConversationSidebar.vue'
