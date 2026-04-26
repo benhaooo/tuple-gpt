@@ -1,14 +1,12 @@
 <template>
-  <div
-    :class="['group flex min-w-0', isUser ? 'justify-end' : 'justify-start']"
-  >
+  <div :class="['group flex min-w-0', isUser ? 'justify-end' : 'justify-start']">
     <div class="min-w-0" :class="isUser ? 'max-w-[85%]' : ''">
-      <div :class="[
-        'rounded-lg px-3 py-2 text-sm min-w-0',
-        isUser
-          ? 'bg-primary text-primary-foreground'
-          : 'text-foreground',
-      ]">
+      <div
+        :class="[
+          'rounded-lg px-3 py-2 text-sm min-w-0',
+          isUser ? 'bg-muted/80 text-foreground' : 'text-foreground',
+        ]"
+      >
         <!-- User message -->
         <div v-if="isUser">
           <!-- Image attachments -->
@@ -22,18 +20,23 @@
             />
           </div>
 
-          <div v-if="message.content" class="whitespace-pre-wrap break-words">{{ message.content }}</div>
+          <div v-if="message.content" class="whitespace-pre-wrap break-words">
+            {{ message.content }}
+          </div>
 
           <!-- Non-image attachments -->
           <div v-if="nonImageAttachments.length" class="mt-1.5 flex flex-wrap gap-1">
             <span
               v-for="att in nonImageAttachments"
               :key="att.id"
-              class="inline-flex items-center gap-1 rounded-md bg-primary-foreground/15 px-1.5 py-0.5 text-xs"
+              class="inline-flex items-center gap-1 rounded-md bg-background/70 px-1.5 py-0.5 text-xs text-muted-foreground"
               :title="att.url || att.title"
             >
               <DocumentIcon v-if="att.category === 'pdf'" class="h-3 w-3 shrink-0 opacity-70" />
-              <DocumentTextIcon v-else-if="att.category === 'text'" class="h-3 w-3 shrink-0 opacity-70" />
+              <DocumentTextIcon
+                v-else-if="att.category === 'text'"
+                class="h-3 w-3 shrink-0 opacity-70"
+              />
               <LinkIcon v-else class="h-3 w-3 shrink-0 opacity-70" />
               <span class="max-w-32 truncate">{{ att.title }}</span>
             </span>
@@ -41,16 +44,22 @@
         </div>
 
         <!-- Assistant message: rendered markdown -->
-        <MarkdownRenderer
-          v-else-if="message.content"
-          :content="message.content"
-        />
+        <MarkdownRenderer v-else-if="message.content" :content="message.content" />
 
         <!-- Streaming placeholder -->
         <div v-else-if="message.status === 'streaming'" class="flex gap-1 items-center py-1">
-          <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-60" style="animation-delay: 0ms"></span>
-          <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-60" style="animation-delay: 150ms"></span>
-          <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-60" style="animation-delay: 300ms"></span>
+          <span
+            class="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-60"
+            style="animation-delay: 0ms"
+          ></span>
+          <span
+            class="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-60"
+            style="animation-delay: 150ms"
+          ></span>
+          <span
+            class="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-60"
+            style="animation-delay: 300ms"
+          ></span>
         </div>
 
         <!-- Error state -->
@@ -95,7 +104,14 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { LinkIcon, DocumentIcon, DocumentTextIcon, TrashIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/vue/24/outline'
+import {
+  LinkIcon,
+  DocumentIcon,
+  DocumentTextIcon,
+  TrashIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
+} from '@heroicons/vue/24/outline'
 import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import type { ChatMessage } from '../../types'
 import { Button } from '../ui/button'
@@ -112,17 +128,19 @@ defineEmits<{
 const copied = ref(false)
 const isUser = computed(() => props.message.role === 'user')
 
-const imageAttachments = computed(() =>
-  props.message.attachments?.filter(a => a.category === 'image' && a.base64Data) ?? [],
+const imageAttachments = computed(
+  () => props.message.attachments?.filter(a => a.category === 'image' && a.base64Data) ?? [],
 )
 
-const nonImageAttachments = computed(() =>
-  props.message.attachments?.filter(a => a.category !== 'image') ?? [],
+const nonImageAttachments = computed(
+  () => props.message.attachments?.filter(a => a.category !== 'image') ?? [],
 )
 
 function copyContent() {
   navigator.clipboard.writeText(props.message.content)
   copied.value = true
-  setTimeout(() => { copied.value = false }, 2000)
+  setTimeout(() => {
+    copied.value = false
+  }, 2000)
 }
 </script>

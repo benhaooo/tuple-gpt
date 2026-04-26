@@ -56,12 +56,34 @@
         <p class="mt-2 text-sm text-muted-foreground">暂无对话</p>
       </div>
     </ScrollArea>
+
+    <div class="flex items-center justify-between border-t border-border/50 px-3 py-3">
+      <div class="size-8" aria-hidden="true"></div>
+      <Button
+        v-if="platform.openSettings"
+        variant="ghost"
+        size="icon-sm"
+        class="rounded-lg hover:bg-muted/50"
+        title="打开设置"
+        @click="handleOpenSettings"
+      >
+        <Cog6ToothIcon class="h-4 w-4 text-muted-foreground" />
+      </Button>
+      <div v-else class="size-8" aria-hidden="true"></div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ChatBubbleLeftRightIcon, XMarkIcon, TrashIcon, PlusIcon } from '@heroicons/vue/24/outline'
+import {
+  ChatBubbleLeftRightIcon,
+  XMarkIcon,
+  TrashIcon,
+  PlusIcon,
+  Cog6ToothIcon,
+} from '@heroicons/vue/24/outline'
 import type { Conversation } from '../../types'
+import { usePlatform } from '../../composables/usePlatform'
 import { Button } from '../ui/button'
 import { ScrollArea } from '../ui/scroll-area'
 
@@ -76,4 +98,10 @@ defineEmits<{
   (e: 'new'): void
   (e: 'close'): void
 }>()
+
+const platform = usePlatform()
+
+async function handleOpenSettings() {
+  await platform.openSettings?.()
+}
 </script>

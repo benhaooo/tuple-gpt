@@ -4,7 +4,7 @@
       <Button
         variant="ghost"
         size="sm"
-        class="h-8 max-w-56 rounded-full border border-border/70 bg-background/90 justify-between gap-2 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur transition-[background-color,color,box-shadow] supports-[backdrop-filter]:bg-background/70 hover:bg-accent/80 hover:text-accent-foreground data-[state=open]:bg-accent/80 data-[state=open]:text-accent-foreground"
+        class="h-8 max-w-48 md:max-w-72 rounded-full border border-border/70 bg-background/90 justify-between gap-2 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur transition-[background-color,color,box-shadow] supports-[backdrop-filter]:bg-background/70 hover:bg-accent/80 hover:text-accent-foreground data-[state=open]:bg-accent/80 data-[state=open]:text-accent-foreground"
       >
         <span class="flex min-w-0 items-center gap-2">
           <ModelAvatar :model-id="activeModelId" :size="16" />

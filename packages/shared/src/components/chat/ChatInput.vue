@@ -1,8 +1,5 @@
 <template>
-  <div
-    ref="dropZoneRef"
-    class="relative px-3 py-3"
-  >
+  <div ref="dropZoneRef" class="relative px-3 py-3">
     <div
       v-if="isDragOver"
       class="absolute inset-3 z-10 flex items-center justify-center rounded-3xl backdrop-blur-md bg-background/60 border-2 border-dashed border-primary/40"
@@ -25,7 +22,7 @@
         :disabled="disabled"
         :placeholder="disabled ? '请先配置AI服务商' : '输入消息... (Shift+Enter 换行)'"
         rows="1"
-        class="min-h-24 max-h-56 w-full resize-none overflow-y-auto rounded-2xl border-0 bg-transparent dark:bg-transparent px-3 pt-3 pb-2 text-base shadow-none focus-visible:border-0 focus-visible:ring-0 md:text-sm"
+        class="min-h-20 max-h-56 w-full resize-none overflow-y-auto rounded-2xl border-0 bg-transparent dark:bg-transparent px-3 pt-3 pb-2 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0"
         @keydown.enter.exact="handleEnter"
         @paste="handlePaste"
       />
@@ -36,7 +33,11 @@
           <FilePickerButton :disabled="disabled" />
 
           <!-- 平台操作按钮（如 tab 选择器） -->
-          <component :is="platform.InputActions" v-if="platform.InputActions" :disabled="disabled" />
+          <component
+            :is="platform.InputActions"
+            v-if="platform.InputActions"
+            :disabled="disabled"
+          />
         </div>
 
         <div class="flex items-center gap-1.5">

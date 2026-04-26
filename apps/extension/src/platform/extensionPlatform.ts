@@ -4,6 +4,7 @@ import TabSelector from '../components/TabSelector.vue'
 import TabPreview from '../components/TabPreview.vue'
 import { useSelectedTabs } from '../composables/useSelectedTabs'
 import { extractMultipleTabsContent } from '../composables/useTabContent'
+import { backgroundClient } from '../utils/messages'
 
 export function createExtensionPlatform(): PlatformConfig {
   const { selectedTabs, clear } = useSelectedTabs()
@@ -11,19 +12,25 @@ export function createExtensionPlatform(): PlatformConfig {
   return {
     InputActions: TabSelector,
     InputPreview: TabPreview,
+    async openSettings() {
+      const response = await backgroundClient.openOptionsPage()
+      if (!response.success) {
+        throw new Error(response.error)
+      }
+    },
 
     async prepareContext() {
       if (!selectedTabs.value.length) return null
 
       const tabContents = await extractMultipleTabsContent(selectedTabs.value)
-      console.log("🚀 ~ createExtensionPlatform ~ tabContents:", tabContents)
+      console.log('🚀 ~ createExtensionPlatform ~ tabContents:', tabContents)
       const validContents = tabContents.filter(c => !c.error)
 
       if (!validContents.length) return null
 
-      const pages = validContents.map(c =>
-        `<page title="${c.title}" url="${c.url}">\n${c.content}\n</page>`,
-      ).join('\n\n')
+      const pages = validContents
+        .map(c => `<page title="${c.title}" url="${c.url}">\n${c.content}\n</page>`)
+        .join('\n\n')
 
       const context = `\n\n<attached_pages>\n${pages}\n</attached_pages>`
 
