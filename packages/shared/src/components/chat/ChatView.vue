@@ -13,14 +13,16 @@
       v-else
       :messages="chat.messages.value"
       :is-streaming="chat.isStreaming.value"
-      @retry="chat.retryLastMessage"
+      @regenerate="chat.regenerateAssistantMessage"
       @delete="handleDeleteMessage"
+      @edit-save="handleSaveUserMessage"
+      @edit-resend="handleResendUserMessage"
       class="flex-1 min-h-0"
     />
 
     <!-- Chat input -->
     <ChatInput
-      @send="(content) => chat.sendMessage(content)"
+      @send="content => chat.sendMessage(content)"
       @stop="chat.stopStreaming"
       :is-streaming="chat.isStreaming.value"
       :disabled="!providerStore.activeModel"
@@ -46,5 +48,13 @@ function handleDeleteMessage(messageId: string) {
   if (convId) {
     conversationStore.deleteMessage(convId, messageId)
   }
+}
+
+function handleSaveUserMessage(payload: { messageId: string; content: string }) {
+  void chat.saveUserMessage(payload.messageId, payload.content)
+}
+
+function handleResendUserMessage(payload: { messageId: string; content: string }) {
+  void chat.resendFromUserMessage(payload.messageId, payload.content)
 }
 </script>

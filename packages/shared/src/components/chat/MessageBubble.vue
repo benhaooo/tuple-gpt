@@ -1,12 +1,7 @@
 <template>
   <div :class="['group flex min-w-0', isUser ? 'justify-end' : 'justify-start']">
     <div class="min-w-0" :class="isUser ? 'max-w-[85%]' : ''">
-      <div
-        :class="[
-          'rounded-lg px-3 py-2 text-sm min-w-0',
-          isUser ? 'bg-muted/80 text-foreground' : 'text-foreground',
-        ]"
-      >
+      <div :class="bubbleClass">
         <!-- User message -->
         <div v-if="isUser">
           <!-- Image attachments -->
@@ -20,12 +15,54 @@
             />
           </div>
 
-          <div v-if="message.content" class="whitespace-pre-wrap break-words">
+          <div v-if="isEditing" class="space-y-2">
+            <Textarea
+              v-model="draftContent"
+              rows="3"
+              class="min-h-[84px] resize-none border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus-visible:ring-0"
+              :disabled="actionsDisabled"
+              @keydown.esc.stop="cancelEditing"
+            />
+
+            <div class="flex items-center justify-end gap-1.5 border-t border-border/50 pt-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                class="h-7 rounded-md px-2 text-[11px] text-muted-foreground"
+                :disabled="actionsDisabled"
+                @click="cancelEditing"
+              >
+                取消
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                class="h-7 rounded-md border-border/60 px-2.5 text-[11px] shadow-none"
+                :disabled="!canSubmitEdit || actionsDisabled"
+                @click="handleSaveEdit"
+              >
+                保存
+              </Button>
+              <Button
+                size="sm"
+                class="h-7 rounded-md px-2.5 text-[11px] shadow-none"
+                :disabled="!canSubmitEdit || actionsDisabled"
+                @click="handleResendEdit"
+              >
+                重新发送
+              </Button>
+            </div>
+          </div>
+
+          <div v-else-if="message.content" class="whitespace-pre-wrap break-words">
             {{ message.content }}
           </div>
 
           <!-- Non-image attachments -->
-          <div v-if="nonImageAttachments.length" class="mt-1.5 flex flex-wrap gap-1">
+          <div
+            v-if="nonImageAttachments.length"
+            :class="['flex flex-wrap gap-1', isEditing ? 'mt-2' : 'mt-1.5']"
+          >
             <span
               v-for="att in nonImageAttachments"
               :key="att.id"
@@ -66,9 +103,11 @@
         <div v-if="message.status === 'error'" class="mt-2 pt-2 border-t border-destructive/20">
           <p class="text-xs text-destructive">{{ message.error || '请求失败' }}</p>
           <Button
-            @click="$emit('retry')"
+            v-if="canRegenerate"
+            @click="$emit('regenerate', message.id)"
             variant="link"
             class="mt-1 h-auto p-0 text-xs text-destructive hover:text-destructive/80"
+            :disabled="actionsDisabled"
           >
             重试
           </Button>
@@ -77,23 +116,50 @@
 
       <!-- Action buttons -->
       <div
-        v-if="message.status !== 'streaming'"
+        v-if="message.status !== 'streaming' && !isEditing"
         :class="[
-          'mt-0.5 ml-2 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100',
+          'mt-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100',
           isUser ? 'justify-end' : 'justify-start',
         ]"
       >
         <button
           @click="copyContent"
-          class="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          type="button"
+          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground"
+          title="复制消息"
         >
           <CheckIcon v-if="copied" class="h-3.5 w-3.5 text-green-500" />
           <ClipboardDocumentIcon v-else class="h-3.5 w-3.5" />
         </button>
 
         <button
+          v-if="isUser"
+          @click="startEditing"
+          type="button"
+          :disabled="actionsDisabled"
+          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          title="编辑消息"
+        >
+          <PencilSquareIcon class="h-3.5 w-3.5" />
+        </button>
+
+        <button
+          v-else-if="canRegenerate"
+          @click="$emit('regenerate', message.id)"
+          type="button"
+          :disabled="actionsDisabled"
+          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          title="重新生成"
+        >
+          <ArrowPathIcon class="h-3.5 w-3.5" />
+        </button>
+
+        <button
           @click="$emit('delete', message.id)"
-          class="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          type="button"
+          :disabled="actionsDisabled"
+          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+          title="删除消息"
         >
           <TrashIcon class="h-3.5 w-3.5" />
         </button>
@@ -103,7 +169,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   LinkIcon,
   DocumentIcon,
@@ -111,22 +177,47 @@ import {
   TrashIcon,
   ClipboardDocumentIcon,
   CheckIcon,
+  ArrowPathIcon,
+  PencilSquareIcon,
 } from '@heroicons/vue/24/outline'
 import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import type { ChatMessage } from '../../types'
 import { Button } from '../ui/button'
+import { Textarea } from '../ui/textarea'
 
-const props = defineProps<{
-  message: ChatMessage
-}>()
+const props = withDefaults(
+  defineProps<{
+    message: ChatMessage
+    canRegenerate?: boolean
+    actionsDisabled?: boolean
+  }>(),
+  {
+    canRegenerate: false,
+    actionsDisabled: false,
+  },
+)
 
-defineEmits<{
-  (e: 'retry'): void
+const emit = defineEmits<{
+  (e: 'regenerate', messageId: string): void
   (e: 'delete', messageId: string): void
+  (e: 'edit-save', payload: { messageId: string; content: string }): void
+  (e: 'edit-resend', payload: { messageId: string; content: string }): void
 }>()
 
 const copied = ref(false)
+const isEditing = ref(false)
+const draftContent = ref('')
 const isUser = computed(() => props.message.role === 'user')
+const hasAttachments = computed(() => (props.message.attachments?.length ?? 0) > 0)
+const canSubmitEdit = computed(() => draftContent.value.trim().length > 0 || hasAttachments.value)
+const bubbleClass = computed(() => [
+  'min-w-0 text-sm text-foreground transition-[background-color,border-color,box-shadow]',
+  isUser.value
+    ? isEditing.value
+      ? 'rounded-xl border border-border/60 bg-muted/65 px-2.5 py-2.5 shadow-xs'
+      : 'rounded-lg bg-muted/80 px-3 py-2'
+    : 'rounded-lg px-3 py-2',
+])
 
 const imageAttachments = computed(
   () => props.message.attachments?.filter(a => a.category === 'image' && a.base64Data) ?? [],
@@ -136,11 +227,47 @@ const nonImageAttachments = computed(
   () => props.message.attachments?.filter(a => a.category !== 'image') ?? [],
 )
 
+watch(
+  () => [props.message.id, props.message.content] as const,
+  () => {
+    if (!isEditing.value) {
+      draftContent.value = props.message.content
+    }
+  },
+  { immediate: true },
+)
+
 function copyContent() {
   navigator.clipboard.writeText(props.message.content)
   copied.value = true
   setTimeout(() => {
     copied.value = false
   }, 2000)
+}
+
+function startEditing() {
+  draftContent.value = props.message.content
+  isEditing.value = true
+}
+
+function cancelEditing() {
+  draftContent.value = props.message.content
+  isEditing.value = false
+}
+
+function handleSaveEdit() {
+  if (!canSubmitEdit.value || props.actionsDisabled) return
+
+  isEditing.value = false
+  const content = draftContent.value.trim()
+  emit('edit-save', { messageId: props.message.id, content })
+}
+
+function handleResendEdit() {
+  if (!canSubmitEdit.value || props.actionsDisabled) return
+
+  isEditing.value = false
+  const content = draftContent.value.trim()
+  emit('edit-resend', { messageId: props.message.id, content })
 }
 </script>

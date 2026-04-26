@@ -2,11 +2,15 @@
   <ScrollArea ref="listRef" class="h-full">
     <div class="p-3 space-y-4">
       <MessageBubble
-        v-for="message in messages"
+        v-for="(message, index) in messages"
         :key="message.id"
         :message="message"
-        @retry="$emit('retry')"
-        @delete="(id) => $emit('delete', id)"
+        :can-regenerate="message.role === 'assistant' && hasPreviousUser(index)"
+        :actions-disabled="isStreaming"
+        @regenerate="id => $emit('regenerate', id)"
+        @delete="id => $emit('delete', id)"
+        @edit-save="payload => $emit('edit-save', payload)"
+        @edit-resend="payload => $emit('edit-resend', payload)"
       />
     </div>
   </ScrollArea>
@@ -25,8 +29,10 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  (e: 'retry'): void
+  (e: 'regenerate', messageId: string): void
   (e: 'delete', messageId: string): void
+  (e: 'edit-save', payload: { messageId: string; content: string }): void
+  (e: 'edit-resend', payload: { messageId: string; content: string }): void
 }>()
 
 const listRef = ref<ComponentPublicInstance | null>(null)
@@ -38,6 +44,10 @@ function scrollToBottom() {
     if (!viewport) return
     viewport.scrollTop = viewport.scrollHeight
   })
+}
+
+function hasPreviousUser(index: number) {
+  return props.messages.slice(0, index).some(message => message.role === 'user')
 }
 
 // Auto-scroll to bottom when new content appears

@@ -5,15 +5,15 @@ import { useConversationStore } from '../stores/conversationStore'
 import { toProviderConfig, toMessages } from '../adapters/ai-core-adapter'
 import { usePlatform } from './usePlatform'
 import { useFileAttachments } from './useFileAttachments'
-import type { MessageAttachment } from '../types/chat'
+import type { ChatMessage, MessageAttachment } from '../types/chat'
 
 function formatAttachmentsAsContext(attachments: MessageAttachment[]): string {
   const valid = attachments.filter(a => a.extractedContent)
   if (valid.length === 0) return ''
 
-  const pages = valid.map(a =>
-    `<page title="${a.title}" url="${a.url ?? ''}">\n${a.extractedContent}\n</page>`,
-  ).join('\n\n')
+  const pages = valid
+    .map(a => `<page title="${a.title}" url="${a.url ?? ''}">\n${a.extractedContent}\n</page>`)
+    .join('\n\n')
 
   return `\n\n<attached_pages>\n${pages}\n</attached_pages>`
 }
@@ -30,108 +30,117 @@ export function useChat() {
   const activeConversation = computed(() => conversationStore.getActiveConversation())
   const messages = computed(() => activeConversation.value?.messages ?? [])
 
-  async function sendMessage(content: string, extraAttachments?: MessageAttachment[]): Promise<void> {
+  function getActiveRequestConfig() {
     const selection = providerStore.activeModel
     const provider = providerStore.activeProvider
     if (!selection || !provider) {
       throw new Error('请先配置AI服务商')
     }
 
-    let convId = conversationStore.activeConversationId
-    if (!convId) {
-      const conv = conversationStore.createConversation(provider.id, selection.model)
-      convId = conv.id
-    }
+    return { provider, model: selection.model }
+  }
 
-    // 先快照历史消息，避免后续 addMessage 后再读 computed 的时序问题
-    const historySnapshot = [...(conversationStore.getActiveConversation()?.messages ?? [])]
+  function buildRequestMessages(history: ChatMessage[]) {
+    return history.map(message => {
+      const contextStr = formatAttachmentsAsContext(message.attachments ?? [])
 
-    // 收集文件附件（来自 useFileAttachments 或 retry 传入的 extraAttachments）
-    const currentFileAttachments = extraAttachments ?? [...fileAttachments.value]
-
-    // 通过平台钩子收集附件上下文（如提取 tab 内容）
-    let platformAttachments: MessageAttachment[] = []
-    let contextStr = ''
-    if (platform.prepareContext) {
-      const result = await platform.prepareContext()
-      if (result) {
-        platformAttachments = result.attachments
-        contextStr = result.context
+      return {
+        role: message.role,
+        content: contextStr ? message.content + contextStr : message.content,
+        attachments: message.attachments,
       }
-    }
-
-    // 合并所有附件
-    const allAttachments = [...platformAttachments, ...currentFileAttachments]
-
-    // 文本文件的上下文也注入 contextStr
-    const textFileContext = formatAttachmentsAsContext(
-      currentFileAttachments.filter(a => a.category === 'text'),
-    )
-    contextStr += textFileContext
-
-    // Add user message
-    conversationStore.addMessage(convId, {
-      role: 'user',
-      content,
-      status: 'done',
-      attachments: allAttachments.length > 0 ? allAttachments : undefined,
     })
+  }
 
-    // Add placeholder assistant message
-    const assistantMsg = conversationStore.addMessage(convId, {
+  async function streamAssistantReply(
+    conversationId: string,
+    history: ChatMessage[],
+  ): Promise<void> {
+    const { provider, model } = getActiveRequestConfig()
+
+    const assistantMsg = conversationStore.addMessage(conversationId, {
       role: 'assistant',
       content: '',
       status: 'streaming',
       providerId: provider.id,
     })
 
-    // 发送成功后清理状态
-    platform.clearAfterSend?.()
-    if (!extraAttachments) clearFiles()
+    const aiMessages = toMessages(buildRequestMessages(history))
 
     isStreaming.value = true
     abortController.value = new AbortController()
     let accumulated = ''
 
     try {
-      // 用快照拼接历史，再加上当前携带上下文的用户消息
-      const apiMessages = [
-        ...historySnapshot.map(msg => {
-          const msgContextStr = formatAttachmentsAsContext(msg.attachments ?? [])
-          return msgContextStr ? { ...msg, content: msg.content + msgContextStr } : msg
-        }),
-        {
-          role: 'user' as const,
-          content: contextStr ? content + contextStr : content,
-          attachments: currentFileAttachments.filter(a => a.category !== 'text'),
-        },
-      ]
-      const aiMessages = toMessages(apiMessages)
       const events = ChatClient.chat(aiMessages, {
-        provider: toProviderConfig(provider, selection.model),
+        provider: toProviderConfig(provider, model),
         defaults: { maxTokens: 4096, signal: abortController.value.signal },
       })
 
       for await (const event of events) {
         if (event.type === 'text_delta') {
           accumulated += event.text
-          conversationStore.updateMessageContent(convId!, assistantMsg.id, accumulated)
+          conversationStore.updateMessageContent(conversationId, assistantMsg.id, accumulated)
         } else if (event.type === 'error') {
           throw event.error
         }
       }
 
-      conversationStore.updateMessageStatus(convId!, assistantMsg.id, 'done')
+      conversationStore.updateMessageStatus(conversationId, assistantMsg.id, 'done')
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        conversationStore.updateMessageStatus(convId!, assistantMsg.id, 'done')
+        conversationStore.updateMessageStatus(conversationId, assistantMsg.id, 'done')
       } else {
-        conversationStore.updateMessageStatus(convId!, assistantMsg.id, 'error', error.message)
+        conversationStore.updateMessageStatus(
+          conversationId,
+          assistantMsg.id,
+          'error',
+          error.message,
+        )
       }
     } finally {
       isStreaming.value = false
       abortController.value = null
     }
+  }
+
+  async function sendMessage(content: string): Promise<void> {
+    if (isStreaming.value) return
+
+    const { provider, model } = getActiveRequestConfig()
+
+    let convId = conversationStore.activeConversationId
+    if (!convId) {
+      const conv = conversationStore.createConversation(provider.id, model)
+      convId = conv.id
+    }
+
+    // 先快照历史消息，避免后续 addMessage 后再读 computed 的时序问题
+    const historySnapshot = [...(conversationStore.getActiveConversation()?.messages ?? [])]
+
+    const currentFileAttachments = [...fileAttachments.value]
+    let platformAttachments: MessageAttachment[] = []
+    if (platform.prepareContext) {
+      const result = await platform.prepareContext()
+      if (result) {
+        platformAttachments = result.attachments
+      }
+    }
+
+    const allAttachments = [...platformAttachments, ...currentFileAttachments]
+
+    const userMessage = conversationStore.addMessage(convId, {
+      role: 'user',
+      content,
+      status: 'done',
+      attachments: allAttachments.length > 0 ? allAttachments : undefined,
+    })
+
+    // 发送成功后清理状态
+    platform.clearAfterSend?.()
+    clearFiles()
+
+    await streamAssistantReply(convId, [...historySnapshot, userMessage])
   }
 
   function stopStreaming() {
@@ -146,21 +155,89 @@ export function useChat() {
     }
   }
 
+  function normalizeContent(content: string) {
+    return content.trim()
+  }
+
+  function canPersistEditedMessage(message: ChatMessage, content: string) {
+    return normalizeContent(content).length > 0 || (message.attachments?.length ?? 0) > 0
+  }
+
+  function getActiveConversationMessage(messageId: string) {
+    const conversation = activeConversation.value
+    if (!conversation) return null
+
+    const index = conversation.messages.findIndex(message => message.id === messageId)
+    if (index === -1) return null
+
+    return {
+      conversation,
+      index,
+      message: conversation.messages[index],
+    }
+  }
+
+  async function saveUserMessage(messageId: string, content: string): Promise<void> {
+    const target = getActiveConversationMessage(messageId)
+    if (!target || target.message.role !== 'user') return
+
+    if (!canPersistEditedMessage(target.message, content)) return
+
+    conversationStore.updateMessageContent(
+      target.conversation.id,
+      messageId,
+      normalizeContent(content),
+    )
+  }
+
+  async function resendFromUserMessage(messageId: string, content: string): Promise<void> {
+    if (isStreaming.value) return
+
+    const target = getActiveConversationMessage(messageId)
+    if (!target || target.message.role !== 'user') return
+
+    if (!canPersistEditedMessage(target.message, content)) return
+
+    const conversationId = target.conversation.id
+    conversationStore.updateMessageContent(conversationId, messageId, normalizeContent(content))
+    conversationStore.truncateAfterMessage(conversationId, messageId)
+
+    const requestHistory = [...target.conversation.messages]
+    await streamAssistantReply(conversationId, requestHistory)
+  }
+
+  async function regenerateAssistantMessage(messageId: string): Promise<void> {
+    if (isStreaming.value) return
+
+    const target = getActiveConversationMessage(messageId)
+    if (!target || target.message.role !== 'assistant') return
+
+    const anchorUser = [...target.conversation.messages.slice(0, target.index)]
+      .reverse()
+      .find(message => message.role === 'user')
+
+    if (!anchorUser) return
+
+    const conversationId = target.conversation.id
+    conversationStore.truncateAfterMessage(conversationId, anchorUser.id)
+
+    const requestHistory = [...target.conversation.messages]
+    await streamAssistantReply(conversationId, requestHistory)
+  }
+
   async function retryLastMessage(): Promise<void> {
     const conv = activeConversation.value
-    if (!conv || conv.messages.length < 2) return
+    if (!conv) return
 
-    const lastMsg = conv.messages[conv.messages.length - 1]
-    if (lastMsg.role === 'assistant' && lastMsg.status === 'error') {
-      conv.messages.pop()
+    const lastAssistant = [...conv.messages].reverse().find(message => message.role === 'assistant')
+    if (lastAssistant) {
+      await regenerateAssistantMessage(lastAssistant.id)
+      return
     }
 
-    const lastUserMsg = conv.messages[conv.messages.length - 1]
-    if (lastUserMsg?.role === 'user') {
-      const content = lastUserMsg.content
-      const savedAttachments = lastUserMsg.attachments ?? []
-      conv.messages.pop()
-      await sendMessage(content, savedAttachments)
+    const lastUser = [...conv.messages].reverse().find(message => message.role === 'user')
+    if (lastUser) {
+      await resendFromUserMessage(lastUser.id, lastUser.content)
     }
   }
 
@@ -172,5 +249,8 @@ export function useChat() {
     stopStreaming,
     newConversation,
     retryLastMessage,
+    saveUserMessage,
+    resendFromUserMessage,
+    regenerateAssistantMessage,
   }
 }
