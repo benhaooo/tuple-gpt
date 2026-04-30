@@ -171,7 +171,7 @@ import {
   PlusIcon,
   Cog6ToothIcon,
 } from '@heroicons/vue/24/outline'
-import type { Conversation } from '../../types'
+import type { Conversation } from '@tuple-gpt/chat-core'
 import { usePlatform } from '../../composables/usePlatform'
 import { Button } from '../ui/button'
 import { ScrollArea } from '../ui/scroll-area'

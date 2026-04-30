@@ -11,6 +11,7 @@
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "@tuple-gpt/ai-core": "workspace:*",
+    "@tuple-gpt/chat-core": "workspace:*",
     "@tuple-gpt/shared": "workspace:*",
     "await-to-js": "^3.0.0"
   },

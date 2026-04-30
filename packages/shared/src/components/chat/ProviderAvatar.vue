@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Provider } from '../../types'
+import type { Provider } from '@tuple-gpt/chat-core'
 import { generateAvatarColor, getAvatarForegroundColor, getAvatarInitial } from '../../utils/avatar'
 import { resolveProviderIcon } from '../../config/aiIcons'
 

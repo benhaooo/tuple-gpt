@@ -1,17 +1,48 @@
 import { ref } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
-import type { AttachmentCategory, MessageAttachment } from '../types/chat'
+import type { AttachmentCategory, MessageAttachment } from '@tuple-gpt/chat-core'
 
-const IMAGE_EXTENSIONS = new Set([
-  'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico',
-])
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'])
 
 const TEXT_EXTENSIONS = new Set([
-  'txt', 'md', 'json', 'csv', 'js', 'ts', 'jsx', 'tsx',
-  'py', 'html', 'css', 'xml', 'yaml', 'yml', 'toml',
-  'sh', 'bat', 'log', 'sql', 'java', 'go', 'rs', 'c',
-  'cpp', 'h', 'hpp', 'rb', 'php', 'swift', 'kt', 'vue',
-  'svelte', 'scss', 'less', 'ini', 'conf', 'env', 'gitignore',
+  'txt',
+  'md',
+  'json',
+  'csv',
+  'js',
+  'ts',
+  'jsx',
+  'tsx',
+  'py',
+  'html',
+  'css',
+  'xml',
+  'yaml',
+  'yml',
+  'toml',
+  'sh',
+  'bat',
+  'log',
+  'sql',
+  'java',
+  'go',
+  'rs',
+  'c',
+  'cpp',
+  'h',
+  'hpp',
+  'rb',
+  'php',
+  'swift',
+  'kt',
+  'vue',
+  'svelte',
+  'scss',
+  'less',
+  'ini',
+  'conf',
+  'env',
+  'gitignore',
 ])
 
 const MAX_BINARY_SIZE = 30 * 1024 * 1024 // 30MB

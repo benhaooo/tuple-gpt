@@ -126,6 +126,9 @@ importers:
       '@tuple-gpt/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
+      '@tuple-gpt/chat-core':
+        specifier: workspace:*
+        version: link:../../packages/chat-core
       '@tuple-gpt/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -164,6 +167,16 @@ importers:
         specifier: ^2.1.1
         version: 2.2.4(marked@15.0.12)
 
+  packages/chat-core:
+    dependencies:
+      '@tuple-gpt/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
+    devDependencies:
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/node@22.19.7)(jiti@2.6.1)(less@4.5.1)(yaml@2.8.3)
+
   packages/shared:
     dependencies:
       '@radix-icons/vue':
@@ -175,6 +188,9 @@ importers:
       '@tuple-gpt/ai-ui':
         specifier: workspace:*
         version: link:../ai-ui
+      '@tuple-gpt/chat-core':
+        specifier: workspace:*
+        version: link:../chat-core
       '@vueuse/core':
         specifier: ^14.2.1
         version: 14.2.1(vue@3.5.27(typescript@5.7.3))
@@ -1947,10 +1963,6 @@ packages:
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
 
-  tinyexec@1.0.2:
-    resolution: {integrity: sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg==}
-    engines: {node: '>=18'}
-
   tinyexec@1.1.1:
     resolution: {integrity: sha512-VKS/ZaQhhkKFMANmAOhhXVoIfBXblQxGX1myCQ2faQrfmobMftXeJPcZGp0gS07ocvGJWDLZGyOZDadDBqYIJg==}
     engines: {node: '>=18'}
@@ -2270,7 +2282,7 @@ snapshots:
   '@antfu/install-pkg@1.1.0':
     dependencies:
       package-manager-detector: 1.6.0
-      tinyexec: 1.0.2
+      tinyexec: 1.1.1
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -4079,8 +4091,6 @@ snapshots:
   tinybench@2.9.0: {}
 
   tinyexec@0.3.2: {}
-
-  tinyexec@1.0.2: {}
 
   tinyexec@1.1.1: {}
 

@@ -1,4 +1,4 @@
-import type { ProviderPreset } from '../types/provider'
+import type { ProviderPreset } from '@tuple-gpt/chat-core'
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
@@ -53,5 +53,5 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
 ]
 
 export function getPresetById(id: string): ProviderPreset | undefined {
-  return PROVIDER_PRESETS.find((p) => p.id === id)
+  return PROVIDER_PRESETS.find(p => p.id === id)
 }

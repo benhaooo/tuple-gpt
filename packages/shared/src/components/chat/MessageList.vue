@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from 'vue'
 import { ref, watch, nextTick } from 'vue'
-import type { ChatMessage } from '../../types'
+import type { ChatMessage } from '@tuple-gpt/chat-core'
 import MessageBubble from './MessageBubble.vue'
 import { ScrollArea } from '../ui/scroll-area'
 

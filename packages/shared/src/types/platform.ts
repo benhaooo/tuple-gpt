@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import type { MessageAttachment } from './chat'
+import type { MessageAttachment } from '@tuple-gpt/chat-core'
 
 export interface PlatformConfig {
   /** 渲染在输入框左下角的操作按钮区域（如 tab 选择器） */

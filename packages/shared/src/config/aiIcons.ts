@@ -29,7 +29,7 @@ import StepModelLogo from '../assets/ai-icons/models/step.png'
 import JinaModelLogo from '../assets/ai-icons/models/jina.png'
 import VoyageModelLogo from '../assets/ai-icons/models/voyageai.png'
 import FluxModelLogo from '../assets/ai-icons/models/flux.png'
-import type { Provider } from '../types'
+import type { Provider } from '@tuple-gpt/chat-core'
 
 const PROVIDER_ICON_MAP = {
   openai: OpenAIProviderLogo,

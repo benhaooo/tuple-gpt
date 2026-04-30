@@ -181,7 +181,7 @@ import {
   PencilSquareIcon,
 } from '@heroicons/vue/24/outline'
 import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
-import type { ChatMessage } from '../../types'
+import type { ChatMessage } from '@tuple-gpt/chat-core'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
 

@@ -80,7 +80,7 @@
 import { ref, computed, watch } from 'vue'
 import { PlusIcon, MinusIcon } from '@heroicons/vue/24/outline'
 import { fetchModels } from '../../adapters/fetch-models'
-import type { Provider } from '../../types'
+import type { Provider } from '@tuple-gpt/chat-core'
 import ModelAvatar from './ModelAvatar.vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'

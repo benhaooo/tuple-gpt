@@ -1,5 +1,5 @@
 import type { PlatformConfig } from '@shared/types/platform'
-import type { MessageAttachment } from '@shared/types/chat'
+import type { MessageAttachment } from '@tuple-gpt/chat-core'
 import TabSelector from '../components/TabSelector.vue'
 import TabPreview from '../components/TabPreview.vue'
 import { useSelectedTabs } from '../composables/useSelectedTabs'

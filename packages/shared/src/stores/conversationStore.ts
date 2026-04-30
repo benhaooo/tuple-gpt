@@ -1,7 +1,21 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
-import type { Conversation, ChatMessage, MessageStatus } from '../types'
+import {
+  addMessage as addCoreMessage,
+  createConversation as createCoreConversation,
+  deleteConversation as deleteCoreConversation,
+  deleteMessage as deleteCoreMessage,
+  getActiveConversation as getCoreActiveConversation,
+  renameConversation as renameCoreConversation,
+  truncateAfterMessage as truncateAfterCoreMessage,
+  updateMessageContent as updateCoreMessageContent,
+  updateMessageStatus as updateCoreMessageStatus,
+  upsertConversation,
+  type ChatMessage,
+  type Conversation,
+  type MessageStatus,
+} from '@tuple-gpt/chat-core'
 
 export const useConversationStore = defineStore(
   'conversations',
@@ -10,24 +24,24 @@ export const useConversationStore = defineStore(
     const activeConversationId = ref<string | null>(null)
 
     function getActiveConversation(): Conversation | undefined {
-      if (!activeConversationId.value) return undefined
-      return conversations.value.find(c => c.id === activeConversationId.value)
+      return getCoreActiveConversation(conversations.value, activeConversationId.value)
     }
 
     function createConversation(providerId: string, model: string, title?: string): Conversation {
-      const now = new Date().toISOString()
-      const conversation: Conversation = {
-        id: uuidv4(),
-        title: title || '新对话',
-        messages: [],
+      const conversation = createCoreConversation({
         providerId,
         model,
-        createdAt: now,
-        updatedAt: now,
-      }
+        title,
+        createId: uuidv4,
+      })
       conversations.value.unshift(conversation)
       activeConversationId.value = conversation.id
       return conversation
+    }
+
+    function replaceConversation(conversation: Conversation) {
+      conversations.value = upsertConversation(conversations.value, conversation)
+      activeConversationId.value = conversation.id
     }
 
     function setActiveConversation(id: string) {
@@ -35,58 +49,35 @@ export const useConversationStore = defineStore(
     }
 
     function deleteConversation(id: string) {
-      const index = conversations.value.findIndex(c => c.id === id)
-      if (index === -1) return
-      conversations.value.splice(index, 1)
-      if (activeConversationId.value === id) {
-        activeConversationId.value =
-          conversations.value.length > 0 ? conversations.value[0].id : null
-      }
+      const result = deleteCoreConversation(conversations.value, activeConversationId.value, id)
+      conversations.value = result.conversations
+      activeConversationId.value = result.activeConversationId
     }
 
     function renameConversation(id: string, title: string) {
-      const conv = conversations.value.find(c => c.id === id)
-      if (conv) {
-        conv.title = title
-        conv.updatedAt = new Date().toISOString()
-      }
+      conversations.value = renameCoreConversation(conversations.value, id, title)
     }
 
     function addMessage(
       conversationId: string,
-      message: Omit<ChatMessage, 'id' | 'timestamp'>,
+      message: Omit<ChatMessage, 'id' | 'timestamp'> &
+        Partial<Pick<ChatMessage, 'id' | 'timestamp'>>,
     ): ChatMessage {
       const conv = conversations.value.find(c => c.id === conversationId)
       if (!conv) throw new Error(`Conversation ${conversationId} not found`)
 
-      const fullMessage: ChatMessage = {
-        ...message,
-        id: uuidv4(),
-        timestamp: new Date().toISOString(),
-      }
-      conv.messages.push(fullMessage)
-      conv.updatedAt = fullMessage.timestamp
-
-      // Auto-generate title from first user message
-      if (
-        conv.title === '新对话' &&
-        message.role === 'user' &&
-        conv.messages.filter(m => m.role === 'user').length === 1
-      ) {
-        conv.title = message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
-      }
-
-      return fullMessage
+      const result = addCoreMessage(conv, message, { createId: uuidv4 })
+      conversations.value = upsertConversation(conversations.value, result.conversation)
+      return result.message
     }
 
     function updateMessageContent(conversationId: string, messageId: string, content: string) {
-      const conv = conversations.value.find(c => c.id === conversationId)
-      if (!conv) return
-      const msg = conv.messages.find(m => m.id === messageId)
-      if (msg) {
-        msg.content = content
-        conv.updatedAt = new Date().toISOString()
-      }
+      conversations.value = updateCoreMessageContent(
+        conversations.value,
+        conversationId,
+        messageId,
+        content,
+      )
     }
 
     function updateMessageStatus(
@@ -95,34 +86,21 @@ export const useConversationStore = defineStore(
       status: MessageStatus,
       error?: string,
     ) {
-      const conv = conversations.value.find(c => c.id === conversationId)
-      if (!conv) return
-      const msg = conv.messages.find(m => m.id === messageId)
-      if (msg) {
-        msg.status = status
-        if (error) msg.error = error
-      }
+      conversations.value = updateCoreMessageStatus(
+        conversations.value,
+        conversationId,
+        messageId,
+        status,
+        error,
+      )
     }
 
     function deleteMessage(conversationId: string, messageId: string) {
-      const conv = conversations.value.find(c => c.id === conversationId)
-      if (!conv) return
-      const index = conv.messages.findIndex(m => m.id === messageId)
-      if (index !== -1) {
-        conv.messages.splice(index, 1)
-        conv.updatedAt = new Date().toISOString()
-      }
+      conversations.value = deleteCoreMessage(conversations.value, conversationId, messageId)
     }
 
     function truncateAfterMessage(conversationId: string, messageId: string) {
-      const conv = conversations.value.find(c => c.id === conversationId)
-      if (!conv) return
-
-      const index = conv.messages.findIndex(m => m.id === messageId)
-      if (index === -1) return
-
-      conv.messages.splice(index + 1)
-      conv.updatedAt = new Date().toISOString()
+      conversations.value = truncateAfterCoreMessage(conversations.value, conversationId, messageId)
     }
 
     function clearAll() {
@@ -135,6 +113,7 @@ export const useConversationStore = defineStore(
       activeConversationId,
       getActiveConversation,
       createConversation,
+      replaceConversation,
       setActiveConversation,
       deleteConversation,
       renameConversation,

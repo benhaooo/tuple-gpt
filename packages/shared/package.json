@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@tuple-gpt/ai-core": "workspace:*",
+    "@tuple-gpt/chat-core": "workspace:*",
     "@tuple-gpt/ai-ui": "workspace:*",
     "@radix-icons/vue": "^1.0.0",
     "@vueuse/core": "^14.2.1",
