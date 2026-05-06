@@ -55,6 +55,12 @@ describe('streamAssistantReply', () => {
       'assistant_delta',
       'assistant_done',
     ])
+    expect(events[0]).toMatchObject({
+      message: {
+        providerId: provider.id,
+        model: 'gpt-4o',
+      },
+    })
     expect(events[1]).toMatchObject({ content: 'hel' })
     expect(events[2]).toMatchObject({ content: 'hello' })
   })

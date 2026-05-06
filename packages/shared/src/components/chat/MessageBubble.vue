@@ -1,7 +1,29 @@
 <template>
   <div :class="['group flex min-w-0', isUser ? 'justify-end' : 'justify-start']">
-    <div class="min-w-0" :class="isUser ? 'max-w-[85%]' : ''">
+    <div class="min-w-0" :class="isUser ? 'max-w-[85%]' : 'w-full'">
       <div :class="bubbleClass">
+        <div
+          v-if="assistantMeta && !isUser"
+          class="mb-2 flex max-w-full min-w-0 items-start gap-2.5 text-muted-foreground"
+        >
+          <ModelAvatar class="mt-0.5 opacity-90" :model-id="assistantMeta.model" :size="22" />
+          <div class="min-w-0 flex-1">
+            <div
+              class="break-words text-[12px] font-semibold leading-4 text-foreground/85"
+              :title="`${assistantMeta.model}｜${assistantMeta.providerName}`"
+            >
+              <span>{{ assistantMeta.model }}</span>
+              <span class="text-muted-foreground/45" aria-hidden="true">｜</span>
+              <span class="font-medium text-muted-foreground/78">
+                {{ assistantMeta.providerName }}
+              </span>
+            </div>
+            <div class="mt-0.5 truncate text-[10px] leading-3 text-muted-foreground/55">
+              {{ formattedTimestamp }}
+            </div>
+          </div>
+        </div>
+
         <!-- User message -->
         <div v-if="isUser">
           <!-- Image attachments -->
@@ -184,10 +206,17 @@ import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import type { ChatMessage } from '@tuple-gpt/chat-core'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
+import ModelAvatar from './ModelAvatar.vue'
+
+interface AssistantMessageMeta {
+  model: string
+  providerName: string
+}
 
 const props = withDefaults(
   defineProps<{
     message: ChatMessage
+    assistantMeta?: AssistantMessageMeta
     canRegenerate?: boolean
     actionsDisabled?: boolean
   }>(),
@@ -210,6 +239,7 @@ const draftContent = ref('')
 const isUser = computed(() => props.message.role === 'user')
 const hasAttachments = computed(() => (props.message.attachments?.length ?? 0) > 0)
 const canSubmitEdit = computed(() => draftContent.value.trim().length > 0 || hasAttachments.value)
+const formattedTimestamp = computed(() => formatMessageTimestamp(props.message.timestamp))
 const bubbleClass = computed(() => [
   'min-w-0 text-sm text-foreground transition-[background-color,border-color,box-shadow]',
   isUser.value
@@ -269,5 +299,22 @@ function handleResendEdit() {
   isEditing.value = false
   const content = draftContent.value.trim()
   emit('edit-resend', { messageId: props.message.id, content })
+}
+
+function formatMessageTimestamp(timestamp: string) {
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return timestamp
+
+  const year = date.getFullYear()
+  const month = padDatePart(date.getMonth() + 1)
+  const day = padDatePart(date.getDate())
+  const hours = padDatePart(date.getHours())
+  const minutes = padDatePart(date.getMinutes())
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+function padDatePart(value: number) {
+  return value.toString().padStart(2, '0')
 }
 </script>

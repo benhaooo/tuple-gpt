@@ -145,6 +145,8 @@ describe('chat runtime', () => {
     expect(snapshot.messages[1]).toMatchObject({
       content: 'ok',
       status: 'done',
+      providerId: provider.id,
+      model: 'gpt-4o',
     })
     expect(snapshot.messages[0].id).toEqual(expect.any(String))
     expect(snapshot.messages[1].id).toEqual(expect.any(String))
@@ -153,6 +155,10 @@ describe('chat runtime', () => {
       'user',
       'assistant',
     ])
+    expect(persisted.conversations[0].messages[1]).toMatchObject({
+      providerId: provider.id,
+      model: 'gpt-4o',
+    })
   })
 
   it('regenerates an assistant message by truncating to the anchor user message', async () => {

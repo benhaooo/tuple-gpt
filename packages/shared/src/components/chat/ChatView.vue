@@ -13,6 +13,7 @@
       v-else
       :messages="messages"
       :is-streaming="isStreaming"
+      :providers="providerStore.providers"
       @regenerate="chat.regenerateAssistantMessage"
       @delete="handleDeleteMessage"
       @edit-save="handleSaveUserMessage"

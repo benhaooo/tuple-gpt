@@ -59,6 +59,7 @@ export async function* streamAssistantReply(
       content: '',
       status: 'streaming',
       providerId: input.provider.id,
+      model: input.model,
     },
   )
   const assistantMessage = assistantResult.message

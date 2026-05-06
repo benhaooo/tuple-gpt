@@ -5,6 +5,7 @@
         v-for="(message, index) in messages"
         :key="message.id"
         :message="message"
+        :assistant-meta="getAssistantMeta(message)"
         :can-regenerate="message.role === 'assistant' && hasPreviousUser(index)"
         :actions-disabled="isStreaming"
         @regenerate="id => $emit('regenerate', id)"
@@ -18,15 +19,21 @@
 
 <script setup lang="ts">
 import type { ComponentPublicInstance } from 'vue'
-import { ref, watch, nextTick } from 'vue'
-import type { ChatMessage } from '@tuple-gpt/chat-core'
+import { computed, ref, watch, nextTick } from 'vue'
+import type { ChatMessage, Provider } from '@tuple-gpt/chat-core'
 import MessageBubble from './MessageBubble.vue'
 import { ScrollArea } from '../ui/scroll-area'
 
-const props = defineProps<{
-  messages: ChatMessage[]
-  isStreaming: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    messages: ChatMessage[]
+    isStreaming: boolean
+    providers?: Provider[]
+  }>(),
+  {
+    providers: () => [],
+  },
+)
 
 defineEmits<{
   (e: 'regenerate', messageId: string): void
@@ -36,6 +43,9 @@ defineEmits<{
 }>()
 
 const listRef = ref<ComponentPublicInstance | null>(null)
+const providerNameById = computed(
+  () => new Map(props.providers.map(provider => [provider.id, provider.name])),
+)
 
 function scrollToBottom() {
   nextTick(() => {
@@ -48,6 +58,18 @@ function scrollToBottom() {
 
 function hasPreviousUser(index: number) {
   return props.messages.slice(0, index).some(message => message.role === 'user')
+}
+
+function getAssistantMeta(message: ChatMessage) {
+  if (message.role !== 'assistant') return undefined
+
+  const providerId = message.providerId
+  const model = message.model ?? '未知模型'
+  const providerName = providerId
+    ? (providerNameById.value.get(providerId) ?? '未知服务商')
+    : '未知服务商'
+
+  return { model, providerName }
 }
 
 // Auto-scroll to bottom when new content appears

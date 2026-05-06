@@ -25,6 +25,7 @@ export interface ChatMessage {
   status: MessageStatus
   error?: string
   providerId?: string
+  model?: string
   attachments?: MessageAttachment[]
 }
 
