@@ -6,11 +6,11 @@
       :class="desktopSidebarOpen ? 'w-56' : 'w-16'"
     >
       <ConversationSidebar
-        :conversations="conversationStore.conversations"
-        :active-id="conversationStore.activeConversationId"
+        :conversations="conversations"
+        :active-id="activeConversationId"
         :collapsed="!desktopSidebarOpen"
-        @select="conversationStore.setActiveConversation"
-        @delete="conversationStore.deleteConversation"
+        @select="chat.setActiveConversation"
+        @delete="chat.deleteConversation"
         @new="chat.newConversation"
         class="w-full flex-shrink-0 border-r-0"
       />
@@ -20,8 +20,8 @@
     <Sheet :open="mobileSidebarOpen" @update:open="handleMobileOpenChange">
       <SheetContent side="left" :show-close-button="false" class="w-[85vw] max-w-xs p-0 md:hidden">
         <ConversationSidebar
-          :conversations="conversationStore.conversations"
-          :active-id="conversationStore.activeConversationId"
+          :conversations="conversations"
+          :active-id="activeConversationId"
           @select="handleMobileSelect"
           @delete="handleMobileDelete"
           @new="handleMobileNew"
@@ -43,7 +43,7 @@
             <Bars3Icon v-else class="h-5 w-5 text-muted-foreground" />
           </Button>
           <h2 class="text-sm font-medium truncate">
-            {{ chat.activeConversation.value?.title || 'Tuple Chat' }}
+            {{ activeConversation?.title || 'Tuple Chat' }}
           </h2>
         </div>
 
@@ -76,7 +76,6 @@ import { computed, ref } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import { Bars3Icon, PlusIcon } from '@heroicons/vue/24/outline'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
-import { useConversationStore } from '../../stores/conversationStore'
 import { useChat } from '../../composables/useChat'
 import ConversationSidebar from './ConversationSidebar.vue'
 import ChatView from './ChatView.vue'
@@ -85,8 +84,8 @@ import { Button } from '../ui/button'
 import { Sheet, SheetContent } from '../ui/sheet'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip'
 
-const conversationStore = useConversationStore()
 const chat = useChat()
+const { conversations, activeConversationId, activeConversation } = chat
 const isDesktop = useMediaQuery('(min-width: 768px)')
 const sidebarOpen = ref(false)
 const desktopSidebarOpen = computed(() => isDesktop.value && sidebarOpen.value)
@@ -104,17 +103,17 @@ function handleMobileOpenChange(open: boolean) {
   if (!isDesktop.value) sidebarOpen.value = open
 }
 
-function handleMobileSelect(id: string) {
-  conversationStore.setActiveConversation(id)
+async function handleMobileSelect(id: string) {
+  await chat.setActiveConversation(id)
   closeSidebar()
 }
 
-function handleMobileDelete(id: string) {
-  conversationStore.deleteConversation(id)
+async function handleMobileDelete(id: string) {
+  await chat.deleteConversation(id)
 }
 
-function handleMobileNew() {
-  chat.newConversation()
+async function handleMobileNew() {
+  await chat.newConversation()
   closeSidebar()
 }
 </script>

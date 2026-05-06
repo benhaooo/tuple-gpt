@@ -1,20 +1,8 @@
-import {
-  ChatClient,
-  StreamEventType,
-  type ChatOptions,
-  type ClientConfig,
-  type Message,
-  type StreamEvent,
-} from '@tuple-gpt/ai-core'
+import { ChatClient, StreamEventType } from '@tuple-gpt/ai-core'
 import { buildRequestMessages, toMessages, toProviderConfig } from './request'
 import type { ChatMessage, Provider } from './types'
-import { addMessage, type IdTimeOptions } from './conversation'
-
-export type ChatStreamRunner = (
-  messages: Message[],
-  config: ClientConfig,
-  opts?: ChatOptions,
-) => AsyncIterable<StreamEvent>
+import { addMessage } from './conversation'
+import { getErrorMessage } from './utils/error'
 
 export type ChatRuntimeEvent =
   | {
@@ -41,18 +29,12 @@ export type ChatRuntimeEvent =
       error: string
     }
 
-export interface StreamAssistantReplyInput extends IdTimeOptions {
+export interface StreamAssistantReplyInput {
   conversationId: string
   history: ChatMessage[]
   provider: Provider
   model: string
-  maxTokens?: number
   signal?: AbortSignal
-  chat?: ChatStreamRunner
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
 }
 
 function isAbortError(error: unknown): boolean {
@@ -78,15 +60,8 @@ export async function* streamAssistantReply(
       status: 'streaming',
       providerId: input.provider.id,
     },
-    {
-      id: input.id,
-      timestamp: input.timestamp,
-      createId: input.createId,
-      now: input.now,
-    },
   )
   const assistantMessage = assistantResult.message
-  const chat = input.chat ?? ChatClient.chat
   const aiMessages = toMessages(buildRequestMessages(input.history))
   let accumulated = ''
 
@@ -97,10 +72,10 @@ export async function* streamAssistantReply(
   }
 
   try {
-    const events = chat(aiMessages, {
+    const events = ChatClient.chat(aiMessages, {
       provider: toProviderConfig(input.provider, input.model),
       defaults: {
-        maxTokens: input.maxTokens ?? 4096,
+        maxTokens: 4096,
         signal: input.signal,
       },
     })

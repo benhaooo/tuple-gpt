@@ -7,7 +7,6 @@ export { PROVIDER_PRESETS, getPresetById } from './config/providerPresets'
 // Stores
 export { useSettingsStore } from './stores/settingsStore'
 export { useProviderStore } from './stores/providerStore'
-export { useConversationStore } from './stores/conversationStore'
 
 // Composables
 export { useTheme, ThemeName } from './composables/useTheme'

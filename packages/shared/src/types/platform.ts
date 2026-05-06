@@ -1,7 +1,9 @@
 import type { Component } from 'vue'
-import type { MessageAttachment } from '@tuple-gpt/chat-core'
+import type { ChatStorage, MessageAttachment } from '@tuple-gpt/chat-core'
 
 export interface PlatformConfig {
+  /** 聊天数据存储适配器，由宿主平台决定落到 Chrome storage、IndexedDB、SQLite 等。 */
+  chatStorage: ChatStorage
   /** 渲染在输入框左下角的操作按钮区域（如 tab 选择器） */
   InputActions?: Component
   /** 渲染在输入框上方的附件预览区域（如已选 tab 列表） */

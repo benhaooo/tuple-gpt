@@ -55,6 +55,26 @@ export {
 export {
   streamAssistantReply,
   type ChatRuntimeEvent,
-  type ChatStreamRunner,
   type StreamAssistantReplyInput,
 } from './runtime'
+
+export { getErrorMessage } from './utils/error'
+
+export {
+  cloneConversation,
+  cloneMessage,
+  cloneStorageSnapshot,
+  normalizeStorageSnapshot,
+  type ActiveChatRequestConfig,
+  type ChatSnapshot,
+  type ChatSnapshotListener,
+  type ChatStorage,
+  type ChatStorageSnapshot,
+} from './ports'
+
+export {
+  createChatRuntime,
+  type ChatRuntime,
+  type ChatRuntimeOptions,
+  type SendMessageInput,
+} from './chat-runtime'

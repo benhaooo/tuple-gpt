@@ -13,19 +13,17 @@ apps/
 packages/
   ai-core/            # AI provider、stream、pipeline、agent loop
   ai-ui/              # AI 展示相关 Vue 组件，如 MarkdownRenderer
-  shared/             # Vue UI、聊天组件、Pinia store、平台注入、AI adapter
+  shared/             # Vue UI、聊天组件、Vue adapter、平台注入、provider/settings store
 ```
 
 现阶段 `@tuple-gpt/ai-core` 的方向是正确的：它基本保持为纯 TypeScript，不依赖 Vue、DOM、Pinia 或 Chrome Extension API。
 
-主要需要收敛的是 `@tuple-gpt/shared`。它目前同时承担了以下职责：
+主要需要继续收敛的是 `@tuple-gpt/shared`。它目前仍承担了以下职责：
 
-- 通用聊天类型与 provider 类型
 - Vue UI 基础组件和聊天组件
-- Pinia store
+- provider/settings Pinia store
 - Vue composables
 - 平台差异注入
-- AI core adapter
 - 资源与 provider preset
 
 这个结构能快速支撑 Web 与 Extension 共用 Vue UI，但如果继续扩大，会让 React Native 和桌面端复用 AI 核心逻辑时被 Vue、DOM、Chrome storage 等假设牵制。
@@ -66,7 +64,7 @@ apps/desktop
 ```text
 packages/
   ai-core/            # 纯 AI runtime
-  chat-core/          # 聊天领域模型、会话操作、请求构造、stream orchestration
+  chat-core/          # 聊天领域模型、运行态、会话操作、请求构造、stream orchestration
   platform/           # Storage、Secret、Clipboard、File、Context 等跨端接口
   ui-vue/             # Vue UI kit 与通用视觉组件
   chat-vue/           # Vue composables、Pinia adapter、ChatLayout
@@ -126,20 +124,23 @@ export interface ChatRepository {
 - `chat-core` 不 import `vue`、`pinia`、`chrome`、`window`、`document`。
 - `chat-core` 有基础单元测试。
 
-### 阶段 2：把 `useChat` 降级为 Vue adapter
+### 阶段 2：让 `chat-core` 成为 headless chat engine
 
-目的：保留现有 Vue 使用体验，但让核心流程不被 Vue 绑定。
+目的：让对话数据和聊天流程的事实来源进入 `chat-core`，保留现有 Vue 使用体验，但让核心状态和流程不被 Vue/Pinia 绑定。
 
 调整方向：
 
-- `useChat` 从“业务实现”变成“Vue 适配层”。
-- Pinia store 只负责状态承载和持久化触发。
-- 消息发送、重试、重新生成等流程委托给 `chat-core`。
+- `chat-core` 提供 `createChatRuntime()`，内部持有 `conversations`、`activeConversationId`、`isStreaming` 等运行态。
+- `chat-core` 暴露 `hydrate()`、`subscribe()`、`getSnapshot()` 与 `sendMessage()`、`regenerateAssistantMessage()` 等完整 use case。
+- `useChat` 从“业务实现”变成“Vue 响应式 adapter”，只订阅 runtime snapshot 并暴露 computed。
+- 聊天会话不再存在 Pinia store；Pinia 保留 provider/settings 等 Vue 应用状态。
+- 持久化通过 `ChatStorage` adapter 注入，Extension 当前实现为 `chrome.storage.local`，未来 Web/RN/Desktop 可替换为 IndexedDB、SQLite、文件等。
 - 将 `useFileAttachments` 中依赖 `FileReader` 的部分抽为 Web 文件 adapter。
 
 完成定义：
 
 - Extension 现有聊天功能行为不变。
+- UI 通过 `useChat` 读取响应式 snapshot，通过 runtime 方法修改数据。
 - 新增 Web app 时不需要复制聊天业务逻辑。
 - RN 端可以直接复用同一套 `chat-core` 流程。
 
@@ -174,7 +175,7 @@ export interface VuePlatformSlots {
 
 完成定义：
 
-- `chat-core` 只依赖 `PlatformServices` 类型，不依赖 Vue component。
+- `chat-core` 只依赖 storage 这类持久化 port，以及调用时传入的 provider/attachment 数据，不依赖 Vue component。
 - `chat-vue` 可以读取 `VuePlatformSlots` 渲染插件专属按钮。
 - Extension 专属 tab 选择逻辑仍留在 `apps/extension`。
 
@@ -259,7 +260,7 @@ packages/ui-rn/
 
 1. 阶段 0：清理风险。
 2. 阶段 1：抽 `chat-core`。
-3. 阶段 2：让 `useChat` 成为 Vue adapter。
+3. 阶段 2：让 `chat-core` 成为 headless chat engine，`useChat` 成为 Vue adapter。
 
 中期优先级：
 

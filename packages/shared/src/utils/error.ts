@@ -1,3 +1,1 @@
-export function getErrorMessage(err: unknown, fallback = 'Unknown error'): string {
-  return err instanceof Error ? err.message : fallback
-}
+export { getErrorMessage } from '@tuple-gpt/chat-core'

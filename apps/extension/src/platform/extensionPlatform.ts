@@ -5,11 +5,13 @@ import TabPreview from '../components/TabPreview.vue'
 import { useSelectedTabs } from '../composables/useSelectedTabs'
 import { extractMultipleTabsContent } from '../composables/useTabContent'
 import { backgroundClient } from '../utils/messages'
+import { createChromeChatStorage } from './chromeChatStorage'
 
 export function createExtensionPlatform(): PlatformConfig {
   const { selectedTabs, clear } = useSelectedTabs()
 
   return {
+    chatStorage: createChromeChatStorage(),
     InputActions: TabSelector,
     InputPreview: TabPreview,
     async openSettings() {

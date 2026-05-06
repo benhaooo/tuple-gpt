@@ -9,5 +9,9 @@ export function providePlatform(config: PlatformConfig) {
 }
 
 export function usePlatform(): PlatformConfig {
-  return inject(PLATFORM_KEY, {})
+  const platform = inject(PLATFORM_KEY)
+  if (!platform) {
+    throw new Error('PlatformConfig is not provided')
+  }
+  return platform
 }

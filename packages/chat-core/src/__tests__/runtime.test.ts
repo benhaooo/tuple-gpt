@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
-import { streamAssistantReply, type ChatRuntimeEvent, type ChatStreamRunner } from '../runtime'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ChatClient, FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
+import { streamAssistantReply, type ChatRuntimeEvent } from '../runtime'
 import type { ChatMessage, Provider } from '../types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
@@ -29,12 +29,16 @@ async function collect(input: AsyncIterable<ChatRuntimeEvent>): Promise<ChatRunt
 }
 
 describe('streamAssistantReply', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('emits start, delta, and done events', async () => {
-    const chat: ChatStreamRunner = async function* (_messages, _config) {
+    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
       yield { type: StreamEventType.TextDelta, text: 'hel' }
       yield { type: StreamEventType.TextDelta, text: 'lo' }
       yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
-    }
+    })
 
     const events = await collect(
       streamAssistantReply({
@@ -42,9 +46,6 @@ describe('streamAssistantReply', () => {
         history,
         provider,
         model: 'gpt-4o',
-        chat,
-        createId: () => 'assistant-1',
-        now: () => timestamp,
       }),
     )
 
@@ -59,9 +60,9 @@ describe('streamAssistantReply', () => {
   })
 
   it('emits assistant_error when the stream yields an error event', async () => {
-    const chat: ChatStreamRunner = async function* (_messages, _config) {
+    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
       yield { type: StreamEventType.Error, error: new Error('boom') }
-    }
+    })
 
     const events = await collect(
       streamAssistantReply({
@@ -69,9 +70,6 @@ describe('streamAssistantReply', () => {
         history,
         provider,
         model: 'gpt-4o',
-        chat,
-        createId: () => 'assistant-1',
-        now: () => timestamp,
       }),
     )
 
@@ -80,7 +78,7 @@ describe('streamAssistantReply', () => {
   })
 
   it('treats AbortError as a completed assistant message', async () => {
-    const chat: ChatStreamRunner = () => ({
+    vi.spyOn(ChatClient, 'chat').mockImplementation(() => ({
       [Symbol.asyncIterator]() {
         return {
           async next() {
@@ -90,7 +88,7 @@ describe('streamAssistantReply', () => {
           },
         }
       },
-    })
+    }))
 
     const events = await collect(
       streamAssistantReply({
@@ -98,9 +96,6 @@ describe('streamAssistantReply', () => {
         history,
         provider,
         model: 'gpt-4o',
-        chat,
-        createId: () => 'assistant-1',
-        now: () => timestamp,
       }),
     )
 
