@@ -4,12 +4,12 @@
       <div :class="bubbleClass">
         <div
           v-if="assistantMeta && !isUser"
-          class="mb-2 flex max-w-full min-w-0 items-start gap-2.5 text-muted-foreground"
+          class="mb-2 flex max-w-full min-w-0 items-center gap-2 text-muted-foreground"
         >
-          <ModelAvatar class="mt-0.5 opacity-90" :model-id="assistantMeta.model" :size="22" />
+          <ModelAvatar class="opacity-90" :model-id="assistantMeta.model" :size="20" />
           <div class="min-w-0 flex-1">
             <div
-              class="break-words text-[12px] font-semibold leading-4 text-foreground/85"
+              class="break-words text-[12px] font-semibold leading-5 text-foreground/85"
               :title="`${assistantMeta.model}｜${assistantMeta.providerName}`"
             >
               <span>{{ assistantMeta.model }}</span>
@@ -17,9 +17,6 @@
               <span class="font-medium text-muted-foreground/78">
                 {{ assistantMeta.providerName }}
               </span>
-            </div>
-            <div class="mt-0.5 truncate text-[10px] leading-3 text-muted-foreground/55">
-              {{ formattedTimestamp }}
             </div>
           </div>
         </div>
@@ -140,51 +137,59 @@
       <div
         v-if="message.status !== 'streaming' && !isEditing"
         :class="[
-          'mt-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100',
+          'mt-1 flex opacity-0 transition-opacity group-hover:opacity-100',
           isUser ? 'justify-end' : 'justify-start',
         ]"
       >
-        <button
-          @click="copyContent"
-          type="button"
-          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground"
-          title="复制消息"
-        >
-          <CheckIcon v-if="copied" class="h-3.5 w-3.5 text-green-500" />
-          <ClipboardDocumentIcon v-else class="h-3.5 w-3.5" />
-        </button>
+        <div class="inline-flex items-center gap-1">
+          <button
+            @click="copyContent"
+            type="button"
+            class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground"
+            title="复制消息"
+          >
+            <CheckIcon v-if="copied" class="h-3.5 w-3.5 text-green-500" />
+            <ClipboardDocumentIcon v-else class="h-3.5 w-3.5" />
+          </button>
 
-        <button
-          v-if="isUser"
-          @click="startEditing"
-          type="button"
-          :disabled="actionsDisabled"
-          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-          title="编辑消息"
-        >
-          <PencilSquareIcon class="h-3.5 w-3.5" />
-        </button>
+          <button
+            v-if="isUser"
+            @click="startEditing"
+            type="button"
+            :disabled="actionsDisabled"
+            class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            title="编辑消息"
+          >
+            <PencilSquareIcon class="h-3.5 w-3.5" />
+          </button>
 
-        <button
-          v-else-if="canRegenerate"
-          @click="$emit('regenerate', message.id)"
-          type="button"
-          :disabled="actionsDisabled"
-          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-          title="重新生成"
-        >
-          <ArrowPathIcon class="h-3.5 w-3.5" />
-        </button>
+          <button
+            v-else-if="canRegenerate"
+            @click="$emit('regenerate', message.id)"
+            type="button"
+            :disabled="actionsDisabled"
+            class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            title="重新生成"
+          >
+            <ArrowPathIcon class="h-3.5 w-3.5" />
+          </button>
 
-        <button
-          @click="$emit('delete', message.id)"
-          type="button"
-          :disabled="actionsDisabled"
-          class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
-          title="删除消息"
-        >
-          <TrashIcon class="h-3.5 w-3.5" />
-        </button>
+          <button
+            @click="$emit('delete', message.id)"
+            type="button"
+            :disabled="actionsDisabled"
+            class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+            title="删除消息"
+          >
+            <TrashIcon class="h-3.5 w-3.5" />
+          </button>
+
+          <span
+            class="ml-1 shrink-0 border-l border-border/60 pl-2 text-[10px] leading-none text-muted-foreground/55"
+          >
+            {{ formattedTimestamp }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
