@@ -1,21 +1,17 @@
 <template>
   <ScrollArea ref="listRef" class="h-full">
     <div class="p-3 space-y-5">
-      <div v-for="turn in turns" :key="turn.id" class="space-y-2">
-        <MessageBubble
-          v-for="message in turn.messages"
-          :key="message.id"
-          :message="message"
-          :turn-id="turn.id"
-          :assistant-meta="getAssistantMeta(turn, message)"
-          :can-regenerate="message.role === 'assistant' && hasUserMessage(turn)"
-          :actions-disabled="isStreaming"
-          @regenerate="id => $emit('regenerate', id)"
-          @delete="id => $emit('delete', id)"
-          @edit-save="payload => $emit('edit-save', payload)"
-          @edit-resend="payload => $emit('edit-resend', payload)"
-        />
-      </div>
+      <TurnBubble
+        v-for="turn in turns"
+        :key="turn.id"
+        :turn="turn"
+        :assistant-meta="getAssistantMeta(turn)"
+        :actions-disabled="isStreaming"
+        @regenerate="id => $emit('regenerate', id)"
+        @delete="id => $emit('delete', id)"
+        @edit-save="payload => $emit('edit-save', payload)"
+        @edit-resend="payload => $emit('edit-resend', payload)"
+      />
     </div>
   </ScrollArea>
 </template>
@@ -23,9 +19,9 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from 'vue'
 import { computed, ref, watch, nextTick } from 'vue'
-import type { ChatMessage, ChatTurn, Provider } from '@tuple-gpt/chat-core'
+import type { ChatTurn, Provider } from '@tuple-gpt/chat-core'
 import { getContentText } from '@tuple-gpt/chat-core'
-import MessageBubble from './MessageBubble.vue'
+import TurnBubble from './TurnBubble.vue'
 import { ScrollArea } from '../ui/scroll-area'
 
 const props = withDefaults(
@@ -60,13 +56,7 @@ function scrollToBottom() {
   })
 }
 
-function hasUserMessage(turn: ChatTurn) {
-  return turn.messages.some(message => message.role === 'user')
-}
-
-function getAssistantMeta(turn: ChatTurn, message: ChatMessage) {
-  if (message.role !== 'assistant') return undefined
-
+function getAssistantMeta(turn: ChatTurn) {
   const providerName = providerNameById.value.get(turn.providerId) ?? '未知服务商'
   return { model: turn.model, providerName }
 }

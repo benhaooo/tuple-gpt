@@ -20,7 +20,13 @@
       <Textarea
         v-model="inputText"
         :disabled="disabled"
-        :placeholder="disabled ? '请先配置AI服务商' : '输入消息... (Shift+Enter 换行)'"
+        :placeholder="
+          disabled
+            ? '请先配置AI服务商'
+            : mode === 'agent'
+              ? '描述任务，Agent 将调用工具完成... (Shift+Enter 换行)'
+              : '输入消息... (Shift+Enter 换行)'
+        "
         rows="1"
         class="min-h-20 max-h-56 w-full resize-none overflow-y-auto rounded-2xl border-0 bg-transparent dark:bg-transparent px-3 pt-3 pb-2 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0"
         @keydown.enter.exact="handleEnter"
@@ -38,6 +44,19 @@
             v-if="platform.InputActions"
             :disabled="disabled"
           />
+
+          <!-- Agent 模式切换 -->
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            :disabled="disabled"
+            class="size-8 rounded-lg transition-colors"
+            :class="mode === 'agent' ? 'bg-primary/10 text-primary' : 'text-muted-foreground'"
+            :title="mode === 'agent' ? '当前: Agent 模式' : '当前: 对话模式'"
+            @click="toggleMode"
+          >
+            <CpuChipIcon class="h-4 w-4" />
+          </Button>
         </div>
 
         <div class="flex items-center gap-1.5">
@@ -71,12 +90,14 @@
 import { ref } from 'vue'
 import { useDropZone } from '@vueuse/core'
 import { PaperAirplaneIcon, StopIcon } from '@heroicons/vue/24/solid'
+import { CpuChipIcon } from '@heroicons/vue/24/outline'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
 import { usePlatform } from '../../composables/usePlatform'
 import { useFileAttachments } from '../../composables/useFileAttachments'
 import FileAttachmentPreview from './FileAttachmentPreview.vue'
 import FilePickerButton from './FilePickerButton.vue'
+import type { ChatMode } from '@tuple-gpt/chat-core'
 
 defineProps<{
   isStreaming: boolean
@@ -84,19 +105,24 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'send', content: string): void
+  (e: 'send', content: string, mode: ChatMode): void
   (e: 'stop'): void
 }>()
 
 const platform = usePlatform()
 const { attachments: fileAttachments, addFiles } = useFileAttachments()
 const inputText = ref('')
+const mode = ref<ChatMode>('chat')
 const dropZoneRef = ref()
 const { isOverDropZone: isDragOver } = useDropZone(dropZoneRef, {
   onDrop(files) {
     if (files?.length) addFiles(files)
   },
 })
+
+function toggleMode() {
+  mode.value = mode.value === 'chat' ? 'agent' : 'chat'
+}
 
 function handleEnter(event: KeyboardEvent) {
   if (event.isComposing) return
@@ -107,7 +133,7 @@ function handleEnter(event: KeyboardEvent) {
 function handleSend() {
   const text = inputText.value.trim()
   if (!text && fileAttachments.value.length === 0) return
-  emit('send', text)
+  emit('send', text, mode.value)
   inputText.value = ''
 }
 
