@@ -2,7 +2,7 @@
   <div class="h-full flex bg-background text-foreground">
     <!-- Desktop sidebar -->
     <div
-      class="hidden w-16 flex-shrink-0 overflow-hidden border-r border-border transition-[width] duration-250 ease-out md:flex"
+      class="hidden flex-shrink-0 overflow-hidden border-r border-border transition-[width] duration-250 ease-out md:block"
       :class="desktopSidebarOpen ? 'w-56' : 'w-16'"
     >
       <ConversationSidebar
@@ -12,7 +12,7 @@
         @select="chat.setActiveConversation"
         @delete="chat.deleteConversation"
         @new="chat.newConversation"
-        class="w-full flex-shrink-0 border-r-0"
+        class="h-full border-r-0"
       />
     </div>
 
@@ -51,7 +51,7 @@
           <ModelSelector />
         </div>
 
-        <div class="flex justify-end">
+        <div class="flex justify-end md:invisible">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
