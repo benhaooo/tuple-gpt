@@ -6,6 +6,7 @@ export type {
   ChatMessage,
   ChatTurn,
   Conversation,
+  ErrorBlock,
   MessageContent,
   MessageAttachment,
   MessageRole,
@@ -83,6 +84,8 @@ export {
 
 export { getErrorMessage } from './utils/error'
 
+export { getAvatarInitial, generateAvatarColor, getAvatarForegroundColor } from './utils/avatar'
+
 export {
   cloneConversation,
   cloneMessage,
@@ -102,3 +105,19 @@ export {
   type ChatRuntimeOptions,
   type SendMessageInput,
 } from './chat-runtime'
+
+export { PROVIDER_PRESETS, getPresetById } from './config/provider-presets'
+
+export {
+  fetchModels,
+  validateApiKey,
+  type FetchModelsOptions,
+  type FetchModelsResult,
+} from './services/fetch-models'
+
+export {
+  McpClient,
+  type McpConnectionStatus,
+  type McpServerConfig,
+  type McpServerState,
+} from './services/mcp-client'

@@ -3,15 +3,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["../../packages/shared/src/*"],
-      "#/*": ["../../packages/shared/src/*"]
+      "@/*": ["src/*"]
     },
     "types": ["vite/client", "chrome"],
     "allowJs": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]
 }

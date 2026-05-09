@@ -5,12 +5,12 @@
 </template>
 
 <script setup lang="ts">
-import { useTheme } from '@shared/composables/useTheme'
-import { useProviderStore } from '@shared/stores/providerStore'
-import { useMcpStore } from '@shared/stores/mcpStore'
-import { providePlatform } from '@shared/composables/usePlatform'
+import { useTheme } from '@tuple-gpt/chat-vue'
+import { useProviderStore } from '@tuple-gpt/chat-vue'
+import { useMcpStore } from '@tuple-gpt/chat-vue'
+import { providePlatform } from '@tuple-gpt/chat-vue'
 import { createExtensionPlatform } from '../platform/extensionPlatform'
-import ChatLayout from '@shared/components/chat/ChatLayout.vue'
+import ChatLayout from '@tuple-gpt/chat-vue/components/ChatLayout.vue'
 
 providePlatform(createExtensionPlatform())
 useTheme()

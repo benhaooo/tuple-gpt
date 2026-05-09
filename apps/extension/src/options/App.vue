@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useTheme } from '@shared/composables/useTheme'
+import { useTheme } from '@tuple-gpt/chat-vue'
 import {
   UserIcon,
   Cog6ToothIcon,
@@ -8,8 +8,8 @@ import {
   CpuChipIcon,
   WrenchScrewdriverIcon,
 } from '@heroicons/vue/24/outline'
-import { Button } from '@shared/components/ui/button'
-import { ScrollArea } from '@shared/components/ui/scroll-area'
+import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
+import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
 import GeneralSection from './sections/GeneralSection.vue'
 import SidebarSection from './sections/SidebarSection.vue'
 import UserSection from './sections/UserSection.vue'

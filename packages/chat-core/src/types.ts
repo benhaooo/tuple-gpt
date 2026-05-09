@@ -88,3 +88,14 @@ export interface ModelSelection {
 
 /** Alias for backward compatibility with older extension utilities. */
 export type Assistant = Provider
+
+export interface ErrorBlock {
+  type: 'network' | 'timeout' | 'auth' | 'quota' | 'validation' | 'api' | 'unknown'
+  message: string
+  details: string
+  timestamp: string
+  provider: string
+  model?: string
+  code?: number
+  originalError?: any
+}

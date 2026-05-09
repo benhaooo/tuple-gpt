@@ -28,8 +28,8 @@
 
 <script setup lang="ts">
 import { GlobeAltIcon } from '@heroicons/vue/24/outline'
-import { ScrollArea, ScrollBar } from '@shared/components/ui/scroll-area'
-import AttachmentPreviewItem from '@shared/components/chat/AttachmentPreviewItem.vue'
+import { ScrollArea, ScrollBar } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+import AttachmentPreviewItem from '@tuple-gpt/chat-vue/components/AttachmentPreviewItem.vue'
 import { useSelectedTabs } from '../composables/useSelectedTabs'
 
 const { selectedTabs, remove } = useSelectedTabs()
