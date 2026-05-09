@@ -68,11 +68,11 @@ export function useChat() {
     snapshot,
     isReady: computed(() => snapshot.value.isReady),
     isStreaming: computed(() => snapshot.value.isStreaming),
-    streamingConversationIds: computed(() => snapshot.value.streamingConversationIds),
     conversations: computed(() => snapshot.value.conversations),
     activeConversationId: computed(() => snapshot.value.activeConversationId),
     activeConversation: computed(() => snapshot.value.activeConversation),
-    messages: computed(() => snapshot.value.messages),
+    turns: computed(() => snapshot.value.turns),
+    runningTurnIds: computed(() => snapshot.value.runningTurnIds),
     async sendMessage(content: string) {
       await runtime.sendMessage({
         content,
@@ -81,18 +81,16 @@ export function useChat() {
       })
       await clearAttachmentsAfterSend()
     },
-    stopStreaming: () => runtime.stopStreaming(),
-    newConversation: () => runtime.newConversation(getActiveRequestConfig()),
+    stopStreaming: (turnId?: string) => runtime.stopStreaming(turnId),
+    newConversation: () => runtime.newConversation(),
     setActiveConversation: (id: string) => runtime.setActiveConversation(id),
     deleteConversation: (id: string) => runtime.deleteConversation(id),
     renameConversation: (id: string, title: string) => runtime.renameConversation(id, title),
-    deleteMessage: (messageId: string) => runtime.deleteMessage(messageId),
-    retryLastMessage: () => runtime.retryLastMessage(getActiveRequestConfig()),
-    saveUserMessage: (messageId: string, content: string) =>
-      runtime.saveUserMessage(messageId, content),
-    resendFromUserMessage: (messageId: string, content: string) =>
-      runtime.resendFromUserMessage(messageId, content, getActiveRequestConfig()),
-    regenerateAssistantMessage: (messageId: string) =>
-      runtime.regenerateAssistantMessage(messageId, getActiveRequestConfig()),
+    deleteTurn: (turnId: string) => runtime.deleteTurn(turnId),
+    retryLastTurn: () => runtime.retryLastTurn(getActiveRequestConfig()),
+    saveUserMessage: (turnId: string, content: string) => runtime.saveUserMessage(turnId, content),
+    resendTurn: (turnId: string, content: string) =>
+      runtime.resendTurn(turnId, content, getActiveRequestConfig()),
+    regenerateTurn: (turnId: string) => runtime.regenerateTurn(turnId, getActiveRequestConfig()),
   }
 }

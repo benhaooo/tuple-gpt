@@ -1,4 +1,12 @@
-import type { Message, StreamEvent, ToolCall, ToolDefinition, ProviderConfig, RequestOptions, PipelineOutput } from '../types'
+import type {
+  Message,
+  StreamEvent,
+  ToolCall,
+  ToolDefinition,
+  ProviderConfig,
+  RequestOptions,
+  PipelineOutput,
+} from '../types'
 import { Role, FinishReason, StreamEventType } from '../types'
 import type { Transport } from '../transport/transport'
 import type { PipelineStep } from '../pipeline/pipeline'
@@ -29,9 +37,8 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     maxTurns = 10,
   } = opts
 
-  const pipeline = pipelineSteps && pipelineSteps.length > 0
-    ? createPipeline(...pipelineSteps)
-    : undefined
+  const pipeline =
+    pipelineSteps && pipelineSteps.length > 0 ? createPipeline(...pipelineSteps) : undefined
 
   let turn = 0
 
@@ -101,9 +108,10 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
       }
       messages.push({
         role: Role.Assistant,
-        content: assistantContent.length === 1 && assistantContent[0].type === 'text'
-          ? textContent
-          : assistantContent,
+        content:
+          assistantContent.length === 1 && assistantContent[0].type === 'text'
+            ? textContent
+            : assistantContent,
       })
     }
 
@@ -114,7 +122,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
 
     // 5. Execute tools in parallel
     const results = await Promise.all(
-      pendingToolCalls.map(async (tc) => {
+      pendingToolCalls.map(async tc => {
         const result = await executeToolCall(toolExecutor, tc.name, tc.arguments)
         return { toolCallId: tc.id, ...result }
       }),
@@ -122,6 +130,12 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
 
     // 6. Append tool results to messages
     for (const result of results) {
+      yield {
+        type: StreamEventType.ToolResult,
+        toolCallId: result.toolCallId,
+        result: result.result,
+        ...(result.isError ? { isError: true } : {}),
+      }
       messages.push({
         role: Role.Tool,
         content: [

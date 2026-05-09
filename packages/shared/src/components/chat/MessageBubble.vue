@@ -73,8 +73,8 @@
             </div>
           </div>
 
-          <div v-else-if="message.content" class="whitespace-pre-wrap break-words">
-            {{ message.content }}
+          <div v-else-if="textContent" class="whitespace-pre-wrap break-words">
+            {{ textContent }}
           </div>
 
           <!-- Non-image attachments -->
@@ -100,10 +100,60 @@
         </div>
 
         <!-- Assistant message: rendered markdown -->
-        <MarkdownRenderer v-else-if="message.content" :content="message.content" />
+        <MarkdownRenderer v-else-if="textContent" :content="textContent" />
+
+        <div v-if="!isUser && toolCalls.length" class="mt-2 space-y-1.5">
+          <details
+            v-for="part in toolCalls"
+            :key="part.toolCall.id"
+            class="rounded-md border border-border/60 bg-muted/30 px-2 py-1.5"
+          >
+            <summary
+              class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground"
+            >
+              <WrenchScrewdriverIcon class="h-3.5 w-3.5 shrink-0" />
+              <span class="truncate">{{ part.toolCall.name }}</span>
+            </summary>
+            <pre
+              class="mt-1.5 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-background/70 p-2 text-[11px] leading-5 text-muted-foreground"
+              >{{ formatToolArguments(part.toolCall.arguments) }}</pre
+            >
+          </details>
+        </div>
+
+        <div v-if="!isUser && toolResults.length" class="mt-2 space-y-1.5">
+          <details
+            v-for="part in toolResults"
+            :key="part.toolCallId"
+            :open="part.isError"
+            :class="[
+              'rounded-md border px-2 py-1.5',
+              part.isError
+                ? 'border-destructive/35 bg-destructive/5'
+                : 'border-border/60 bg-muted/30',
+            ]"
+          >
+            <summary
+              :class="[
+                'flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium',
+                part.isError ? 'text-destructive' : 'text-muted-foreground',
+              ]"
+            >
+              <CommandLineIcon class="h-3.5 w-3.5 shrink-0" />
+              <span class="truncate">工具结果</span>
+            </summary>
+            <pre
+              class="mt-1.5 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-background/70 p-2 text-[11px] leading-5 text-muted-foreground"
+              >{{ part.result }}</pre
+            >
+          </details>
+        </div>
 
         <!-- Streaming placeholder -->
-        <div v-else-if="message.status === 'streaming'" class="flex gap-1 items-center py-1">
+        <div
+          v-if="message.status === 'streaming' && !hasRenderableContent"
+          class="flex gap-1 items-center py-1"
+        >
           <span
             class="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-60"
             style="animation-delay: 0ms"
@@ -123,7 +173,7 @@
           <p class="text-xs text-destructive">{{ message.error || '请求失败' }}</p>
           <Button
             v-if="canRegenerate"
-            @click="$emit('regenerate', message.id)"
+            @click="$emit('regenerate', turnId)"
             variant="link"
             class="mt-1 h-auto p-0 text-xs text-destructive hover:text-destructive/80"
             :disabled="actionsDisabled"
@@ -165,7 +215,7 @@
 
           <button
             v-else-if="canRegenerate"
-            @click="$emit('regenerate', message.id)"
+            @click="$emit('regenerate', turnId)"
             type="button"
             :disabled="actionsDisabled"
             class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
@@ -175,11 +225,11 @@
           </button>
 
           <button
-            @click="$emit('delete', message.id)"
+            @click="$emit('delete', turnId)"
             type="button"
             :disabled="actionsDisabled"
             class="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
-            title="删除消息"
+            title="删除本轮"
           >
             <TrashIcon class="h-3.5 w-3.5" />
           </button>
@@ -206,8 +256,11 @@ import {
   CheckIcon,
   ArrowPathIcon,
   PencilSquareIcon,
+  WrenchScrewdriverIcon,
+  CommandLineIcon,
 } from '@heroicons/vue/24/outline'
 import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
+import { getContentText } from '@tuple-gpt/chat-core'
 import type { ChatMessage } from '@tuple-gpt/chat-core'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
@@ -221,6 +274,7 @@ interface AssistantMessageMeta {
 const props = withDefaults(
   defineProps<{
     message: ChatMessage
+    turnId: string
     assistantMeta?: AssistantMessageMeta
     canRegenerate?: boolean
     actionsDisabled?: boolean
@@ -232,26 +286,37 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  (e: 'regenerate', messageId: string): void
-  (e: 'delete', messageId: string): void
-  (e: 'edit-save', payload: { messageId: string; content: string }): void
-  (e: 'edit-resend', payload: { messageId: string; content: string }): void
+  (e: 'regenerate', turnId: string): void
+  (e: 'delete', turnId: string): void
+  (e: 'edit-save', payload: { turnId: string; content: string }): void
+  (e: 'edit-resend', payload: { turnId: string; content: string }): void
 }>()
 
 const copied = ref(false)
 const isEditing = ref(false)
 const draftContent = ref('')
 const isUser = computed(() => props.message.role === 'user')
+const isTool = computed(() => props.message.role === 'tool')
 const hasAttachments = computed(() => (props.message.attachments?.length ?? 0) > 0)
 const canSubmitEdit = computed(() => draftContent.value.trim().length > 0 || hasAttachments.value)
-const formattedTimestamp = computed(() => formatMessageTimestamp(props.message.timestamp))
+const formattedTimestamp = computed(() => formatMessageTimestamp(props.message.createdAt))
+const textContent = computed(() => getContentText(props.message.content))
+const toolCalls = computed(() => props.message.content.filter(part => part.type === 'tool_call'))
+const toolResults = computed(() =>
+  props.message.content.filter(part => part.type === 'tool_result'),
+)
+const hasRenderableContent = computed(
+  () => !!textContent.value || toolCalls.value.length > 0 || toolResults.value.length > 0,
+)
 const bubbleClass = computed(() => [
   'min-w-0 text-sm text-foreground transition-[background-color,border-color,box-shadow]',
   isUser.value
     ? isEditing.value
       ? 'rounded-xl border border-border/60 bg-muted/65 px-2.5 py-2.5 shadow-xs'
       : 'rounded-lg bg-muted/80 px-3 py-2'
-    : 'rounded-lg px-3 py-2',
+    : isTool.value
+      ? 'rounded-lg border border-border/60 bg-muted/25 px-3 py-2'
+      : 'rounded-lg px-3 py-2',
 ])
 
 const imageAttachments = computed(
@@ -263,17 +328,17 @@ const nonImageAttachments = computed(
 )
 
 watch(
-  () => [props.message.id, props.message.content] as const,
+  () => [props.message.id, textContent.value] as const,
   () => {
     if (!isEditing.value) {
-      draftContent.value = props.message.content
+      draftContent.value = textContent.value
     }
   },
   { immediate: true },
 )
 
 function copyContent() {
-  navigator.clipboard.writeText(props.message.content)
+  navigator.clipboard.writeText(toClipboardText())
   copied.value = true
   setTimeout(() => {
     copied.value = false
@@ -281,12 +346,12 @@ function copyContent() {
 }
 
 function startEditing() {
-  draftContent.value = props.message.content
+  draftContent.value = textContent.value
   isEditing.value = true
 }
 
 function cancelEditing() {
-  draftContent.value = props.message.content
+  draftContent.value = textContent.value
   isEditing.value = false
 }
 
@@ -295,7 +360,7 @@ function handleSaveEdit() {
 
   isEditing.value = false
   const content = draftContent.value.trim()
-  emit('edit-save', { messageId: props.message.id, content })
+  emit('edit-save', { turnId: props.turnId, content })
 }
 
 function handleResendEdit() {
@@ -303,7 +368,32 @@ function handleResendEdit() {
 
   isEditing.value = false
   const content = draftContent.value.trim()
-  emit('edit-resend', { messageId: props.message.id, content })
+  emit('edit-resend', { turnId: props.turnId, content })
+}
+
+function toClipboardText() {
+  const chunks: string[] = []
+  if (textContent.value) chunks.push(textContent.value)
+
+  for (const part of toolCalls.value) {
+    chunks.push(`${part.toolCall.name}(${part.toolCall.arguments})`)
+  }
+
+  for (const part of toolResults.value) {
+    chunks.push(part.result)
+  }
+
+  return chunks.join('\n\n')
+}
+
+function formatToolArguments(value: string) {
+  if (!value) return '{}'
+
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
+  } catch {
+    return value
+  }
 }
 
 function formatMessageTimestamp(timestamp: string) {

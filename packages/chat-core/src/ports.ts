@@ -1,4 +1,6 @@
-import type { ChatMessage, Conversation, Provider } from './types'
+import type { ToolDefinition, ToolExecutor } from '@tuple-gpt/ai-core'
+import type { ChatMode, ChatMessage, ChatTurn, Conversation, Provider } from './types'
+import { cloneContent } from './content'
 
 export type MaybePromise<T> = T | Promise<T>
 
@@ -16,13 +18,17 @@ export interface ChatStorage {
 export interface ActiveChatRequestConfig {
   provider: Provider
   model: string
+  mode?: ChatMode
+  tools?: ToolDefinition[]
+  toolExecutor?: ToolExecutor
+  maxTurns?: number
 }
 
 export interface ChatSnapshot extends ChatStorageSnapshot {
   activeConversation?: Conversation
-  messages: ChatMessage[]
+  turns: ChatTurn[]
   isReady: boolean
-  streamingConversationIds: string[]
+  runningTurnIds: string[]
   isStreaming: boolean
 }
 
@@ -31,14 +37,22 @@ export type ChatSnapshotListener = (snapshot: ChatSnapshot) => void
 export function cloneMessage(message: ChatMessage): ChatMessage {
   return {
     ...message,
+    content: cloneContent(message.content),
     attachments: message.attachments?.map(attachment => ({ ...attachment })),
+  }
+}
+
+export function cloneTurn(turn: ChatTurn): ChatTurn {
+  return {
+    ...turn,
+    messages: turn.messages.map(cloneMessage),
   }
 }
 
 export function cloneConversation(conversation: Conversation): Conversation {
   return {
     ...conversation,
-    messages: conversation.messages.map(cloneMessage),
+    turns: conversation.turns.map(cloneTurn),
   }
 }
 

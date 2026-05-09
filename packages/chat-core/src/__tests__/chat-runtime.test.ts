@@ -8,7 +8,7 @@ import type {
   ChatStorage,
   ChatStorageSnapshot,
 } from '../ports'
-import type { Conversation, Provider } from '../types'
+import type { ChatTurn, Conversation, Provider } from '../types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 
@@ -28,15 +28,47 @@ const requestConfig: ActiveChatRequestConfig = {
   model: 'gpt-4o',
 }
 
+function text(value: string) {
+  return [{ type: 'text' as const, text: value }]
+}
+
+function turn(id: string, userId = `${id}-u`, assistantId = `${id}-a`): ChatTurn {
+  return {
+    id,
+    mode: 'chat',
+    status: 'done',
+    providerId: provider.id,
+    model: 'gpt-4o',
+    startedAt: timestamp,
+    endedAt: timestamp,
+    messages: [
+      {
+        id: userId,
+        role: 'user',
+        content: text(`question ${id}`),
+        status: 'done',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: text(`answer ${id}`),
+        status: 'done',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    ],
+  }
+}
+
 function conversation(overrides: Partial<Conversation> = {}): Conversation {
   return {
     id: 'conv-1',
     title: 'Chat',
-    providerId: provider.id,
-    model: 'gpt-4o',
     createdAt: timestamp,
     updatedAt: timestamp,
-    messages: [],
+    turns: [],
     ...overrides,
   }
 }
@@ -89,13 +121,9 @@ describe('chat runtime', () => {
     vi.restoreAllMocks()
   })
 
-  it('hydrates conversations from storage and exposes a derived snapshot', async () => {
+  it('hydrates conversations from storage and exposes turns in the snapshot', async () => {
     const storage = createTestChatStorage({
-      conversations: [
-        conversation({
-          messages: [{ id: 'u1', role: 'user', content: 'hello', status: 'done', timestamp }],
-        }),
-      ],
+      conversations: [conversation({ turns: [turn('t1', 'u1', 'a1')] })],
       activeConversationId: 'conv-1',
     })
 
@@ -105,20 +133,18 @@ describe('chat runtime', () => {
     expect(runtime.getSnapshot()).toMatchObject({
       isReady: true,
       activeConversationId: 'conv-1',
-      messages: [{ id: 'u1', content: 'hello' }],
+      turns: [{ id: 't1' }],
     })
   })
 
-  it('sends a message, updates core state, and persists the conversation', async () => {
+  it('sends a message, updates turn state, and persists the conversation', async () => {
     const storage = createTestChatStorage()
     vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
       yield { type: StreamEventType.TextDelta, text: 'ok' }
       yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
     })
 
-    const runtime = createChatRuntime({
-      storage,
-    })
+    const runtime = createChatRuntime({ storage })
 
     await runtime.hydrate()
     await runtime.sendMessage({
@@ -135,43 +161,65 @@ describe('chat runtime', () => {
     })
 
     const snapshot = runtime.getSnapshot()
+    const createdTurn = snapshot.turns[0]
     expect(snapshot.isStreaming).toBe(false)
     expect(snapshot.conversations).toHaveLength(1)
-    expect(snapshot.messages.map(message => message.role)).toEqual(['user', 'assistant'])
-    expect(snapshot.messages[0]).toMatchObject({
-      content: 'summarize',
-      attachments: [{ id: 'tab-1' }],
-    })
-    expect(snapshot.messages[1]).toMatchObject({
-      content: 'ok',
+    expect(createdTurn).toMatchObject({
+      mode: 'chat',
       status: 'done',
       providerId: provider.id,
       model: 'gpt-4o',
     })
-    expect(snapshot.messages[0].id).toEqual(expect.any(String))
-    expect(snapshot.messages[1].id).toEqual(expect.any(String))
+    expect(createdTurn?.messages.map(message => message.role)).toEqual(['user', 'assistant'])
+    expect(createdTurn?.messages[0]).toMatchObject({
+      content: [{ type: 'text', text: 'summarize' }],
+      attachments: [{ id: 'tab-1' }],
+    })
+    expect(createdTurn?.messages[1]).toMatchObject({
+      content: [{ type: 'text', text: 'ok' }],
+      status: 'done',
+    })
+
     const persisted = await loadRequiredSnapshot(storage)
-    expect(persisted.conversations[0].messages.map(message => message.role)).toEqual([
+    expect(persisted.conversations[0]?.turns[0]?.messages.map(message => message.role)).toEqual([
       'user',
       'assistant',
     ])
-    expect(persisted.conversations[0].messages[1]).toMatchObject({
-      providerId: provider.id,
-      model: 'gpt-4o',
-    })
   })
 
-  it('regenerates an assistant message by truncating to the anchor user message', async () => {
+  it('persists agent tool messages inside a single turn', async () => {
+    const storage = createTestChatStorage()
+    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+      yield { type: StreamEventType.ToolCallStart, toolCall: { id: 'tc1', name: 'search' } }
+      yield { type: StreamEventType.ToolCallDelta, toolCallId: 'tc1', arguments: '{"q":"x"}' }
+      yield { type: StreamEventType.ToolCallEnd, toolCallId: 'tc1' }
+      yield { type: StreamEventType.Finish, finishReason: FinishReason.ToolCalls }
+      yield { type: StreamEventType.ToolResult, toolCallId: 'tc1', result: 'found' }
+      yield { type: StreamEventType.TextDelta, text: 'done' }
+      yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
+    })
+
+    const runtime = createChatRuntime({ storage })
+    await runtime.hydrate()
+    await runtime.sendMessage({
+      content: 'search',
+      config: { ...requestConfig, mode: 'agent' },
+    })
+
+    expect(runtime.getSnapshot().turns[0]?.messages.map(message => message.role)).toEqual([
+      'user',
+      'assistant',
+      'tool',
+      'assistant',
+    ])
+  })
+
+  it('regenerates a turn by replacing that turn and dropping following turns', async () => {
     const initialState: ChatStorageSnapshot = {
       activeConversationId: 'conv-1',
       conversations: [
         conversation({
-          messages: [
-            { id: 'u1', role: 'user', content: 'first', status: 'done', timestamp },
-            { id: 'a1', role: 'assistant', content: 'first answer', status: 'done', timestamp },
-            { id: 'u2', role: 'user', content: 'second', status: 'done', timestamp },
-            { id: 'a2', role: 'assistant', content: 'second answer', status: 'done', timestamp },
-          ],
+          turns: [turn('t1', 'u1', 'a1'), turn('t2', 'u2', 'a2')],
         }),
       ],
     }
@@ -181,23 +229,17 @@ describe('chat runtime', () => {
       yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
     })
 
-    const runtime = createChatRuntime({
-      storage,
-    })
+    const runtime = createChatRuntime({ storage })
 
     await runtime.hydrate()
-    await runtime.regenerateAssistantMessage('a2', requestConfig)
+    await runtime.regenerateTurn('t2', requestConfig)
 
-    expect(
-      runtime
-        .getSnapshot()
-        .messages.slice(0, 3)
-        .map(message => message.id),
-    ).toEqual(['u1', 'a1', 'u2'])
-    expect(runtime.getSnapshot().messages[3].id).not.toBe('a2')
-    expect(runtime.getSnapshot().messages[3]).toMatchObject({
+    const turns = runtime.getSnapshot().turns
+    expect(turns.map(item => item.id)).toEqual(['t1', 't2'])
+    expect(turns[1]?.messages.map(message => message.role)).toEqual(['user', 'assistant'])
+    expect(turns[1]?.messages[1]).toMatchObject({
       role: 'assistant',
-      content: 'new answer',
+      content: [{ type: 'text', text: 'new answer' }],
       status: 'done',
     })
   })
@@ -233,13 +275,11 @@ describe('chat runtime', () => {
       config: requestConfig,
     })
 
-    const streamingSnapshot = await waitForSnapshot(runtime, snapshot =>
-      snapshot.streamingConversationIds.includes('conv-1'),
-    )
+    const streamingSnapshot = await waitForSnapshot(runtime, snapshot => snapshot.isStreaming)
+    const runningTurnId = streamingSnapshot.runningTurnIds[0]
     expect(streamingSnapshot).toMatchObject({
       activeConversationId: 'conv-1',
       isStreaming: true,
-      streamingConversationIds: ['conv-1'],
     })
 
     await runtime.setActiveConversation('conv-2')
@@ -247,16 +287,16 @@ describe('chat runtime', () => {
     expect(runtime.getSnapshot()).toMatchObject({
       activeConversationId: 'conv-2',
       isStreaming: false,
-      streamingConversationIds: ['conv-1'],
+      runningTurnIds: [runningTurnId],
     })
 
-    runtime.stopStreaming('conv-1')
+    runtime.stopStreaming(runningTurnId)
     await sendPromise
 
-    expect(runtime.getSnapshot().streamingConversationIds).toEqual([])
+    expect(runtime.getSnapshot().runningTurnIds).toEqual([])
   })
 
-  it('stops the active conversation stream by default', async () => {
+  it('stops the active turn stream by default and marks it aborted', async () => {
     const storage = createTestChatStorage()
     vi.spyOn(ChatClient, 'chat').mockImplementation(async function* (_messages, config) {
       yield { type: StreamEventType.TextDelta, text: 'partial' }
@@ -284,7 +324,8 @@ describe('chat runtime', () => {
 
     expect(runtime.getSnapshot()).toMatchObject({
       isStreaming: false,
-      streamingConversationIds: [],
+      runningTurnIds: [],
+      turns: [{ status: 'aborted' }],
     })
   })
 })

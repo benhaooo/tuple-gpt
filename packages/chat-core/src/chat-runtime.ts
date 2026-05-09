@@ -1,22 +1,23 @@
 import {
-  addMessage,
+  appendMessageToTurn,
   createConversation,
   deleteConversation as deleteConversationFromList,
-  deleteMessage as deleteMessageFromList,
+  deleteTurn as deleteTurnFromList,
   getActiveConversation,
   renameConversation as renameConversationInList,
   updateMessageContent,
   updateMessageStatus,
+  updateTurnStatus,
   upsertConversation,
 } from './conversation'
 import {
-  prepareRegenerateAssistantMessage,
-  prepareResendFromUserMessage,
+  prepareRegenerateTurn,
+  prepareResendTurn,
   prepareSaveUserMessage,
   prepareSendMessage,
 } from './flow'
 import { streamAssistantReply, type ChatRuntimeEvent } from './runtime'
-import type { ChatMessage, Conversation, MessageAttachment } from './types'
+import type { Conversation, MessageAttachment } from './types'
 import {
   cloneStorageSnapshot,
   normalizeStorageSnapshot,
@@ -43,40 +44,37 @@ export interface ChatRuntime {
   getSnapshot(): ChatSnapshot
   subscribe(listener: ChatSnapshotListener): () => void
   sendMessage(input: SendMessageInput): Promise<void>
-  stopStreaming(conversationId?: string): void
-  newConversation(config: ActiveChatRequestConfig): Promise<Conversation | null>
+  stopStreaming(turnId?: string): void
+  newConversation(): Promise<Conversation | null>
   setActiveConversation(id: string): Promise<void>
   deleteConversation(id: string): Promise<void>
   renameConversation(id: string, title: string): Promise<void>
-  deleteMessage(messageId: string): Promise<void>
-  saveUserMessage(messageId: string, content: string): Promise<void>
-  resendFromUserMessage(
-    messageId: string,
-    content: string,
-    config: ActiveChatRequestConfig,
-  ): Promise<void>
-  regenerateAssistantMessage(messageId: string, config: ActiveChatRequestConfig): Promise<void>
-  retryLastMessage(config: ActiveChatRequestConfig): Promise<void>
+  deleteTurn(turnId: string): Promise<void>
+  saveUserMessage(turnId: string, content: string): Promise<void>
+  resendTurn(turnId: string, content: string, config: ActiveChatRequestConfig): Promise<void>
+  regenerateTurn(turnId: string, config: ActiveChatRequestConfig): Promise<void>
+  retryLastTurn(config: ActiveChatRequestConfig): Promise<void>
   clearAll(): Promise<void>
 }
 
 interface ChatRuntimeState extends ChatStorageSnapshot {
   isReady: boolean
-  streamingConversationIds: string[]
+  runningTurnIds: string[]
 }
 
 function toSnapshot(state: ChatRuntimeState): ChatSnapshot {
   const activeConversation = getActiveConversation(state.conversations, state.activeConversationId)
-  const streamingConversationIds = [...state.streamingConversationIds]
+  const runningTurnIds = [...state.runningTurnIds]
+  const activeTurnIds = new Set(activeConversation?.turns.map(turn => turn.id) ?? [])
+
   return {
     conversations: state.conversations,
     activeConversationId: state.activeConversationId,
     activeConversation,
-    messages: activeConversation?.messages ?? [],
+    turns: activeConversation?.turns ?? [],
     isReady: state.isReady,
-    streamingConversationIds,
-    isStreaming:
-      !!state.activeConversationId && streamingConversationIds.includes(state.activeConversationId),
+    runningTurnIds,
+    isStreaming: runningTurnIds.some(turnId => activeTurnIds.has(turnId)),
   }
 }
 
@@ -94,7 +92,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
     conversations: [],
     activeConversationId: null,
     isReady: false,
-    streamingConversationIds: [],
+    runningTurnIds: [],
   }
   let hydratePromise: Promise<void> | null = null
   let unsubscribeStorage: (() => void) | null = null
@@ -151,7 +149,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
 
         unsubscribeStorage =
           storage.subscribe?.(snapshot => {
-            if (state.streamingConversationIds.length > 0) return
+            if (state.runningTurnIds.length > 0) return
             patchStorageSnapshot(snapshot, false)
           }) ?? null
       } catch {
@@ -172,37 +170,53 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
     }
   }
 
-  function isConversationStreaming(conversationId: string | null | undefined) {
-    return !!conversationId && state.streamingConversationIds.includes(conversationId)
+  function isTurnRunning(turnId: string | null | undefined) {
+    return !!turnId && state.runningTurnIds.includes(turnId)
   }
 
-  function addStreamingConversation(conversationId: string): ChatRuntimeState {
-    if (isConversationStreaming(conversationId)) return state
+  function isConversationRunning(conversation: Conversation | null | undefined) {
+    return !!conversation?.turns.some(turn => isTurnRunning(turn.id))
+  }
+
+  function addRunningTurn(turnId: string): ChatRuntimeState {
+    if (isTurnRunning(turnId)) return state
     return {
       ...state,
-      streamingConversationIds: [...state.streamingConversationIds, conversationId],
+      runningTurnIds: [...state.runningTurnIds, turnId],
     }
   }
 
-  function removeStreamingConversation(conversationId: string): ChatRuntimeState {
+  function removeRunningTurn(turnId: string): ChatRuntimeState {
     return {
       ...state,
-      streamingConversationIds: state.streamingConversationIds.filter(id => id !== conversationId),
+      runningTurnIds: state.runningTurnIds.filter(id => id !== turnId),
     }
   }
 
-  function getActiveConversationMessage(messageId: string) {
+  function getActiveConversationTurn(turnId: string) {
     const conversation = getActiveConversation(state.conversations, state.activeConversationId)
     if (!conversation) return null
 
-    const index = conversation.messages.findIndex(message => message.id === messageId)
+    const index = conversation.turns.findIndex(turn => turn.id === turnId)
     if (index === -1) return null
 
     return {
       conversation,
       index,
-      message: conversation.messages[index],
+      turn: conversation.turns[index],
     }
+  }
+
+  function getDefaultStopTurnId() {
+    const activeConversation = getActiveConversation(
+      state.conversations,
+      state.activeConversationId,
+    )
+    const activeRunningTurn = [...(activeConversation?.turns ?? [])]
+      .reverse()
+      .find(turn => isTurnRunning(turn.id))
+
+    return activeRunningTurn?.id ?? state.runningTurnIds[0]
   }
 
   async function replaceConversation(conversation: Conversation) {
@@ -215,22 +229,23 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
 
   function applyRuntimeEvent(event: ChatRuntimeEvent): ChatRuntimeState {
     switch (event.type) {
-      case 'assistant_started': {
-        const conversation = state.conversations.find(item => item.id === event.conversationId)
-        if (!conversation) return state
-
-        const result = addMessage(conversation, event.message)
+      case 'assistant_started':
         return {
           ...state,
-          conversations: upsertConversation(state.conversations, result.conversation),
+          conversations: appendMessageToTurn(
+            state.conversations,
+            event.conversationId,
+            event.turnId,
+            event.message,
+          ),
         }
-      }
       case 'assistant_delta':
         return {
           ...state,
           conversations: updateMessageContent(
             state.conversations,
             event.conversationId,
+            event.turnId,
             event.messageId,
             event.content,
           ),
@@ -241,6 +256,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
           conversations: updateMessageStatus(
             state.conversations,
             event.conversationId,
+            event.turnId,
             event.messageId,
             'done',
           ),
@@ -251,38 +267,86 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
           conversations: updateMessageStatus(
             state.conversations,
             event.conversationId,
+            event.turnId,
             event.messageId,
             'error',
             event.error,
           ),
         }
+      case 'tool_message':
+        return {
+          ...state,
+          conversations: appendMessageToTurn(
+            state.conversations,
+            event.conversationId,
+            event.turnId,
+            event.message,
+          ),
+        }
+      case 'turn_done':
+        return {
+          ...state,
+          conversations: updateTurnStatus(
+            state.conversations,
+            event.conversationId,
+            event.turnId,
+            'done',
+          ),
+        }
+      case 'turn_error':
+        return {
+          ...state,
+          conversations: updateTurnStatus(
+            state.conversations,
+            event.conversationId,
+            event.turnId,
+            'error',
+            event.error,
+          ),
+        }
+      case 'turn_aborted':
+        return {
+          ...state,
+          conversations: updateTurnStatus(
+            state.conversations,
+            event.conversationId,
+            event.turnId,
+            'aborted',
+          ),
+        }
     }
   }
 
-  async function runAssistantReply(
+  async function runTurnReply(
     conversationId: string,
-    history: ChatMessage[],
+    turnId: string,
+    history: SendMessageHistory,
     config: ActiveChatRequestConfig,
   ) {
-    if (isConversationStreaming(conversationId)) return
+    if (isTurnRunning(turnId)) return
 
     const abortController = new AbortController()
-    abortControllers.set(conversationId, abortController)
-    await setState(addStreamingConversation(conversationId), false)
+    abortControllers.set(turnId, abortController)
+    await setState(addRunningTurn(turnId), false)
 
     try {
       for await (const event of streamAssistantReply({
         conversationId,
-        history,
+        turnId,
+        mode: config.mode ?? (config.tools?.length && config.toolExecutor ? 'agent' : 'chat'),
+        history: history.messages,
         provider: config.provider,
         model: config.model,
+        tools: config.tools,
+        toolExecutor: config.toolExecutor,
+        maxTurns: config.maxTurns,
         signal: abortController.signal,
       })) {
         await setState(applyRuntimeEvent(event))
       }
     } finally {
-      abortControllers.delete(conversationId)
-      await setState(removeStreamingConversation(conversationId), false)
+      abortControllers.delete(turnId)
+      await setState(removeRunningTurn(turnId), false)
     }
   }
 
@@ -314,35 +378,43 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
 
     async sendMessage(input) {
       await ensureReady()
-      if (isConversationStreaming(state.activeConversationId)) return
+      const activeConversation = getActiveConversation(
+        state.conversations,
+        state.activeConversationId,
+      )
+      if (isConversationRunning(activeConversation)) return
 
       const attachments = input.attachments ?? []
       const prepared = prepareSendMessage({
-        activeConversation: getActiveConversation(state.conversations, state.activeConversationId),
+        activeConversation,
         providerId: input.config.provider.id,
         model: input.config.model,
+        mode:
+          input.config.mode ??
+          (input.config.tools?.length && input.config.toolExecutor ? 'agent' : 'chat'),
         content: input.content,
         attachments: attachments.length > 0 ? attachments : undefined,
       })
 
       await replaceConversation(prepared.conversation)
-      await runAssistantReply(prepared.conversation.id, prepared.requestHistory, input.config)
+      await runTurnReply(
+        prepared.conversation.id,
+        prepared.turn.id,
+        { messages: prepared.requestHistory },
+        input.config,
+      )
     },
 
-    stopStreaming(conversationId) {
-      const targetConversationId = conversationId ?? state.activeConversationId
-      if (targetConversationId) {
-        abortControllers.get(targetConversationId)?.abort()
+    stopStreaming(turnId) {
+      const targetTurnId = turnId ?? getDefaultStopTurnId()
+      if (targetTurnId) {
+        abortControllers.get(targetTurnId)?.abort()
       }
     },
 
-    async newConversation(config) {
+    async newConversation() {
       await ensureReady()
-      const conversation = createConversation({
-        providerId: config.provider.id,
-        model: config.model,
-      })
-
+      const conversation = createConversation()
       await replaceConversation(conversation)
       return conversation
     },
@@ -355,16 +427,19 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
 
     async deleteConversation(id) {
       await ensureReady()
-      abortControllers.get(id)?.abort()
-      abortControllers.delete(id)
+      const conversation = state.conversations.find(item => item.id === id)
+      for (const turn of conversation?.turns ?? []) {
+        abortControllers.get(turn.id)?.abort()
+        abortControllers.delete(turn.id)
+      }
 
       const result = deleteConversationFromList(state.conversations, state.activeConversationId, id)
       await setState({
         ...state,
         conversations: result.conversations,
         activeConversationId: result.activeConversationId,
-        streamingConversationIds: state.streamingConversationIds.filter(
-          conversationId => conversationId !== id,
+        runningTurnIds: state.runningTurnIds.filter(
+          turnId => !conversation?.turns.some(turn => turn.id === turnId),
         ),
       })
     },
@@ -377,82 +452,84 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
       })
     },
 
-    async deleteMessage(messageId) {
+    async deleteTurn(turnId) {
       await ensureReady()
       const conversationId = state.activeConversationId
       if (!conversationId) return
 
+      abortControllers.get(turnId)?.abort()
+      abortControllers.delete(turnId)
+
       await setState({
         ...state,
-        conversations: deleteMessageFromList(state.conversations, conversationId, messageId),
+        conversations: deleteTurnFromList(state.conversations, conversationId, turnId),
+        runningTurnIds: state.runningTurnIds.filter(id => id !== turnId),
       })
     },
 
-    async saveUserMessage(messageId, content) {
+    async saveUserMessage(turnId, content) {
       await ensureReady()
-      const target = getActiveConversationMessage(messageId)
-      if (!target || target.message.role !== 'user') return
+      const target = getActiveConversationTurn(turnId)
+      if (!target || isTurnRunning(turnId)) return
 
-      const conversation = prepareSaveUserMessage(target.conversation, messageId, content)
+      const conversation = prepareSaveUserMessage(target.conversation, turnId, content)
       if (conversation) {
         await replaceConversation(conversation)
       }
     },
 
-    async resendFromUserMessage(messageId, content, config) {
+    async resendTurn(turnId, content, config) {
       await ensureReady()
+      const target = getActiveConversationTurn(turnId)
+      if (!target || isTurnRunning(turnId)) return
 
-      const target = getActiveConversationMessage(messageId)
-      if (!target || target.message.role !== 'user') return
-      if (isConversationStreaming(target.conversation.id)) return
-
-      const prepared = prepareResendFromUserMessage(target.conversation, messageId, content)
+      const prepared = prepareResendTurn(target.conversation, turnId, content)
       if (!prepared) return
 
       await replaceConversation(prepared.conversation)
-      await runAssistantReply(prepared.conversation.id, prepared.requestHistory, config)
+      await runTurnReply(
+        prepared.conversation.id,
+        prepared.turn.id,
+        { messages: prepared.requestHistory },
+        config,
+      )
     },
 
-    async regenerateAssistantMessage(messageId, config) {
+    async regenerateTurn(turnId, config) {
       await ensureReady()
+      const target = getActiveConversationTurn(turnId)
+      if (!target || isTurnRunning(turnId)) return
 
-      const target = getActiveConversationMessage(messageId)
-      if (!target || target.message.role !== 'assistant') return
-      if (isConversationStreaming(target.conversation.id)) return
-
-      const prepared = prepareRegenerateAssistantMessage(target.conversation, messageId)
+      const prepared = prepareRegenerateTurn(target.conversation, turnId)
       if (!prepared) return
 
       await replaceConversation(prepared.conversation)
-      await runAssistantReply(prepared.conversation.id, prepared.requestHistory, config)
+      await runTurnReply(
+        prepared.conversation.id,
+        prepared.turn.id,
+        { messages: prepared.requestHistory },
+        config,
+      )
     },
 
-    async retryLastMessage(config) {
+    async retryLastTurn(config) {
       await ensureReady()
       const conversation = getActiveConversation(state.conversations, state.activeConversationId)
-      if (!conversation) return
-      if (isConversationStreaming(conversation.id)) return
+      if (!conversation || isConversationRunning(conversation)) return
 
-      const lastAssistant = [...conversation.messages]
-        .reverse()
-        .find(message => message.role === 'assistant')
-      if (lastAssistant) {
-        const prepared = prepareRegenerateAssistantMessage(conversation, lastAssistant.id)
-        if (!prepared) return
+      const lastTurn = conversation.turns[conversation.turns.length - 1]
+      if (!lastTurn) return
 
-        await replaceConversation(prepared.conversation)
-        await runAssistantReply(prepared.conversation.id, prepared.requestHistory, config)
-        return
-      }
+      const prepared = prepareRegenerateTurn(conversation, lastTurn.id)
+      if (!prepared) return
 
-      const lastUser = [...conversation.messages].reverse().find(message => message.role === 'user')
-      if (lastUser) {
-        const prepared = prepareResendFromUserMessage(conversation, lastUser.id, lastUser.content)
-        if (!prepared) return
-
-        await replaceConversation(prepared.conversation)
-        await runAssistantReply(prepared.conversation.id, prepared.requestHistory, config)
-      }
+      await replaceConversation(prepared.conversation)
+      await runTurnReply(
+        prepared.conversation.id,
+        prepared.turn.id,
+        { messages: prepared.requestHistory },
+        config,
+      )
     },
 
     async clearAll() {
@@ -466,8 +543,12 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         ...state,
         conversations: [],
         activeConversationId: null,
-        streamingConversationIds: [],
+        runningTurnIds: [],
       })
     },
   }
+}
+
+interface SendMessageHistory {
+  messages: Parameters<typeof streamAssistantReply>[0]['history']
 }

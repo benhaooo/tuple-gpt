@@ -1,9 +1,17 @@
 import type { ContentPart, Message, ProviderConfig } from '@tuple-gpt/ai-core'
-import type { ApiFormat, ChatMessage, MessageAttachment, MessageRole, Provider } from './types'
+import { cloneContent } from './content'
+import type {
+  ApiFormat,
+  ChatMessage,
+  MessageAttachment,
+  MessageContent,
+  MessageRole,
+  Provider,
+} from './types'
 
 export interface ChatRequestMessage {
   role: MessageRole
-  content: string
+  content: MessageContent[]
   attachments?: MessageAttachment[]
 }
 
@@ -40,7 +48,7 @@ export function buildRequestMessages(history: ChatMessage[]): ChatRequestMessage
     const context = formatAttachmentsAsContext(message.attachments ?? [])
     return {
       role: message.role,
-      content: context ? message.content + context : message.content,
+      content: appendAttachmentContext(message.content, context),
       attachments: message.attachments,
     }
   })
@@ -70,22 +78,10 @@ export function toProviderConfig(provider: Provider, model: string): ProviderCon
 export function toMessages(messages: ChatRequestMessage[]): Message[] {
   return messages.map(message => {
     const binaryAttachments = getBinaryAttachments(message.attachments)
-
-    if (binaryAttachments.length === 0) {
-      return {
-        role: message.role as Message['role'],
-        content: message.content,
-      }
-    }
-
-    const parts: ContentPart[] = []
-
-    if (message.content) {
-      parts.push({ type: 'text', text: message.content })
-    }
+    const content = cloneContent(message.content)
 
     for (const attachment of binaryAttachments) {
-      parts.push({
+      content.push({
         type: 'image',
         image: attachment.base64Data!,
         mimeType: attachment.mimeType,
@@ -94,7 +90,29 @@ export function toMessages(messages: ChatRequestMessage[]): Message[] {
 
     return {
       role: message.role as Message['role'],
-      content: parts,
+      content: normalizeAiContent(content),
     }
   })
+}
+
+function appendAttachmentContext(content: MessageContent[], context: string): MessageContent[] {
+  const next = cloneContent(content)
+  if (!context) return next
+
+  const textIndex = next.findIndex(part => part.type === 'text')
+  if (textIndex === -1) {
+    return [{ type: 'text', text: context }, ...next]
+  }
+
+  return next.map((part, index) =>
+    index === textIndex && part.type === 'text' ? { ...part, text: part.text + context } : part,
+  )
+}
+
+function normalizeAiContent(content: ContentPart[]): Message['content'] {
+  if (content.length === 1 && content[0]?.type === 'text') {
+    return content[0].text
+  }
+
+  return content
 }

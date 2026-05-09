@@ -1,4 +1,14 @@
-import type { ChatMessage, Conversation, MessageStatus } from './types'
+import { createTextContent, getMessageText } from './content'
+import type {
+  ChatMessage,
+  ChatMode,
+  ChatTurn,
+  Conversation,
+  MessageContent,
+  MessageStatus,
+  MessageAttachment,
+  TurnStatus,
+} from './types'
 
 export interface IdTimeOptions {
   id?: string
@@ -8,13 +18,19 @@ export interface IdTimeOptions {
 }
 
 export interface CreateConversationInput extends IdTimeOptions {
-  providerId: string
-  model: string
   title?: string
 }
 
-export type MessageInput = Omit<ChatMessage, 'id' | 'timestamp'> &
-  Partial<Pick<ChatMessage, 'id' | 'timestamp'>>
+export type MessageInput = Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt'> &
+  Partial<Pick<ChatMessage, 'id' | 'createdAt' | 'updatedAt'>>
+
+export interface CreateTurnInput extends IdTimeOptions {
+  mode?: ChatMode
+  providerId: string
+  model: string
+  content: string
+  attachments?: MessageAttachment[]
+}
 
 export interface ConversationListResult {
   conversations: Conversation[]
@@ -31,7 +47,7 @@ function resolveId(options?: IdTimeOptions): string {
   return options?.id ?? options?.createId?.() ?? defaultCreateId()
 }
 
-function resolveTimestamp(options?: IdTimeOptions): string {
+export function resolveTimestamp(options?: Pick<IdTimeOptions, 'timestamp' | 'now'>): string {
   return options?.timestamp ?? options?.now?.() ?? new Date().toISOString()
 }
 
@@ -39,16 +55,52 @@ function createTitle(content: string): string {
   return content.slice(0, 30) + (content.length > 30 ? '...' : '')
 }
 
-export function createConversation(input: CreateConversationInput): Conversation {
+export function createConversation(input: CreateConversationInput = {}): Conversation {
   const timestamp = resolveTimestamp(input)
   return {
     id: resolveId(input),
     title: input.title || '新对话',
-    messages: [],
-    providerId: input.providerId,
-    model: input.model,
+    turns: [],
     createdAt: timestamp,
     updatedAt: timestamp,
+  }
+}
+
+export function createMessage(message: MessageInput, options?: IdTimeOptions): ChatMessage {
+  const createdAt = message.createdAt ?? resolveTimestamp(options)
+  const updatedAt = message.updatedAt ?? createdAt
+
+  return {
+    ...message,
+    id: message.id ?? resolveId(options),
+    createdAt,
+    updatedAt,
+  }
+}
+
+export function createTurn(input: CreateTurnInput): { turn: ChatTurn; userMessage: ChatMessage } {
+  const startedAt = resolveTimestamp(input)
+  const userMessage = createMessage(
+    {
+      role: 'user',
+      content: createTextContent(input.content),
+      status: 'done',
+      attachments: input.attachments?.length ? input.attachments : undefined,
+    },
+    input,
+  )
+
+  return {
+    userMessage,
+    turn: {
+      id: resolveId(input),
+      mode: input.mode ?? 'chat',
+      status: 'running',
+      providerId: input.providerId,
+      model: input.model,
+      messages: [userMessage],
+      startedAt,
+    },
   }
 }
 
@@ -60,37 +112,33 @@ export function getActiveConversation(
   return conversations.find(c => c.id === activeConversationId)
 }
 
-export function addMessage(
-  conversation: Conversation,
-  message: MessageInput,
-  options?: IdTimeOptions,
-): { conversation: Conversation; message: ChatMessage } {
-  const timestamp = message.timestamp ?? resolveTimestamp(options)
-  const fullMessage: ChatMessage = {
-    ...message,
-    id: message.id ?? resolveId(options),
-    timestamp,
-  }
+export function flattenTurnMessages(turns: ChatTurn[]): ChatMessage[] {
+  return turns.flatMap(turn => turn.messages)
+}
 
-  const messages = [...conversation.messages, fullMessage]
+export function flattenConversationMessages(conversation: Conversation): ChatMessage[] {
+  return flattenTurnMessages(conversation.turns)
+}
+
+export function addTurn(
+  conversation: Conversation,
+  turn: ChatTurn,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation {
+  const timestamp = resolveTimestamp(options ?? { timestamp: turn.startedAt })
   let title = conversation.title
 
-  if (
-    title === '新对话' &&
-    fullMessage.role === 'user' &&
-    messages.filter(m => m.role === 'user').length === 1
-  ) {
-    title = createTitle(fullMessage.content)
+  if (title === '新对话' && conversation.turns.length === 0) {
+    const userMessage = turn.messages.find(message => message.role === 'user')
+    const text = userMessage ? getMessageText(userMessage) : ''
+    if (text) title = createTitle(text)
   }
 
   return {
-    message: fullMessage,
-    conversation: {
-      ...conversation,
-      title,
-      messages,
-      updatedAt: timestamp,
-    },
+    ...conversation,
+    title,
+    turns: [...conversation.turns, turn],
+    updatedAt: timestamp,
   }
 }
 
@@ -134,105 +182,169 @@ export function renameConversation(
   )
 }
 
+export function appendMessageToTurn(
+  conversations: Conversation[],
+  conversationId: string,
+  turnId: string,
+  message: ChatMessage,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation[] {
+  const timestamp = resolveTimestamp(options ?? { timestamp: message.updatedAt })
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      messages: [...turn.messages, message],
+    }),
+    timestamp,
+  )
+}
+
 export function updateMessageContent(
   conversations: Conversation[],
   conversationId: string,
+  turnId: string,
   messageId: string,
-  content: string,
+  content: MessageContent[],
   options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
 ): Conversation[] {
   const timestamp = resolveTimestamp(options)
-  return conversations.map(conversation => {
-    if (conversation.id !== conversationId) return conversation
-    const hasMessage = conversation.messages.some(message => message.id === messageId)
-    if (!hasMessage) return conversation
-
-    return {
-      ...conversation,
-      updatedAt: timestamp,
-      messages: conversation.messages.map(message =>
-        message.id === messageId ? { ...message, content } : message,
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      messages: turn.messages.map(message =>
+        message.id === messageId ? { ...message, content, updatedAt: timestamp } : message,
       ),
-    }
-  })
+    }),
+    timestamp,
+  )
 }
 
 export function updateMessageStatus(
   conversations: Conversation[],
   conversationId: string,
+  turnId: string,
   messageId: string,
   status: MessageStatus,
   error?: string,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
 ): Conversation[] {
-  return conversations.map(conversation => {
-    if (conversation.id !== conversationId) return conversation
-    const hasMessage = conversation.messages.some(message => message.id === messageId)
-    if (!hasMessage) return conversation
-
-    return {
-      ...conversation,
-      messages: conversation.messages.map(message => {
+  const timestamp = resolveTimestamp(options)
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      messages: turn.messages.map(message => {
         if (message.id !== messageId) return message
         return {
           ...message,
           status,
+          updatedAt: timestamp,
           ...(error ? { error } : {}),
         }
       }),
-    }
-  })
+    }),
+    timestamp,
+  )
 }
 
-export function deleteMessage(
+export function updateTurnStatus(
   conversations: Conversation[],
   conversationId: string,
-  messageId: string,
+  turnId: string,
+  status: TurnStatus,
+  error?: string,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation[] {
+  const timestamp = resolveTimestamp(options)
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      status,
+      endedAt: status === 'running' ? undefined : timestamp,
+      error,
+    }),
+    timestamp,
+  )
+}
+
+export function deleteTurn(
+  conversations: Conversation[],
+  conversationId: string,
+  turnId: string,
   options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
 ): Conversation[] {
   const timestamp = resolveTimestamp(options)
   return conversations.map(conversation => {
     if (conversation.id !== conversationId) return conversation
-    const messages = conversation.messages.filter(message => message.id !== messageId)
-    if (messages.length === conversation.messages.length) return conversation
+    const turns = conversation.turns.filter(turn => turn.id !== turnId)
+    if (turns.length === conversation.turns.length) return conversation
 
     return {
       ...conversation,
-      messages,
+      turns,
       updatedAt: timestamp,
     }
   })
 }
 
-export function truncateAfterMessage(
-  conversations: Conversation[],
-  conversationId: string,
-  messageId: string,
-  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
-): Conversation[] {
-  const timestamp = resolveTimestamp(options)
-  return conversations.map(conversation => {
-    if (conversation.id !== conversationId) return conversation
-    const index = conversation.messages.findIndex(message => message.id === messageId)
-    if (index === -1) return conversation
-
-    return {
-      ...conversation,
-      messages: conversation.messages.slice(0, index + 1),
-      updatedAt: timestamp,
-    }
-  })
-}
-
-export function truncateConversationAfterMessage(
+export function truncateConversationAfterTurn(
   conversation: Conversation,
-  messageId: string,
+  turnId: string,
   options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
 ): Conversation | null {
-  const index = conversation.messages.findIndex(message => message.id === messageId)
+  const index = conversation.turns.findIndex(turn => turn.id === turnId)
   if (index === -1) return null
+
   return {
     ...conversation,
-    messages: conversation.messages.slice(0, index + 1),
+    turns: conversation.turns.slice(0, index + 1),
     updatedAt: resolveTimestamp(options),
   }
+}
+
+export function replaceTurn(
+  conversation: Conversation,
+  turn: ChatTurn,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation | null {
+  const index = conversation.turns.findIndex(item => item.id === turn.id)
+  if (index === -1) return null
+  const timestamp = resolveTimestamp(options ?? { timestamp: turn.startedAt })
+
+  return {
+    ...conversation,
+    turns: [...conversation.turns.slice(0, index), turn],
+    updatedAt: timestamp,
+  }
+}
+
+function mapTurn(
+  conversations: Conversation[],
+  conversationId: string,
+  turnId: string,
+  mapper: (turn: ChatTurn) => ChatTurn,
+  updatedAt: string,
+): Conversation[] {
+  return conversations.map(conversation => {
+    if (conversation.id !== conversationId) return conversation
+    const hasTurn = conversation.turns.some(turn => turn.id === turnId)
+    if (!hasTurn) return conversation
+
+    return {
+      ...conversation,
+      updatedAt,
+      turns: conversation.turns.map(turn => (turn.id === turnId ? mapper(turn) : turn)),
+    }
+  })
 }

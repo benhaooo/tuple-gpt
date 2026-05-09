@@ -17,7 +17,14 @@ const provider: Provider = {
 }
 
 const history: ChatMessage[] = [
-  { id: 'u1', role: 'user', content: 'hello', status: 'done', timestamp },
+  {
+    id: 'u1',
+    role: 'user',
+    content: [{ type: 'text', text: 'hello' }],
+    status: 'done',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  },
 ]
 
 async function collect(input: AsyncIterable<ChatRuntimeEvent>): Promise<ChatRuntimeEvent[]> {
@@ -33,7 +40,7 @@ describe('streamAssistantReply', () => {
     vi.restoreAllMocks()
   })
 
-  it('emits start, delta, and done events', async () => {
+  it('emits start, delta, assistant done, and turn done events', async () => {
     vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
       yield { type: StreamEventType.TextDelta, text: 'hel' }
       yield { type: StreamEventType.TextDelta, text: 'lo' }
@@ -43,9 +50,12 @@ describe('streamAssistantReply', () => {
     const events = await collect(
       streamAssistantReply({
         conversationId: 'conv-1',
+        turnId: 'turn-1',
+        mode: 'chat',
         history,
         provider,
         model: 'gpt-4o',
+        now: () => timestamp,
       }),
     )
 
@@ -54,18 +64,59 @@ describe('streamAssistantReply', () => {
       'assistant_delta',
       'assistant_delta',
       'assistant_done',
+      'turn_done',
     ])
-    expect(events[0]).toMatchObject({
-      message: {
-        providerId: provider.id,
-        model: 'gpt-4o',
-      },
+    expect(events[1]).toMatchObject({
+      content: [{ type: 'text', text: 'hel' }],
     })
-    expect(events[1]).toMatchObject({ content: 'hel' })
-    expect(events[2]).toMatchObject({ content: 'hello' })
+    expect(events[2]).toMatchObject({
+      content: [{ type: 'text', text: 'hello' }],
+    })
   })
 
-  it('emits assistant_error when the stream yields an error event', async () => {
+  it('emits tool messages between assistant tool call and final assistant response', async () => {
+    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+      yield { type: StreamEventType.ToolCallStart, toolCall: { id: 'tc1', name: 'search' } }
+      yield { type: StreamEventType.ToolCallDelta, toolCallId: 'tc1', arguments: '{"q":"x"}' }
+      yield { type: StreamEventType.ToolCallEnd, toolCallId: 'tc1' }
+      yield { type: StreamEventType.Finish, finishReason: FinishReason.ToolCalls }
+      yield { type: StreamEventType.ToolResult, toolCallId: 'tc1', result: 'found' }
+      yield { type: StreamEventType.TextDelta, text: 'done' }
+      yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
+    })
+
+    const events = await collect(
+      streamAssistantReply({
+        conversationId: 'conv-1',
+        turnId: 'turn-1',
+        mode: 'agent',
+        history,
+        provider,
+        model: 'gpt-4o',
+        now: () => timestamp,
+      }),
+    )
+
+    expect(events.map(event => event.type)).toEqual([
+      'assistant_started',
+      'assistant_delta',
+      'assistant_delta',
+      'assistant_done',
+      'tool_message',
+      'assistant_started',
+      'assistant_delta',
+      'assistant_done',
+      'turn_done',
+    ])
+    expect(events[4]).toMatchObject({
+      message: {
+        role: 'tool',
+        content: [{ type: 'tool_result', toolCallId: 'tc1', result: 'found' }],
+      },
+    })
+  })
+
+  it('emits assistant_error and turn_error when the stream yields an error event', async () => {
     vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
       yield { type: StreamEventType.Error, error: new Error('boom') }
     })
@@ -73,17 +124,24 @@ describe('streamAssistantReply', () => {
     const events = await collect(
       streamAssistantReply({
         conversationId: 'conv-1',
+        turnId: 'turn-1',
+        mode: 'chat',
         history,
         provider,
         model: 'gpt-4o',
       }),
     )
 
-    expect(events.map(event => event.type)).toEqual(['assistant_started', 'assistant_error'])
+    expect(events.map(event => event.type)).toEqual([
+      'assistant_started',
+      'assistant_error',
+      'turn_error',
+    ])
     expect(events[1]).toMatchObject({ error: 'boom' })
+    expect(events[2]).toMatchObject({ error: 'boom' })
   })
 
-  it('treats AbortError as a completed assistant message', async () => {
+  it('treats AbortError as an aborted turn', async () => {
     vi.spyOn(ChatClient, 'chat').mockImplementation(() => ({
       [Symbol.asyncIterator]() {
         return {
@@ -99,12 +157,18 @@ describe('streamAssistantReply', () => {
     const events = await collect(
       streamAssistantReply({
         conversationId: 'conv-1',
+        turnId: 'turn-1',
+        mode: 'chat',
         history,
         provider,
         model: 'gpt-4o',
       }),
     )
 
-    expect(events.map(event => event.type)).toEqual(['assistant_started', 'assistant_done'])
+    expect(events.map(event => event.type)).toEqual([
+      'assistant_started',
+      'assistant_done',
+      'turn_aborted',
+    ])
   })
 })

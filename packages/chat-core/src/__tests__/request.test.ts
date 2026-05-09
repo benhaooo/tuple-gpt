@@ -10,6 +10,10 @@ import type { ChatMessage, MessageAttachment, Provider } from '../types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 
+function text(value: string) {
+  return [{ type: 'text' as const, text: value }]
+}
+
 describe('request helpers', () => {
   it('formats extracted text attachments as page context', () => {
     const attachments: MessageAttachment[] = [
@@ -27,14 +31,15 @@ describe('request helpers', () => {
     )
   })
 
-  it('builds request messages with attachment context appended to content', () => {
+  it('builds request messages with attachment context appended to text content', () => {
     const history: ChatMessage[] = [
       {
         id: 'u1',
         role: 'user',
-        content: 'summarize',
+        content: text('summarize'),
         status: 'done',
-        timestamp,
+        createdAt: timestamp,
+        updatedAt: timestamp,
         attachments: [
           {
             id: 'tab-1',
@@ -47,10 +52,12 @@ describe('request helpers', () => {
     ]
 
     const result = buildRequestMessages(history)
+    const part = result[0]?.content[0]
 
-    expect(result[0].content).toContain('summarize')
-    expect(result[0].content).toContain('<attached_pages>')
-    expect(result[0].attachments).toBe(history[0].attachments)
+    expect(part?.type).toBe('text')
+    expect(part?.type === 'text' ? part.text : '').toContain('summarize')
+    expect(part?.type === 'text' ? part.text : '').toContain('<attached_pages>')
+    expect(result[0]?.attachments).toBe(history[0]?.attachments)
   })
 
   it('keeps only binary image and pdf attachments', () => {
@@ -87,7 +94,7 @@ describe('request helpers', () => {
     const result = toMessages([
       {
         role: 'user',
-        content: 'look',
+        content: text('look'),
         attachments: [
           {
             id: 'img',
@@ -101,7 +108,7 @@ describe('request helpers', () => {
       },
     ])
 
-    expect(result[0].content).toEqual([
+    expect(result[0]?.content).toEqual([
       { type: 'text', text: 'look' },
       { type: 'image', image: 'aaa', mimeType: 'image/png' },
     ])

@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  prepareRegenerateAssistantMessage,
-  prepareResendFromUserMessage,
-  prepareSendMessage,
-} from '../flow'
-import type { Conversation } from '../types'
+import { prepareRegenerateTurn, prepareResendTurn, prepareSendMessage } from '../flow'
+import type { ChatTurn, Conversation } from '../types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 
@@ -16,55 +12,86 @@ function createIdFactory(ids: string[]) {
   }
 }
 
-function conversation(): Conversation {
+function text(value: string) {
+  return [{ type: 'text' as const, text: value }]
+}
+
+function turn(id: string, userId: string, assistantId: string, userText: string): ChatTurn {
   return {
-    id: 'conv-1',
-    title: 'Chat',
+    id,
+    mode: 'chat',
+    status: 'done',
     providerId: 'provider-1',
     model: 'model-1',
-    createdAt: timestamp,
-    updatedAt: timestamp,
+    startedAt: timestamp,
+    endedAt: timestamp,
     messages: [
-      { id: 'u1', role: 'user', content: 'first', status: 'done', timestamp },
-      { id: 'a1', role: 'assistant', content: 'answer first', status: 'done', timestamp },
-      { id: 'u2', role: 'user', content: 'second', status: 'done', timestamp },
-      { id: 'a2', role: 'assistant', content: 'answer second', status: 'done', timestamp },
+      {
+        id: userId,
+        role: 'user',
+        content: text(userText),
+        status: 'done',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: text(`answer ${userText}`),
+        status: 'done',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
     ],
   }
 }
 
-describe('message flow preparation', () => {
-  it('prepares a new conversation and user message for send', () => {
+function conversation(): Conversation {
+  return {
+    id: 'conv-1',
+    title: 'Chat',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    turns: [turn('t1', 'u1', 'a1', 'first'), turn('t2', 'u2', 'a2', 'second')],
+  }
+}
+
+describe('turn flow preparation', () => {
+  it('prepares a new conversation and user turn for send', () => {
     const result = prepareSendMessage({
       providerId: 'provider-1',
       model: 'model-1',
       content: 'hello',
-      createId: createIdFactory(['conv-1', 'msg-1']),
+      createId: createIdFactory(['conv-1', 'msg-1', 'turn-1']),
       now: () => timestamp,
     })
 
     expect(result.createdConversation).toBe(true)
     expect(result.conversation.id).toBe('conv-1')
+    expect(result.turn.id).toBe('turn-1')
     expect(result.userMessage.id).toBe('msg-1')
+    expect(result.conversation.turns).toHaveLength(1)
     expect(result.requestHistory).toEqual([result.userMessage])
   })
 
-  it('prepares resend by editing the user message and truncating following messages', () => {
-    const result = prepareResendFromUserMessage(conversation(), 'u1', 'edited first', {
+  it('prepares resend by editing the user message and replacing following turns', () => {
+    const result = prepareResendTurn(conversation(), 't1', 'edited first', {
       now: () => '2026-04-29T00:01:00.000Z',
     })
 
-    expect(result?.conversation.messages.map(message => message.id)).toEqual(['u1'])
-    expect(result?.conversation.messages[0].content).toBe('edited first')
+    expect(result?.conversation.turns.map(item => item.id)).toEqual(['t1'])
+    expect(result?.turn.messages.map(message => message.id)).toEqual(['u1'])
+    expect(result?.turn.messages[0]?.content).toEqual(text('edited first'))
     expect(result?.requestHistory.map(message => message.id)).toEqual(['u1'])
   })
 
-  it('prepares regeneration by truncating after the previous user message', () => {
-    const result = prepareRegenerateAssistantMessage(conversation(), 'a2', {
+  it('prepares regeneration by keeping the user message and replacing following turns', () => {
+    const result = prepareRegenerateTurn(conversation(), 't2', {
       now: () => '2026-04-29T00:02:00.000Z',
     })
 
-    expect(result?.conversation.messages.map(message => message.id)).toEqual(['u1', 'a1', 'u2'])
+    expect(result?.conversation.turns.map(item => item.id)).toEqual(['t1', 't2'])
+    expect(result?.turn.messages.map(message => message.id)).toEqual(['u2'])
     expect(result?.requestHistory.map(message => message.id)).toEqual(['u1', 'a1', 'u2'])
   })
 })

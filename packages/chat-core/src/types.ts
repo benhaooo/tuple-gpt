@@ -1,6 +1,14 @@
-export type MessageRole = 'system' | 'user' | 'assistant'
+import type { ContentPart } from '@tuple-gpt/ai-core'
 
-export type MessageStatus = 'pending' | 'streaming' | 'done' | 'error'
+export type ChatMode = 'chat' | 'agent'
+
+export type TurnStatus = 'running' | 'done' | 'error' | 'aborted'
+
+export type MessageRole = 'user' | 'assistant' | 'tool'
+
+export type MessageStatus = 'streaming' | 'done' | 'error'
+
+export type MessageContent = ContentPart
 
 export type AttachmentCategory = 'text' | 'image' | 'pdf'
 
@@ -20,21 +28,30 @@ export interface MessageAttachment {
 export interface ChatMessage {
   id: string
   role: MessageRole
-  content: string
-  timestamp: string
+  content: MessageContent[]
   status: MessageStatus
+  createdAt: string
+  updatedAt: string
   error?: string
-  providerId?: string
-  model?: string
   attachments?: MessageAttachment[]
+}
+
+export interface ChatTurn {
+  id: string
+  mode: ChatMode
+  status: TurnStatus
+  providerId: string
+  model: string
+  messages: ChatMessage[]
+  startedAt: string
+  endedAt?: string
+  error?: string
 }
 
 export interface Conversation {
   id: string
   title: string
-  messages: ChatMessage[]
-  providerId: string
-  model: string
+  turns: ChatTurn[]
   createdAt: string
   updatedAt: string
 }

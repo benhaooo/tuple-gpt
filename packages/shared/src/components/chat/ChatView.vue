@@ -8,16 +8,16 @@
       </div>
     </div>
 
-    <!-- Message list -->
-    <MessageList
+    <!-- Turn list -->
+    <TurnList
       v-else
-      :messages="messages"
+      :turns="turns"
       :is-streaming="isStreaming"
       :providers="providerStore.providers"
-      @regenerate="chat.regenerateAssistantMessage"
-      @delete="handleDeleteMessage"
+      @regenerate="chat.regenerateTurn"
+      @delete="handleDeleteTurn"
       @edit-save="handleSaveUserMessage"
-      @edit-resend="handleResendUserMessage"
+      @edit-resend="handleResendTurn"
       class="flex-1 min-h-0"
     />
 
@@ -36,22 +36,22 @@
 import { ChatBubbleLeftRightIcon } from '@heroicons/vue/24/outline'
 import { useChat } from '../../composables/useChat'
 import { useProviderStore } from '../../stores/providerStore'
-import MessageList from './MessageList.vue'
+import TurnList from './TurnList.vue'
 import ChatInput from './ChatInput.vue'
 
 const chat = useChat()
-const { activeConversation, messages, isStreaming } = chat
+const { activeConversation, turns, isStreaming } = chat
 const providerStore = useProviderStore()
 
-async function handleDeleteMessage(messageId: string) {
-  await chat.deleteMessage(messageId)
+async function handleDeleteTurn(turnId: string) {
+  await chat.deleteTurn(turnId)
 }
 
-async function handleSaveUserMessage(payload: { messageId: string; content: string }) {
-  await chat.saveUserMessage(payload.messageId, payload.content)
+async function handleSaveUserMessage(payload: { turnId: string; content: string }) {
+  await chat.saveUserMessage(payload.turnId, payload.content)
 }
 
-async function handleResendUserMessage(payload: { messageId: string; content: string }) {
-  await chat.resendFromUserMessage(payload.messageId, payload.content)
+async function handleResendTurn(payload: { turnId: string; content: string }) {
+  await chat.resendTurn(payload.turnId, payload.content)
 }
 </script>

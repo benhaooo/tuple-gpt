@@ -1,30 +1,36 @@
 import {
-  addMessage,
+  addTurn,
   createConversation,
-  truncateConversationAfterMessage,
-  updateMessageContent,
+  createTurn,
+  flattenConversationMessages,
+  replaceTurn,
+  truncateConversationAfterTurn,
   upsertConversation,
   type IdTimeOptions,
 } from './conversation'
-import type { ChatMessage, Conversation, MessageAttachment } from './types'
+import { createTextContent, getMessageText } from './content'
+import type { ChatMessage, ChatMode, ChatTurn, Conversation, MessageAttachment } from './types'
 
 export interface PrepareSendMessageInput extends IdTimeOptions {
   activeConversation?: Conversation
   providerId: string
   model: string
+  mode?: ChatMode
   content: string
   attachments?: MessageAttachment[]
 }
 
 export interface PrepareSendMessageResult {
   conversation: Conversation
+  turn: ChatTurn
   userMessage: ChatMessage
   requestHistory: ChatMessage[]
   createdConversation: boolean
 }
 
-export interface PrepareMessageResult {
+export interface PrepareTurnResult {
   conversation: Conversation
+  turn: ChatTurn
   requestHistory: ChatMessage[]
 }
 
@@ -41,101 +47,128 @@ export function prepareSendMessage(input: PrepareSendMessageInput): PrepareSendM
   const conversation =
     input.activeConversation ??
     createConversation({
-      providerId: input.providerId,
-      model: input.model,
       createId: input.createId,
       now: input.now,
     })
 
-  const historySnapshot = [...conversation.messages]
-  const addResult = addMessage(
-    conversation,
-    {
-      role: 'user',
-      content: input.content,
-      status: 'done',
-      attachments: input.attachments?.length ? input.attachments : undefined,
-    },
-    {
-      createId: input.createId,
-      now: input.now,
-    },
-  )
+  const historySnapshot = flattenConversationMessages(conversation)
+  const { turn, userMessage } = createTurn({
+    providerId: input.providerId,
+    model: input.model,
+    mode: input.mode,
+    content: input.content,
+    attachments: input.attachments,
+    createId: input.createId,
+    now: input.now,
+  })
+  const nextConversation = addTurn(conversation, turn, { timestamp: turn.startedAt })
 
   return {
-    conversation: addResult.conversation,
-    userMessage: addResult.message,
-    requestHistory: [...historySnapshot, addResult.message],
+    conversation: nextConversation,
+    turn,
+    userMessage,
+    requestHistory: [...historySnapshot, userMessage],
     createdConversation,
   }
 }
 
 export function prepareSaveUserMessage(
   conversation: Conversation,
-  messageId: string,
+  turnId: string,
   content: string,
   options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
 ): Conversation | null {
-  const message = conversation.messages.find(item => item.id === messageId)
-  if (!message || message.role !== 'user') return null
-  if (!canPersistEditedMessage(message, content)) return null
+  const turn = conversation.turns.find(item => item.id === turnId)
+  const userMessage = turn?.messages.find(message => message.role === 'user')
+  if (!turn || !userMessage) return null
+  if (!canPersistEditedMessage(userMessage, content)) return null
 
-  const nextConversations = updateMessageContent(
-    [conversation],
-    conversation.id,
-    messageId,
-    normalizeContent(content),
-    options,
-  )
+  const timestamp = options?.timestamp ?? options?.now?.() ?? new Date().toISOString()
+  const updatedTurn: ChatTurn = {
+    ...turn,
+    messages: turn.messages.map(message =>
+      message.id === userMessage.id
+        ? {
+            ...message,
+            content: createTextContent(normalizeContent(content)),
+            updatedAt: timestamp,
+          }
+        : message,
+    ),
+  }
 
-  return nextConversations[0]
+  return replaceTurnWithoutTruncating(conversation, updatedTurn, timestamp)
 }
 
-export function prepareResendFromUserMessage(
+export function prepareResendTurn(
   conversation: Conversation,
-  messageId: string,
+  turnId: string,
   content: string,
   options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
-): PrepareMessageResult | null {
-  const message = conversation.messages.find(item => item.id === messageId)
-  if (!message || message.role !== 'user') return null
-  if (!canPersistEditedMessage(message, content)) return null
+): PrepareTurnResult | null {
+  const turn = conversation.turns.find(item => item.id === turnId)
+  const userMessage = turn?.messages.find(message => message.role === 'user')
+  if (!turn || !userMessage) return null
+  if (!canPersistEditedMessage(userMessage, content)) return null
 
-  const withUpdatedContent = prepareSaveUserMessage(conversation, messageId, content, options)
-  if (!withUpdatedContent) return null
-
-  const truncated = truncateConversationAfterMessage(withUpdatedContent, messageId, options)
+  const timestamp = options?.timestamp ?? options?.now?.() ?? new Date().toISOString()
+  const updatedUserMessage: ChatMessage = {
+    ...userMessage,
+    content: createTextContent(normalizeContent(content)),
+    updatedAt: timestamp,
+  }
+  const updatedTurn: ChatTurn = {
+    ...turn,
+    status: 'running',
+    messages: [updatedUserMessage],
+    startedAt: timestamp,
+    endedAt: undefined,
+    error: undefined,
+  }
+  const truncated = replaceTurn(conversation, updatedTurn, { timestamp })
   if (!truncated) return null
 
   return {
     conversation: truncated,
-    requestHistory: [...truncated.messages],
+    turn: updatedTurn,
+    requestHistory: flattenConversationMessages(truncated),
   }
 }
 
-export function prepareRegenerateAssistantMessage(
+export function prepareRegenerateTurn(
   conversation: Conversation,
-  messageId: string,
+  turnId: string,
   options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
-): PrepareMessageResult | null {
-  const index = conversation.messages.findIndex(message => message.id === messageId)
-  if (index === -1) return null
+): PrepareTurnResult | null {
+  const turn = conversation.turns.find(item => item.id === turnId)
+  const userMessage = turn?.messages.find(message => message.role === 'user')
+  if (!turn || !userMessage) return null
 
-  const message = conversation.messages[index]
-  if (message.role !== 'assistant') return null
-
-  const anchorUser = [...conversation.messages.slice(0, index)]
-    .reverse()
-    .find(item => item.role === 'user')
-  if (!anchorUser) return null
-
-  const truncated = truncateConversationAfterMessage(conversation, anchorUser.id, options)
+  const timestamp = options?.timestamp ?? options?.now?.() ?? new Date().toISOString()
+  const updatedTurn: ChatTurn = {
+    ...turn,
+    status: 'running',
+    messages: [userMessage],
+    startedAt: timestamp,
+    endedAt: undefined,
+    error: undefined,
+  }
+  const truncated = replaceTurn(conversation, updatedTurn, { timestamp })
   if (!truncated) return null
 
   return {
     conversation: truncated,
-    requestHistory: [...truncated.messages],
+    turn: updatedTurn,
+    requestHistory: flattenConversationMessages(truncated),
   }
+}
+
+export function truncateAfterTurn(
+  conversation: Conversation,
+  turnId: string,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation | null {
+  return truncateConversationAfterTurn(conversation, turnId, options)
 }
 
 export function replaceConversation(
@@ -143,4 +176,24 @@ export function replaceConversation(
   conversation: Conversation,
 ): Conversation[] {
   return upsertConversation(conversations, conversation)
+}
+
+export function getTurnUserText(turn: ChatTurn): string {
+  const userMessage = turn.messages.find(message => message.role === 'user')
+  return userMessage ? getMessageText(userMessage) : ''
+}
+
+function replaceTurnWithoutTruncating(
+  conversation: Conversation,
+  turn: ChatTurn,
+  updatedAt: string,
+): Conversation | null {
+  const index = conversation.turns.findIndex(item => item.id === turn.id)
+  if (index === -1) return null
+
+  return {
+    ...conversation,
+    turns: conversation.turns.map(item => (item.id === turn.id ? turn : item)),
+    updatedAt,
+  }
 }

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addMessage,
+  addTurn,
   createConversation,
+  createTurn,
   deleteConversation,
-  truncateAfterMessage,
+  truncateConversationAfterTurn,
 } from '../conversation'
 import type { Conversation } from '../types'
 
@@ -13,9 +14,7 @@ function conversation(overrides: Partial<Conversation> = {}): Conversation {
   return {
     id: 'conv-1',
     title: '新对话',
-    messages: [],
-    providerId: 'provider-1',
-    model: 'model-1',
+    turns: [],
     createdAt: timestamp,
     updatedAt: timestamp,
     ...overrides,
@@ -25,8 +24,6 @@ function conversation(overrides: Partial<Conversation> = {}): Conversation {
 describe('conversation operations', () => {
   it('creates a conversation with injected id and timestamp', () => {
     const result = createConversation({
-      providerId: 'provider-1',
-      model: 'model-1',
       createId: () => 'conv-1',
       now: () => timestamp,
     })
@@ -34,24 +31,20 @@ describe('conversation operations', () => {
     expect(result).toEqual(conversation())
   })
 
-  it('auto-generates title from the first user message', () => {
+  it('creates a turn and auto-generates title from the first user message', () => {
     const base = conversation()
     const content = 'abcdefghijklmnopqrstuvwxyz1234567890'
-    const { conversation: updated, message } = addMessage(
-      base,
-      {
-        role: 'user',
-        content,
-        status: 'done',
-      },
-      {
-        createId: () => 'msg-1',
-        now: () => timestamp,
-      },
-    )
+    const { turn, userMessage } = createTurn({
+      providerId: 'provider-1',
+      model: 'model-1',
+      content,
+      createId: () => 'id-1',
+      now: () => timestamp,
+    })
+    const updated = addTurn(base, turn)
 
-    expect(message.id).toBe('msg-1')
-    expect(updated.messages).toHaveLength(1)
+    expect(userMessage.content).toEqual([{ type: 'text', text: content }])
+    expect(updated.turns).toHaveLength(1)
     expect(updated.title).toBe(content.slice(0, 30) + '...')
   })
 
@@ -68,22 +61,22 @@ describe('conversation operations', () => {
     expect(result.activeConversationId).toBe('conv-2')
   })
 
-  it('truncates messages after the target message', () => {
-    const conversations = [
-      conversation({
-        messages: [
-          { id: 'u1', role: 'user', content: 'one', status: 'done', timestamp },
-          { id: 'a1', role: 'assistant', content: 'two', status: 'done', timestamp },
-          { id: 'u2', role: 'user', content: 'three', status: 'done', timestamp },
-        ],
-      }),
-    ]
-
-    const result = truncateAfterMessage(conversations, 'conv-1', 'a1', {
+  it('truncates turns after the target turn', () => {
+    const turns = ['t1', 't2', 't3'].map(id => ({
+      id,
+      mode: 'chat' as const,
+      status: 'done' as const,
+      providerId: 'provider-1',
+      model: 'model-1',
+      messages: [],
+      startedAt: timestamp,
+      endedAt: timestamp,
+    }))
+    const result = truncateConversationAfterTurn(conversation({ turns }), 't2', {
       now: () => '2026-04-29T00:01:00.000Z',
     })
 
-    expect(result[0].messages.map(message => message.id)).toEqual(['u1', 'a1'])
-    expect(result[0].updatedAt).toBe('2026-04-29T00:01:00.000Z')
+    expect(result?.turns.map(turn => turn.id)).toEqual(['t1', 't2'])
+    expect(result?.updatedAt).toBe('2026-04-29T00:01:00.000Z')
   })
 })
