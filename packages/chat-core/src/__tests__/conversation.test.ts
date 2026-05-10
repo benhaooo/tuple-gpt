@@ -5,8 +5,8 @@ import {
   createTurn,
   deleteConversation,
   truncateConversationAfterTurn,
-} from '../conversation'
-import type { Conversation } from '../types'
+} from '#conversation'
+import type { Conversation } from '#types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 

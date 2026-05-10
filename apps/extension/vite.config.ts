@@ -10,6 +10,8 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import UnoCSS from 'unocss/vite'
 
+const zipFileName = `crx-${name.replaceAll('/', '-')}-${version}.zip`
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -45,7 +47,7 @@ export default defineConfig({
     crx({ manifest }),
     zip({
       outDir: './Out',
-      outFileName: `crx-${name}-${version}.zip`,
+      outFileName: zipFileName,
     }),
     AutoImport({}),
     Components({}),

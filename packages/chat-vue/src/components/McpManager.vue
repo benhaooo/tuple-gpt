@@ -89,7 +89,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import { useMcpStore } from '../stores/mcp'
+import { useMcpStore } from '#stores/mcp'
 import McpServerDetail from './McpServerDetail.vue'
 import {
   AlertDialog,

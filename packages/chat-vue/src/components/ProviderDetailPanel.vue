@@ -125,7 +125,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { EyeIcon, EyeSlashIcon, XMarkIcon, PlusIcon as PlusIcon2 } from '@heroicons/vue/24/outline'
-import { useProviderStore } from '../stores/provider'
+import { useProviderStore } from '#stores/provider'
 import type { ApiFormat, Provider } from '@tuple-gpt/chat-core'
 import ProviderAvatar from './ProviderAvatar.vue'
 import ModelAvatar from './ModelAvatar.vue'

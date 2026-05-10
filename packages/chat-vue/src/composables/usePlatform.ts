@@ -1,6 +1,6 @@
 import { provide, inject } from 'vue'
 import type { InjectionKey } from 'vue'
-import type { PlatformConfig } from '../types/platform'
+import type { PlatformConfig } from '#types/platform'
 
 const PLATFORM_KEY: InjectionKey<PlatformConfig> = Symbol('platform-config')
 

@@ -132,7 +132,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
 import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import { useMcpStore } from '../stores/mcp'
+import { useMcpStore } from '#stores/mcp'
 import type { McpServerConfig } from '@tuple-gpt/chat-core'
 import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
 import { Input } from '@tuple-gpt/ui-vue/components/ui/input'

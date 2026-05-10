@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useMcpStore } from '../stores/mcp'
+import { useMcpStore } from '#stores/mcp'
 
 export function useToolRegistry() {
   const mcpStore = useMcpStore()

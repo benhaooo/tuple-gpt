@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { DocumentIcon, DocumentTextIcon } from '@heroicons/vue/24/outline'
 import { ScrollArea, ScrollBar } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
-import { useFileAttachments } from '../composables/useFileAttachments'
+import { useFileAttachments } from '#composables/useFileAttachments'
 import AttachmentPreviewItem from './AttachmentPreviewItem.vue'
 
 const { attachments, removeFile, formatFileSize } = useFileAttachments()

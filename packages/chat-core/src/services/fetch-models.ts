@@ -1,4 +1,4 @@
-import { getErrorMessage } from '../utils/error'
+import { getErrorMessage } from '#utils/error'
 
 export interface FetchModelsOptions {
   baseUrl: string

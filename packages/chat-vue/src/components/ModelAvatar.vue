@@ -22,7 +22,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { CpuChipIcon } from '@heroicons/vue/24/outline'
-import { resolveModelIcon } from '../config/ai-icons'
+import { resolveModelIcon } from '#config/ai-icons'
 
 const MODEL_FALLBACK_ICON_RATIO = 0.72
 const MIN_MODEL_FALLBACK_ICON_SIZE = 10

@@ -116,7 +116,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import { useProviderStore } from '../stores/provider'
+import { useProviderStore } from '#stores/provider'
 import ProviderAvatar from './ProviderAvatar.vue'
 import ProviderDetailPanel from './ProviderDetailPanel.vue'
 import AddProviderDialog from './AddProviderDialog.vue'

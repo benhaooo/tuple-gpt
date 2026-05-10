@@ -8,7 +8,7 @@ import type {
   ChatStorage,
   ChatStorageSnapshot,
 } from '../ports'
-import type { ChatTurn, Conversation, Provider } from '../types'
+import type { ChatTurn, Conversation, Provider } from '#types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 

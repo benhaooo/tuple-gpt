@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ChevronDownIcon } from '@heroicons/vue/24/outline'
-import { useProviderStore } from '../stores/provider'
+import { useProviderStore } from '#stores/provider'
 import ModelAvatar from './ModelAvatar.vue'
 import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
 import {

@@ -6,7 +6,7 @@ import {
   type ChatRuntime,
   type ChatSnapshot,
 } from '@tuple-gpt/chat-core'
-import { useProviderStore } from '../stores/provider'
+import { useProviderStore } from '#stores/provider'
 import { usePlatform } from './usePlatform'
 import { useFileAttachments } from './useFileAttachments'
 import { useToolRegistry } from './useToolRegistry'

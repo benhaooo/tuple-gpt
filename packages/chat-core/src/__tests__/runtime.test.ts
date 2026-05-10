@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ChatClient, FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
 import { streamAssistantReply, type ChatRuntimeEvent } from '../runtime'
-import type { ChatMessage, Provider } from '../types'
+import type { ChatMessage, Provider } from '#types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 

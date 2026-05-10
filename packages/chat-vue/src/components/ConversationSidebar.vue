@@ -172,7 +172,7 @@ import {
   Cog6ToothIcon,
 } from '@heroicons/vue/24/outline'
 import type { Conversation } from '@tuple-gpt/chat-core'
-import { usePlatform } from '../composables/usePlatform'
+import { usePlatform } from '#composables/usePlatform'
 import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
 import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
 import {

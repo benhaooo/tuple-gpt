@@ -34,8 +34,8 @@
 
 <script setup lang="ts">
 import { ChatBubbleLeftRightIcon } from '@heroicons/vue/24/outline'
-import { useChat } from '../composables/useChat'
-import { useProviderStore } from '../stores/provider'
+import { useChat } from '#composables/useChat'
+import { useProviderStore } from '#stores/provider'
 import TurnList from './TurnList.vue'
 import ChatInput from './ChatInput.vue'
 

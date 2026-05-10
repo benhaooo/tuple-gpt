@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useProviderStore } from '../stores/provider'
+import { useProviderStore } from '#stores/provider'
 import type { ApiFormat } from '@tuple-gpt/chat-core'
 import {
   Dialog,

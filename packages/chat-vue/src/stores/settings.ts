@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { reactive } from 'vue'
-import { ThemeName } from '../composables/useTheme'
+import { ThemeName } from '#composables/useTheme'
 
 export interface UserSettings {
   theme: ThemeName

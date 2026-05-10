@@ -33,7 +33,7 @@ import {
   getAvatarForegroundColor,
   getAvatarInitial,
 } from '@tuple-gpt/chat-core'
-import { resolveProviderIcon } from '../config/ai-icons'
+import { resolveProviderIcon } from '#config/ai-icons'
 
 const PROVIDER_INITIAL_FONT_RATIO = 0.46
 const MIN_PROVIDER_INITIAL_FONT_SIZE = 10

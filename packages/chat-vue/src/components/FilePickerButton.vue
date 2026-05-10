@@ -21,7 +21,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { PaperClipIcon } from '@heroicons/vue/24/outline'
-import { useFileAttachments } from '../composables/useFileAttachments'
+import { useFileAttachments } from '#composables/useFileAttachments'
 
 defineProps<{
   disabled?: boolean

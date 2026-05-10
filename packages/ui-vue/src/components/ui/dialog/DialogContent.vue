@@ -4,7 +4,7 @@ import type { HTMLAttributes } from 'vue'
 import { reactiveOmit } from '@vueuse/core'
 import { Cross2Icon } from '@radix-icons/vue'
 import { DialogClose, DialogContent, DialogPortal, useForwardPropsEmits } from 'reka-ui'
-import { cn } from '../../../lib/utils'
+import { cn } from '#lib/utils'
 import DialogOverlay from './DialogOverlay.vue'
 
 defineOptions({

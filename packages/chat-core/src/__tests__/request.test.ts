@@ -5,8 +5,8 @@ import {
   getBinaryAttachments,
   toMessages,
   toProviderConfig,
-} from '../request'
-import type { ChatMessage, MessageAttachment, Provider } from '../types'
+} from '#request'
+import type { ChatMessage, MessageAttachment, Provider } from '#types'
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 
