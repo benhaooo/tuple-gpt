@@ -12,7 +12,7 @@ import {
   ChatBubbleLeftIcon,
   DocumentChartBarIcon,
 } from '@heroicons/vue/24/outline'
-import { useTheme } from '@shared/composables/useTheme'
+import { useTheme } from '@tuple-gpt/chat-vue'
 
 // Tab类型定义
 const TabTypes = {

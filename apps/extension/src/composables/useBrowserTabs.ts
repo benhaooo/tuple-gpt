@@ -1,6 +1,6 @@
 import { ref, onMounted } from 'vue'
 import type { BrowserTab } from './useSelectedTabs'
-import { getErrorMessage } from '@tuple-gpt/shared'
+import { getErrorMessage } from '@tuple-gpt/chat-core'
 
 export function useBrowserTabs() {
   const tabs = ref<BrowserTab[]>([])
@@ -13,13 +13,19 @@ export function useBrowserTabs() {
 
     try {
       const allTabs = await chrome.tabs.query({})
-      tabs.value = allTabs.flatMap(tab => tab.id && tab.id !== chrome.tabs.TAB_ID_NONE ? [{
-        id: tab.id,
-        title: tab.title || '',
-        url: tab.url || '',
-        favIconUrl: tab.favIconUrl,
-        windowId: tab.windowId,
-      }] : [])
+      tabs.value = allTabs.flatMap(tab =>
+        tab.id && tab.id !== chrome.tabs.TAB_ID_NONE
+          ? [
+              {
+                id: tab.id,
+                title: tab.title || '',
+                url: tab.url || '',
+                favIconUrl: tab.favIconUrl,
+                windowId: tab.windowId,
+              },
+            ]
+          : [],
+      )
     } catch (err) {
       error.value = getErrorMessage(err, '获取标签页失败')
       console.error('Failed to fetch tabs:', err)

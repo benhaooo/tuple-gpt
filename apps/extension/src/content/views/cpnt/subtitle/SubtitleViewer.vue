@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, nextTick} from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { VideoType } from '@/utils/subtitlesApi'
-import { useSettingsStore } from '@shared/stores/settingsStore'
+import { useSettingsStore } from '@tuple-gpt/chat-vue'
 import {
   ClipboardDocumentIcon,
   ArrowPathIcon,
@@ -9,10 +9,7 @@ import {
   LinkIcon,
   SpeakerWaveIcon,
 } from '@heroicons/vue/24/outline'
-import {
-  backgroundClient,
-  type BilibiliAudioTranscriptionPayload,
-} from '@/utils/messages'
+import { backgroundClient, type BilibiliAudioTranscriptionPayload } from '@/utils/messages'
 
 const props = defineProps<{
   platformType: VideoType
@@ -31,15 +28,14 @@ const emit = defineEmits<{
 // 使用 defineModel 实现双向绑定
 const autoScrollEnabled = defineModel<boolean>('autoScroll', { required: true })
 
-
 // TODO: 双向绑定
 // 视图状态
 const internalError = ref<string | null>(props.error)
 watch(
   () => props.error,
-  (newVal) => {
+  newVal => {
     internalError.value = newVal
-  }
+  },
 )
 const bilingualMode = ref(false)
 const subtitlesRef = ref<HTMLElement | null>(null) // 字幕容器引用
@@ -52,7 +48,6 @@ const isTranscribing = ref(false)
 const transcriptionProgress = ref('')
 
 const settingsStore = useSettingsStore()
-
 
 const toggleBilingual = () => {
   bilingualMode.value = !bilingualMode.value
@@ -102,7 +97,8 @@ const scrollToCurrentSubtitle = (index: number) => {
   const offsetTop = targetRect.top - containerRect.top
 
   // 计算使目标元素居中所需的滚动位置
-  const newScrollTop = container.scrollTop + offsetTop - (container.clientHeight / 2) + (targetElement.clientHeight / 2)
+  const newScrollTop =
+    container.scrollTop + offsetTop - container.clientHeight / 2 + targetElement.clientHeight / 2
 
   container.scrollTop = newScrollTop
 }
@@ -175,7 +171,6 @@ const handleTranscriptionComplete = (data: BilibiliAudioTranscriptionPayload) =>
   // 将转录字幕更新到store中，UI会自动响应
   if (data.subtitles && data.subtitles.length > 0) {
     console.log('转录字幕:', data.subtitles)
-
   }
 
   // 清除进度提示
@@ -185,11 +180,14 @@ const handleTranscriptionComplete = (data: BilibiliAudioTranscriptionPayload) =>
 }
 
 // 监听当前激活的字幕索引变化，自动滚动到对应字幕
-watch(() => props.activeSubtitleIndex, (newIndex) => {
-  if (newIndex !== null && autoScrollEnabled.value) {
-    nextTick(() => scrollToCurrentSubtitle(newIndex))
-  }
-})
+watch(
+  () => props.activeSubtitleIndex,
+  newIndex => {
+    if (newIndex !== null && autoScrollEnabled.value) {
+      nextTick(() => scrollToCurrentSubtitle(newIndex))
+    }
+  },
+)
 </script>
 
 <template>
@@ -201,19 +199,30 @@ watch(() => props.activeSubtitleIndex, (newIndex) => {
         <!-- 双语切换 -->
         <span class="text-sm text-foreground">双语</span>
         <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" v-model="bilingualMode" class="sr-only peer" @change="toggleBilingual">
+          <input
+            type="checkbox"
+            v-model="bilingualMode"
+            class="sr-only peer"
+            @change="toggleBilingual"
+          />
           <div
-            class="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
-          </div>
+            class="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"
+          ></div>
         </label>
 
         <!-- 自动滚动切换 -->
-        <button @click="autoScrollEnabled = !autoScrollEnabled" class="p-2 rounded-lg hover:bg-accent"
-          :title="autoScrollEnabled ? '已开启字幕跟随' : '已关闭字幕跟随'">
-          <LinkIcon class="h-5 w-5" :class="[
-            autoScrollEnabled ? 'text-primary' : 'text-muted-foreground',
-            isUserScrolling && autoScrollEnabled ? 'animate-pulse' : ''
-          ]" />
+        <button
+          @click="autoScrollEnabled = !autoScrollEnabled"
+          class="p-2 rounded-lg hover:bg-accent"
+          :title="autoScrollEnabled ? '已开启字幕跟随' : '已关闭字幕跟随'"
+        >
+          <LinkIcon
+            class="h-5 w-5"
+            :class="[
+              autoScrollEnabled ? 'text-primary' : 'text-muted-foreground',
+              isUserScrolling && autoScrollEnabled ? 'animate-pulse' : '',
+            ]"
+          />
         </button>
       </div>
     </div>
@@ -226,8 +235,10 @@ watch(() => props.activeSubtitleIndex, (newIndex) => {
     <!-- 错误提示 -->
     <div v-else-if="internalError" class="py-6 text-center">
       <div class="text-destructive mb-2">{{ internalError }}</div>
-      <button @click="loadSubtitles"
-        class="p-2 bg-primary text-primary-foreground rounded-md hover:brightness-110 flex items-center justify-center">
+      <button
+        @click="loadSubtitles"
+        class="p-2 bg-primary text-primary-foreground rounded-md hover:brightness-110 flex items-center justify-center"
+      >
         <ArrowPathIcon class="h-5 w-5" />
       </button>
     </div>
@@ -235,28 +246,44 @@ watch(() => props.activeSubtitleIndex, (newIndex) => {
     <!-- 无字幕提示 -->
     <div v-else-if="!selectedSubtitle?.subtitles?.length" class="py-6 text-center">
       <div class="text-muted-foreground mb-2">未找到字幕</div>
-      <button @click="loadSubtitles"
-        class="p-2 bg-primary text-primary-foreground rounded-md hover:brightness-110 flex items-center justify-center">
+      <button
+        @click="loadSubtitles"
+        class="p-2 bg-primary text-primary-foreground rounded-md hover:brightness-110 flex items-center justify-center"
+      >
         <ArrowPathIcon class="h-5 w-5" />
       </button>
     </div>
 
     <!-- 字幕列表 -->
-    <div v-else class="space-y-1 max-h-96 overflow-y-auto" style="scroll-behavior: smooth;" ref="subtitlesRef"
-      @scroll="handleUserScroll">
-      <div v-for="(subtitle, index) in selectedSubtitle?.subtitles || []"
+    <div
+      v-else
+      class="space-y-1 max-h-96 overflow-y-auto"
+      style="scroll-behavior: smooth"
+      ref="subtitlesRef"
+      @scroll="handleUserScroll"
+    >
+      <div
+        v-for="(subtitle, index) in selectedSubtitle?.subtitles || []"
         :key="`${subtitle.startTime}-${subtitle.endTime}`"
         class="flex gap-3 leading-relaxed py-1.5 px-2 rounded-md transition-colors duration-200 subtitle-item cursor-pointer"
         :class="[
           props.activeSubtitleIndex === index
             ? 'bg-accent'
-            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-        ]" @click="jumpToTime(subtitle.startTime)">
-        <span class="font-mono w-12 flex-shrink-0" :class="[props.activeSubtitleIndex === index ? 'text-primary' : '']">{{
-          subtitle.time }}</span>
+            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+        ]"
+        @click="jumpToTime(subtitle.startTime)"
+      >
+        <span
+          class="font-mono w-12 flex-shrink-0"
+          :class="[props.activeSubtitleIndex === index ? 'text-primary' : '']"
+          >{{ subtitle.time }}</span
+        >
         <div class="flex flex-col">
           <span>{{ subtitle.text }}</span>
-          <span v-if="bilingualMode && subtitle.translatedText" class="text-muted-foreground/80 text-xs mt-1">
+          <span
+            v-if="bilingualMode && subtitle.translatedText"
+            class="text-muted-foreground/80 text-xs mt-1"
+          >
             {{ subtitle.translatedText }}
           </span>
         </div>
@@ -272,9 +299,17 @@ watch(() => props.activeSubtitleIndex, (newIndex) => {
       </button>
 
       <!-- 音频转录按钮 (仅Bilibili显示) -->
-      <button v-if="platformType === VideoType.BILIBILI" @click="transcribeAudio" :disabled="isTranscribing"
-        class="p-2 rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed" title="转录音频为字幕">
-        <div v-if="isTranscribing" class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+      <button
+        v-if="platformType === VideoType.BILIBILI"
+        @click="transcribeAudio"
+        :disabled="isTranscribing"
+        class="p-2 rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+        title="转录音频为字幕"
+      >
+        <div
+          v-if="isTranscribing"
+          class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"
+        ></div>
         <SpeakerWaveIcon v-else class="h-5 w-5 text-muted-foreground" />
       </button>
     </div>
@@ -287,7 +322,7 @@ watch(() => props.activeSubtitleIndex, (newIndex) => {
 </template>
 
 <style>
-@unocss-placeholder
+@unocss-placeholder;
 </style>
 
 <style scoped></style>

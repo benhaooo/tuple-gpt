@@ -68,6 +68,7 @@ pnpm type-check
 基于 Vue 3 的 Web 应用，提供完整的 GPT 对话界面。
 
 **特性**:
+
 - Vue Router 路由管理
 - Pinia 状态管理
 - Markdown 渲染支持
@@ -80,6 +81,7 @@ pnpm type-check
 基于 Vue 3 的浏览器扩展，使用 CRXJS 构建。
 
 **特性**:
+
 - Chrome Extension Manifest V3
 - Content Script 支持
 - Web Components
@@ -90,6 +92,7 @@ pnpm type-check
 共享的类型定义和工具函数。
 
 **使用方式**:
+
 ```typescript
 import { Message, ChatSession } from '@tuple-gpt/shared/types'
 import { formatTimestamp, generateId } from '@tuple-gpt/shared/utils'
@@ -111,7 +114,7 @@ pnpm clean
 
 ## 开发指南
 
-详细的迁移指南和开发说明请查看 [MIGRATION.md](MIGRATION.md)。
+架构演进顺序和多端复用边界请查看 [Tuple GPT Monorepo 架构演进路线](docs/architecture-roadmap.md)。
 
 ## License
 

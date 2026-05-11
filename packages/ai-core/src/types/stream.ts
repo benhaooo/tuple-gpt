@@ -19,6 +19,7 @@ export const StreamEventType = {
   ToolCallStart: 'tool_call_start',
   ToolCallDelta: 'tool_call_delta',
   ToolCallEnd: 'tool_call_end',
+  ToolResult: 'tool_result',
   Finish: 'finish',
   Error: 'error',
 } as const
@@ -30,5 +31,11 @@ export type StreamEvent =
   | { type: typeof StreamEventType.ToolCallStart; toolCall: { id: string; name: string } }
   | { type: typeof StreamEventType.ToolCallDelta; toolCallId: string; arguments: string }
   | { type: typeof StreamEventType.ToolCallEnd; toolCallId: string }
+  | {
+      type: typeof StreamEventType.ToolResult
+      toolCallId: string
+      result: string
+      isError?: boolean
+    }
   | { type: typeof StreamEventType.Finish; finishReason: FinishReason; usage?: Usage }
   | { type: typeof StreamEventType.Error; error: Error }

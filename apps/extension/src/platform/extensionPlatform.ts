@@ -1,15 +1,17 @@
-import type { PlatformConfig } from '@shared/types/platform'
-import type { MessageAttachment } from '@shared/types/chat'
+import type { PlatformConfig } from '@tuple-gpt/chat-vue'
+import type { MessageAttachment } from '@tuple-gpt/chat-core'
 import TabSelector from '../components/TabSelector.vue'
 import TabPreview from '../components/TabPreview.vue'
 import { useSelectedTabs } from '../composables/useSelectedTabs'
 import { extractMultipleTabsContent } from '../composables/useTabContent'
 import { backgroundClient } from '../utils/messages'
+import { createChromeChatStorage } from './chromeChatStorage'
 
 export function createExtensionPlatform(): PlatformConfig {
   const { selectedTabs, clear } = useSelectedTabs()
 
   return {
+    chatStorage: createChromeChatStorage(),
     InputActions: TabSelector,
     InputPreview: TabPreview,
     async openSettings() {

@@ -1,0 +1,15 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 604cfbcae71ac2ae27e4d0733762559cb81ce90f..9f82ef509b322191fd199c3e3f1de1126ebc9396 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -446,7 +446,9 @@ function prepAsset(fileName, { id, source }) {
+       const target = getOutputPath(server, fileName);
+       return {
+         target,
+-        source: source ?? await readFile$1(join(server.config.root, id)),
++        source: source ?? await readFile$1(
++          id.startsWith('/@fs/') ? id.slice(4).split('?')[0] : join(server.config.root, id.split('?')[0])
++        ),
+         deps: []
+       };
+     })

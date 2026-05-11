@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProviderManager from '@shared/components/chat/ProviderManager.vue'
+import ProviderManager from '@tuple-gpt/chat-vue/components/ProviderManager.vue'
 </script>
 
 <template>

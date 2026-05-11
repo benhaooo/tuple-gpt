@@ -38,9 +38,7 @@
               :key="tab.id"
               @click="toggle(tab)"
               class="flex w-full items-center gap-2.5 cursor-pointer px-2.5 py-2.5 rounded-md transition-colors"
-              :class="isSelected(tab.id)
-                ? 'bg-primary/15'
-                : 'hover:bg-accent'"
+              :class="isSelected(tab.id) ? 'bg-primary/15' : 'hover:bg-accent'"
             >
               <!-- Favicon -->
               <div class="flex-shrink-0">
@@ -79,8 +77,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { GlobeAltIcon } from '@heroicons/vue/24/outline'
-import { ScrollArea } from '@shared/components/ui/scroll-area'
-import { Popover, PopoverTrigger, PopoverContent } from '@shared/components/ui/popover'
+import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+import { Popover, PopoverTrigger, PopoverContent } from '@tuple-gpt/ui-vue/components/ui/popover'
 import { useBrowserTabs } from '../composables/useBrowserTabs'
 import { useSelectedTabs } from '../composables/useSelectedTabs'
 

@@ -1,0 +1,48 @@
+{
+  "name": "@tuple-gpt/ui-vue",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "imports": {
+    "#components/ui/*": "./src/components/ui/*/index.ts",
+    "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles": "./src/styles/globals.css",
+    "./components/ui/alert-dialog": "./src/components/ui/alert-dialog/index.ts",
+    "./components/ui/badge": "./src/components/ui/badge/index.ts",
+    "./components/ui/button": "./src/components/ui/button/index.ts",
+    "./components/ui/card": "./src/components/ui/card/index.ts",
+    "./components/ui/command": "./src/components/ui/command/index.ts",
+    "./components/ui/dialog": "./src/components/ui/dialog/index.ts",
+    "./components/ui/dropdown-menu": "./src/components/ui/dropdown-menu/index.ts",
+    "./components/ui/input": "./src/components/ui/input/index.ts",
+    "./components/ui/label": "./src/components/ui/label/index.ts",
+    "./components/ui/popover": "./src/components/ui/popover/index.ts",
+    "./components/ui/scroll-area": "./src/components/ui/scroll-area/index.ts",
+    "./components/ui/select": "./src/components/ui/select/index.ts",
+    "./components/ui/separator": "./src/components/ui/separator/index.ts",
+    "./components/ui/sheet": "./src/components/ui/sheet/index.ts",
+    "./components/ui/textarea": "./src/components/ui/textarea/index.ts",
+    "./components/ui/tooltip": "./src/components/ui/tooltip/index.ts"
+  },
+  "scripts": {
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@radix-icons/vue": "^1.0.0",
+    "@vueuse/core": "^14.2.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.575.0",
+    "reka-ui": "^2.8.2",
+    "tailwind-merge": "^3.5.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  }
+}

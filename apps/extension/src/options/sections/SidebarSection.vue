@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useSettingsStore } from '@shared/stores/settingsStore'
+import { useSettingsStore } from '@tuple-gpt/chat-vue'
 import { storeToRefs } from 'pinia'
-import { Input } from '@shared/components/ui/input'
-import { Label } from '@shared/components/ui/label'
+import { Input } from '@tuple-gpt/ui-vue/components/ui/input'
+import { Label } from '@tuple-gpt/ui-vue/components/ui/label'
 
 const settingsStore = useSettingsStore()
 const { settings } = storeToRefs(settingsStore)
@@ -13,9 +13,7 @@ const { settings } = storeToRefs(settingsStore)
     <!-- Whisper API 设置 -->
     <div>
       <h2 class="mb-4 text-xl font-semibold text-foreground">Whisper API 设置</h2>
-      <p class="mb-4 text-muted-foreground">
-        配置 Whisper API 用于Bilibili音频转录功能。
-      </p>
+      <p class="mb-4 text-muted-foreground">配置 Whisper API 用于Bilibili音频转录功能。</p>
 
       <!-- Whisper API Key -->
       <div class="mb-4">
@@ -26,8 +24,11 @@ const { settings } = storeToRefs(settingsStore)
       <!-- API 端点 -->
       <div>
         <Label class="mb-2">API 端点</Label>
-        <Input type="url" v-model="settings.whisperApiEndpoint"
-          placeholder="https://api.openai.com/v1/audio/transcriptions" />
+        <Input
+          type="url"
+          v-model="settings.whisperApiEndpoint"
+          placeholder="https://api.openai.com/v1/audio/transcriptions"
+        />
         <p class="mt-1 text-xs text-muted-foreground">
           默认使用 OpenAI 官方端点，也可以使用兼容的第三方服务
         </p>

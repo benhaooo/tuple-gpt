@@ -4,7 +4,11 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUpdated, onUnmounted } from 'vue'
-import { parseMarkdown, setupCodeCopyButtons, cleanupCodeCopyButtons } from '../composables/useMarkdown'
+import {
+  parseMarkdown,
+  setupCodeCopyButtons,
+  cleanupCodeCopyButtons,
+} from '#composables/useMarkdown'
 import '../styles/markdown.less'
 import '../styles/markdown-patch.less'
 import '../styles/highlight-theme.less'
@@ -46,7 +50,14 @@ onUnmounted(() => {
   }
 
   .code-lang {
-    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    font-family:
+      ui-monospace,
+      SFMono-Regular,
+      SF Mono,
+      Menlo,
+      Consolas,
+      Liberation Mono,
+      monospace;
     text-transform: lowercase;
   }
 
@@ -59,7 +70,9 @@ onUnmounted(() => {
     cursor: pointer;
     font-size: 11px;
     line-height: 1.4;
-    transition: color 0.15s, border-color 0.15s;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
 
     &:hover {
       color: #c9d1d9;

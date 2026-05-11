@@ -53,7 +53,7 @@ describe('runAgentLoop', () => {
     ]
     const transport = createMockTransport([round1, round2])
     const toolExecutor: ToolExecutor = {
-      echo: (args) => `echoed: ${args}`,
+      echo: args => `echoed: ${args}`,
     }
     const messages: Message[] = [{ role: 'user', content: 'run echo' }]
 
@@ -61,8 +61,12 @@ describe('runAgentLoop', () => {
       runAgentLoop({ messages, transport, provider, toolExecutor, tools: [] }),
     )
 
-    // Should yield all events from both rounds
-    expect(yielded).toEqual([...round1, ...round2])
+    // Should yield tool results between the tool-call round and final answer round
+    expect(yielded).toEqual([
+      ...round1,
+      { type: 'tool_result', toolCallId: 'tc1', result: 'echoed: {"text":"hi"}' },
+      ...round2,
+    ])
     // messages: user, assistant(tool_call), tool(result), assistant(text)
     expect(messages).toHaveLength(4)
     expect(messages[1].role).toBe('assistant')
@@ -87,8 +91,14 @@ describe('runAgentLoop', () => {
     ]
     const transport = createMockTransport([round1, round2])
     const toolExecutor: ToolExecutor = {
-      a: async () => { callOrder.push('a'); return 'result-a' },
-      b: async () => { callOrder.push('b'); return 'result-b' },
+      a: async () => {
+        callOrder.push('a')
+        return 'result-a'
+      },
+      b: async () => {
+        callOrder.push('b')
+        return 'result-b'
+      },
     }
     const messages: Message[] = [{ role: 'user', content: 'go' }]
 
@@ -98,8 +108,39 @@ describe('runAgentLoop', () => {
     expect(callOrder).toContain('a')
     expect(callOrder).toContain('b')
     // Two tool result messages
-    const toolMsgs = messages.filter((m) => m.role === 'tool')
+    const toolMsgs = messages.filter(m => m.role === 'tool')
     expect(toolMsgs).toHaveLength(2)
+  })
+
+  it('yields one tool_result event per executed tool call', async () => {
+    const round1: StreamEvent[] = [
+      { type: 'tool_call_start', toolCall: { id: 'tc1', name: 'a' } },
+      { type: 'tool_call_delta', toolCallId: 'tc1', arguments: '{}' },
+      { type: 'tool_call_end', toolCallId: 'tc1' },
+      { type: 'tool_call_start', toolCall: { id: 'tc2', name: 'b' } },
+      { type: 'tool_call_delta', toolCallId: 'tc2', arguments: '{}' },
+      { type: 'tool_call_end', toolCallId: 'tc2' },
+      { type: 'finish', finishReason: 'tool_calls' },
+    ]
+    const round2: StreamEvent[] = [
+      { type: 'text_delta', text: 'ok' },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+    const transport = createMockTransport([round1, round2])
+    const toolExecutor: ToolExecutor = {
+      a: () => 'result-a',
+      b: () => 'result-b',
+    }
+    const messages: Message[] = [{ role: 'user', content: 'go' }]
+
+    const yielded = await collect(
+      runAgentLoop({ messages, transport, provider, toolExecutor, tools: [] }),
+    )
+
+    expect(yielded.filter(event => event.type === 'tool_result')).toEqual([
+      { type: 'tool_result', toolCallId: 'tc1', result: 'result-a' },
+      { type: 'tool_result', toolCallId: 'tc2', result: 'result-b' },
+    ])
   })
 
   it('respects maxTurns limit', async () => {
@@ -119,7 +160,7 @@ describe('runAgentLoop', () => {
     )
 
     // 2 turns means 2 assistant messages and 2 tool result messages
-    const assistantMsgs = messages.filter((m) => m.role === 'assistant')
+    const assistantMsgs = messages.filter(m => m.role === 'assistant')
     expect(assistantMsgs.length).toBeLessThanOrEqual(2)
   })
 
@@ -150,7 +191,7 @@ describe('runAgentLoop', () => {
     await collect(runAgentLoop({ messages, transport, provider }))
 
     // Should stop after one turn — no tool result messages
-    const toolMsgs = messages.filter((m) => m.role === 'tool')
+    const toolMsgs = messages.filter(m => m.role === 'tool')
     expect(toolMsgs).toHaveLength(0)
   })
 
