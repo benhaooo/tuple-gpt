@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@crxjs/vite-plugin@2.3.0':
+    hash: 6a173994921b283d84118315fda9214a3aade0ed930cff5dfe9916a22f77f47c
+    path: patches/@crxjs__vite-plugin@2.3.0.patch
+
 importers:
 
   .:
@@ -141,7 +146,7 @@ importers:
     devDependencies:
       '@crxjs/vite-plugin':
         specifier: ^2.0.2
-        version: 2.3.0
+        version: 2.3.0(patch_hash=6a173994921b283d84118315fda9214a3aade0ed930cff5dfe9916a22f77f47c)
       '@types/chrome':
         specifier: ^0.0.313
         version: 0.0.313
@@ -2350,7 +2355,7 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@crxjs/vite-plugin@2.3.0':
+  '@crxjs/vite-plugin@2.3.0(patch_hash=6a173994921b283d84118315fda9214a3aade0ed930cff5dfe9916a22f77f47c)':
     dependencies:
       '@rollup/pluginutils': 4.2.1
       '@webcomponents/custom-elements': 1.6.0
