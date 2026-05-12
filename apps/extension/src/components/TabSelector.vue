@@ -77,8 +77,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { GlobeAltIcon } from '@heroicons/vue/24/outline'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
-import { Popover, PopoverTrigger, PopoverContent } from '@tuple-gpt/ui-vue/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger, ScrollArea } from '@tuple-gpt/ui-vue'
 import { useBrowserTabs } from '../composables/useBrowserTabs'
 import { useSelectedTabs } from '../composables/useSelectedTabs'
 

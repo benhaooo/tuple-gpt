@@ -80,14 +80,15 @@ import { useChat } from '#composables/useChat'
 import ConversationSidebar from './ConversationSidebar.vue'
 import ChatView from './ChatView.vue'
 import ModelSelector from './ModelSelector.vue'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Sheet, SheetContent } from '@tuple-gpt/ui-vue/components/ui/sheet'
 import {
+  Button,
+  Sheet,
+  SheetContent,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@tuple-gpt/ui-vue/components/ui/tooltip'
+} from '@tuple-gpt/ui-vue'
 
 const chat = useChat()
 const { conversations, activeConversationId, activeConversation } = chat

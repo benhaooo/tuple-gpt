@@ -46,16 +46,18 @@ import { ref, computed } from 'vue'
 import { ChevronDownIcon } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '#stores/provider'
 import ModelAvatar from './ModelAvatar.vue'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
 import {
+  Button,
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from '@tuple-gpt/ui-vue/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@tuple-gpt/ui-vue/components/ui/popover'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@tuple-gpt/ui-vue'
 
 const providerStore = useProviderStore()
 const open = ref(false)

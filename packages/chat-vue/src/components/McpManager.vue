@@ -6,56 +6,20 @@
         <div class="flex w-56 flex-shrink-0 flex-col overflow-hidden border-r border-border">
           <ScrollArea class="min-h-0 flex-1">
             <div class="space-y-1 p-2">
-              <div
+              <McpServerRow
                 v-for="server in mcpStore.servers"
                 :key="server.id"
-                class="group flex items-center gap-1"
-              >
-                <Button
-                  variant="ghost"
-                  class="h-9 min-w-0 flex-1 justify-start gap-2 px-3 text-sm font-normal"
-                  :class="
-                    mcpStore.selectedServerId === server.id &&
-                    'bg-accent text-accent-foreground hover:bg-accent'
-                  "
-                  @click="mcpStore.selectServer(server.id)"
-                >
-                  <span
-                    class="h-2 w-2 flex-shrink-0 rounded-full"
-                    :class="statusColor(server.id)"
-                  />
-                  <span class="min-w-0 flex-1 truncate">{{ server.name }}</span>
-                  <span class="text-xs text-muted-foreground">
-                    {{ toolCount(server.id) }}
-                  </span>
-                </Button>
-
-                <AlertDialog>
-                  <AlertDialogTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      class="size-7 flex-shrink-0 opacity-0 group-hover:opacity-100"
-                    >
-                      <XMarkIcon class="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>删除 MCP Server？</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        删除后将断开连接并清除配置，且无法恢复。
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>取消</AlertDialogCancel>
-                      <AlertDialogAction @click="mcpStore.removeServer(server.id)">
-                        删除
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+                :server="server"
+                :selected="mcpStore.selectedServerId === server.id"
+                :renaming="renamingId === server.id"
+                :status-color="statusColor(server.id)"
+                :tool-count="toolCount(server.id)"
+                @select="mcpStore.selectServer(server.id)"
+                @rename-start="renamingId = server.id"
+                @rename-commit="commitRename(server.id, $event)"
+                @rename-cancel="renamingId = null"
+                @delete="confirmDeleteId = server.id"
+              />
 
               <div
                 v-if="mcpStore.servers.length === 0"
@@ -83,13 +47,32 @@
         </div>
       </div>
     </Card>
+
+    <AlertDialog
+      :open="confirmDeleteId !== null"
+      @update:open="v => !v && (confirmDeleteId = null)"
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除 MCP Server？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后将断开连接并清除配置，且无法恢复。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="confirmDeleteId = null">取消</AlertDialogCancel>
+          <AlertDialogAction @click="handleDeleteConfirmed">删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { ref, onMounted } from 'vue'
+import { PlusIcon } from '@heroicons/vue/24/outline'
 import { useMcpStore } from '#stores/mcp'
+import McpServerRow from './McpServerRow.vue'
 import McpServerDetail from './McpServerDetail.vue'
 import {
   AlertDialog,
@@ -100,13 +83,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@tuple-gpt/ui-vue/components/ui/alert-dialog'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Card } from '@tuple-gpt/ui-vue/components/ui/card'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+  Button,
+  Card,
+  ScrollArea,
+} from '@tuple-gpt/ui-vue'
 
 const mcpStore = useMcpStore()
+const renamingId = ref<string | null>(null)
+const confirmDeleteId = ref<string | null>(null)
 
 onMounted(() => {
   mcpStore.initRuntimeStates()
@@ -130,6 +114,21 @@ function toolCount(serverId: string) {
   const state = mcpStore.getServerState(serverId)
   const count = state?.tools.length ?? 0
   return count > 0 ? `${count}` : ''
+}
+
+function commitRename(id: string, name: string) {
+  const trimmed = name.trim()
+  if (trimmed) {
+    mcpStore.updateServer(id, { name: trimmed })
+  }
+  renamingId.value = null
+}
+
+function handleDeleteConfirmed() {
+  if (confirmDeleteId.value) {
+    mcpStore.removeServer(confirmDeleteId.value)
+  }
+  confirmDeleteId.value = null
 }
 
 function handleAdd() {

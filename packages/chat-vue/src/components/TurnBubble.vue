@@ -302,8 +302,7 @@ import {
 import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import { getContentText } from '@tuple-gpt/chat-core'
 import type { ChatTurn } from '@tuple-gpt/chat-core'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Textarea } from '@tuple-gpt/ui-vue/components/ui/textarea'
+import { Button, Textarea } from '@tuple-gpt/ui-vue'
 import ModelAvatar from './ModelAvatar.vue'
 
 interface AssistantMeta {

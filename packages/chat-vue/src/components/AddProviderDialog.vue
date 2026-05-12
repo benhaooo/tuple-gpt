@@ -36,22 +36,20 @@ import { ref, watch } from 'vue'
 import { useProviderStore } from '#stores/provider'
 import type { ApiFormat } from '@tuple-gpt/chat-core'
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@tuple-gpt/ui-vue/components/ui/dialog'
-import { Input } from '@tuple-gpt/ui-vue/components/ui/input'
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@tuple-gpt/ui-vue/components/ui/select'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Label } from '@tuple-gpt/ui-vue/components/ui/label'
+} from '@tuple-gpt/ui-vue'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{

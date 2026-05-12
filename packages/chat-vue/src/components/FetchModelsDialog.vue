@@ -83,14 +83,14 @@ import { fetchModels } from '@tuple-gpt/chat-core'
 import type { Provider } from '@tuple-gpt/chat-core'
 import ModelAvatar from './ModelAvatar.vue'
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@tuple-gpt/ui-vue/components/ui/dialog'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Input } from '@tuple-gpt/ui-vue/components/ui/input'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+  Input,
+  ScrollArea,
+} from '@tuple-gpt/ui-vue'
 
 const props = defineProps<{
   open: boolean
