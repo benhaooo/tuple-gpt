@@ -4,6 +4,7 @@ export type {
   TextContentPart,
   ImageContentPart,
   ToolCallContentPart,
+  ToolCallStatus,
   ToolResultContentPart,
   Message,
 } from './message'
@@ -12,19 +13,15 @@ export type {
   ToolDefinition,
   ToolCall,
   ToolResult,
+  ToolExecutionContext,
+  ToolHandlerResult,
+  ToolHandler,
 } from './tool'
 
 export { FinishReason, StreamEventType } from './stream'
-export type {
-  Usage,
-  StreamEvent,
-} from './stream'
+export type { Usage, StreamEvent } from './stream'
 
 export { ProviderType } from './provider'
 export type { ProviderConfig } from './provider'
 
-export type {
-  RequestOptions,
-  PipelineInput,
-  PipelineOutput,
-} from './common'
+export type { RequestOptions, PipelineInput, PipelineOutput } from './common'

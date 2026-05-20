@@ -140,63 +140,75 @@
 
               <!-- Tool calls with inline results -->
               <div v-if="step.toolCalls.length" class="mt-2 space-y-1.5">
-                <details
-                  v-for="tc in step.toolCalls"
-                  :key="tc.id"
-                  :class="[
-                    'rounded-md border px-2 py-1.5',
-                    tc.status === 'error'
-                      ? 'border-destructive/35 bg-destructive/5'
-                      : tc.status === 'running'
-                        ? 'border-amber-500/40 bg-amber-500/5'
-                        : 'border-border/60 bg-muted/30',
-                  ]"
-                >
-                  <summary
-                    class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground"
+                <template v-for="tc in step.toolCalls" :key="tc.id">
+                  <!-- Interactive tool: render dynamic component when result missing -->
+                  <component
+                    :is="getInteractiveComponentForCall(tc)"
+                    v-if="getInteractiveComponentForCall(tc)"
+                    :tool-call-id="tc.id"
+                    :arguments="tc.arguments"
+                    :result="tc.result"
+                    @submit="handleToolSubmit"
+                  />
+
+                  <!-- Default: collapsible details -->
+                  <details
+                    v-else
+                    :class="[
+                      'rounded-md border px-2 py-1.5',
+                      isToolCallError(tc)
+                        ? 'border-destructive/35 bg-destructive/5'
+                        : isToolCallRunning(tc)
+                          ? 'border-amber-500/40 bg-amber-500/5'
+                          : 'border-border/60 bg-muted/30',
+                    ]"
                   >
-                    <WrenchScrewdriverIcon class="h-3.5 w-3.5 shrink-0" />
-                    <span class="truncate">{{ tc.name }}</span>
-                    <span
-                      v-if="tc.status === 'running'"
-                      class="ml-auto inline-flex items-center gap-1 text-amber-600"
+                    <summary
+                      class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground"
                     >
-                      <ArrowPathIcon class="h-3 w-3 animate-spin" />
-                    </span>
-                    <span
-                      v-else-if="tc.status === 'error'"
-                      class="ml-auto inline-flex items-center gap-1 text-destructive"
-                    >
-                      <XCircleIcon class="h-3 w-3" />
-                    </span>
-                    <span
-                      v-else-if="tc.status === 'done' && tc.result !== undefined"
-                      class="ml-auto inline-flex items-center gap-1 text-emerald-600"
-                    >
-                      <CheckCircleIcon class="h-3 w-3" />
-                    </span>
-                  </summary>
-                  <div class="mt-1.5 space-y-1.5">
-                    <pre
-                      class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-background/70 p-2 text-[11px] leading-5 text-muted-foreground"
-                      >{{ formatToolArguments(tc.arguments) }}</pre
-                    >
-                    <div
-                      v-if="tc.result !== undefined"
-                      :class="[
-                        'rounded border px-2 py-1.5',
-                        tc.status === 'error'
-                          ? 'border-destructive/35 bg-destructive/5'
-                          : 'border-border/40 bg-background/50',
-                      ]"
-                    >
-                      <pre
-                        class="max-h-56 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground"
-                        >{{ tc.result }}</pre
+                      <WrenchScrewdriverIcon class="h-3.5 w-3.5 shrink-0" />
+                      <span class="truncate">{{ tc.name }}</span>
+                      <span
+                        v-if="isToolCallRunning(tc)"
+                        class="ml-auto inline-flex items-center gap-1 text-amber-600"
                       >
+                        <ArrowPathIcon class="h-3 w-3 animate-spin" />
+                      </span>
+                      <span
+                        v-else-if="isToolCallError(tc)"
+                        class="ml-auto inline-flex items-center gap-1 text-destructive"
+                      >
+                        <XCircleIcon class="h-3 w-3" />
+                      </span>
+                      <span
+                        v-else-if="tc.status === 'resolved' && tc.result !== undefined"
+                        class="ml-auto inline-flex items-center gap-1 text-emerald-600"
+                      >
+                        <CheckCircleIcon class="h-3 w-3" />
+                      </span>
+                    </summary>
+                    <div class="mt-1.5 space-y-1.5">
+                      <pre
+                        class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-background/70 p-2 text-[11px] leading-5 text-muted-foreground"
+                        >{{ formatToolArguments(tc.arguments) }}</pre
+                      >
+                      <div
+                        v-if="tc.result !== undefined"
+                        :class="[
+                          'rounded border px-2 py-1.5',
+                          isToolCallError(tc)
+                            ? 'border-destructive/35 bg-destructive/5'
+                            : 'border-border/40 bg-background/50',
+                        ]"
+                      >
+                        <pre
+                          class="max-h-56 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground"
+                          >{{ tc.result }}</pre
+                        >
+                      </div>
                     </div>
-                  </div>
-                </details>
+                  </details>
+                </template>
               </div>
 
               <!-- Streaming placeholder -->
@@ -285,7 +297,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, type Component } from 'vue'
 import {
   LinkIcon,
   DocumentIcon,
@@ -302,15 +314,21 @@ import {
 import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import { getContentText } from '@tuple-gpt/chat-core'
 import type { ChatTurn } from '@tuple-gpt/chat-core'
+import type { ToolCallStatus } from '@tuple-gpt/ai-core'
 import { Button, Textarea } from '@tuple-gpt/ui-vue'
 import ModelAvatar from './ModelAvatar.vue'
+import ToolAskUser from './tools/ToolAskUser.vue'
+import { useChat } from '../composables/useChat'
+import { useToolRegistry } from '../composables/useToolRegistry'
+
+const interactiveToolComponents: Record<string, Component> = {
+  ToolAskUser,
+}
 
 interface AssistantMeta {
   model: string
   providerName: string
 }
-
-type ToolCallStatus = 'running' | 'done' | 'error'
 
 interface ToolCallWithResult {
   id: string
@@ -318,6 +336,7 @@ interface ToolCallWithResult {
   arguments: string
   status: ToolCallStatus
   result?: string
+  isError?: boolean
 }
 
 interface AssistantStep {
@@ -348,6 +367,28 @@ const userCopied = ref(false)
 const assistantCopied = ref(false)
 const isEditing = ref(false)
 const draftContent = ref('')
+
+const { submitToolResult } = useChat()
+const { getInteractiveComponent } = useToolRegistry()
+
+function getInteractiveComponentForCall(tc: ToolCallWithResult): Component | undefined {
+  if (tc.status !== 'awaiting') return undefined
+  const componentName = getInteractiveComponent(tc.name)
+  if (!componentName) return undefined
+  return interactiveToolComponents[componentName]
+}
+
+function handleToolSubmit(payload: { toolCallId: string; result: string }) {
+  void submitToolResult(props.turn.id, payload.toolCallId, payload.result)
+}
+
+function isToolCallRunning(tc: ToolCallWithResult): boolean {
+  return tc.status === 'pending' || tc.status === 'awaiting'
+}
+
+function isToolCallError(tc: ToolCallWithResult): boolean {
+  return tc.status === 'cancelled' || tc.isError === true
+}
 
 const userMessage = computed(() => props.turn.messages.find(m => m.role === 'user'))
 const hasUserMessage = computed(() => !!userMessage.value)
@@ -382,7 +423,7 @@ const assistantSteps = computed<AssistantStep[]>(() => {
   const messages = props.turn.messages
   const steps: AssistantStep[] = []
 
-  // Collect all tool results from tool messages into a map by toolCallId
+  // Collect tool results so resolved/error calls can show their output.
   const toolResultMap = new Map<string, { result: string; isError?: boolean }>()
   for (const msg of messages) {
     if (msg.role === 'tool') {
@@ -403,18 +444,13 @@ const assistantSteps = computed<AssistantStep[]>(() => {
     for (const part of msg.content) {
       if (part.type === 'tool_call') {
         const result = toolResultMap.get(part.toolCall.id)
-        let status: ToolCallStatus = 'running'
-        if (result) {
-          status = result.isError ? 'error' : 'done'
-        } else if (props.turn.status !== 'running') {
-          status = 'done'
-        }
         toolCalls.push({
           id: part.toolCall.id,
           name: part.toolCall.name,
           arguments: part.toolCall.arguments,
-          status,
+          status: part.status ?? 'pending',
           result: result?.result,
+          isError: result?.isError,
         })
       }
     }

@@ -19,6 +19,8 @@ export interface ImageContentPart {
   mimeType?: string
 }
 
+export type ToolCallStatus = 'pending' | 'awaiting' | 'resolved' | 'cancelled'
+
 export interface ToolCallContentPart {
   type: 'tool_call'
   toolCall: {
@@ -26,6 +28,12 @@ export interface ToolCallContentPart {
     name: string
     arguments: string
   }
+  /**
+   * Lifecycle status of this tool call. Not sent to LLM providers — transports
+   * pick out only id/name/arguments. Used by the runtime/UI to track whether
+   * the call is in-flight, awaiting user input, completed, or cancelled.
+   */
+  status?: ToolCallStatus
 }
 
 export interface ToolResultContentPart {

@@ -20,6 +20,7 @@ export type {
 export {
   addTurn,
   appendMessageToTurn,
+  cancelOpenToolCalls,
   createMessage,
   createConversation,
   createTurn,
@@ -34,6 +35,7 @@ export {
   truncateConversationAfterTurn,
   updateMessageContent,
   updateMessageStatus,
+  updateToolCallStatus,
   updateTurnStatus,
   upsertConversation,
   type CreateConversationInput,
@@ -121,3 +123,14 @@ export {
   type McpServerConfig,
   type McpServerState,
 } from './services/mcp-client'
+
+export {
+  builtinTools,
+  builtinDefinitions,
+  registerBuiltinTools,
+  type AutoTool,
+  type BuiltinTool,
+  type InteractiveTool,
+} from './builtin-tools'
+
+export { DefaultToolRunner, createToolRunner } from './tool-runner'

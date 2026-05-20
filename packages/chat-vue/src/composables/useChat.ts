@@ -33,7 +33,7 @@ export function useChat() {
       config.mode = 'agent'
       if (toolRegistry.hasTools.value) {
         config.tools = toolRegistry.activeTools.value
-        config.toolExecutor = toolRegistry.executor.value
+        config.toolRunner = toolRegistry.runner.value
       }
     }
 
@@ -97,6 +97,19 @@ export function useChat() {
       await clearAttachmentsAfterSend()
     },
     stopStreaming: (turnId?: string) => runtime.stopStreaming(turnId),
+    submitToolResult: (
+      turnId: string,
+      toolCallId: string,
+      result: string,
+      options?: { isError?: boolean },
+    ) =>
+      runtime.submitToolResult(
+        turnId,
+        toolCallId,
+        result,
+        getActiveRequestConfig('agent'),
+        options,
+      ),
     newConversation: () => runtime.newConversation(),
     setActiveConversation: (id: string) => runtime.setActiveConversation(id),
     deleteConversation: (id: string) => runtime.deleteConversation(id),

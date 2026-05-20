@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest'
 import { createGeminiTransport } from '../transport/providers/gemini'
 import { runAgentLoop } from '../agent/agent-loop'
 import { systemPrompt } from '../pipeline/steps/system-prompt'
-import { collect } from './helpers'
+import { collect, executorRunner } from './helpers'
 import type { Message, StreamEvent, ToolDefinition } from '../types'
 import type { ToolExecutor } from '../agent/tool-executor'
 
@@ -43,10 +43,10 @@ describeIf('Gemini Integration', { timeout: 60_000 }, () => {
       const textDeltas = events.filter(
         (e): e is Extract<StreamEvent, { type: 'text_delta' }> => e.type === 'text_delta',
       )
-      const finish = events.find((e) => e.type === 'finish')
+      const finish = events.find(e => e.type === 'finish')
 
       expect(textDeltas.length).toBeGreaterThan(0)
-      const fullText = textDeltas.map((e) => e.text).join('')
+      const fullText = textDeltas.map(e => e.text).join('')
       expect(fullText.toLowerCase()).toContain('hello')
       expect(finish).toBeDefined()
     })
@@ -71,14 +71,22 @@ describeIf('Gemini Integration', { timeout: 60_000 }, () => {
       ]
 
       const toolExecutor: ToolExecutor = {
-        get_weather: (args) => {
-          const { city } = JSON.parse(args)
-          return JSON.stringify({ city, temperature: '22°C', condition: 'sunny' })
+        get_weather: {
+          execute: async args => {
+            const { city } = JSON.parse(args)
+            return {
+              content: JSON.stringify({ city, temperature: '22°C', condition: 'sunny' }),
+            }
+          },
         },
       }
 
       const messages: Message[] = [
-        { role: 'user', content: 'Call the get_weather tool with city "Tokyo". Do not answer without using the tool.' },
+        {
+          role: 'user',
+          content:
+            'Call the get_weather tool with city "Tokyo". Do not answer without using the tool.',
+        },
       ]
 
       const events = await collect(
@@ -87,33 +95,38 @@ describeIf('Gemini Integration', { timeout: 60_000 }, () => {
           transport,
           provider,
           tools,
-          toolExecutor,
-          pipeline: [systemPrompt('Always use the get_weather tool. Never answer weather questions without calling the tool first.')],
+          toolRunner: executorRunner(toolExecutor),
+          pipeline: [
+            systemPrompt(
+              'Always use the get_weather tool. Never answer weather questions without calling the tool first.',
+            ),
+          ],
           options: { maxTokens: 300, temperature: 0 },
           maxTurns: 3,
         }),
       )
 
       // Should have at least one tool_call_start
-      const toolStarts = events.filter((e) => e.type === 'tool_call_start')
+      const toolStarts = events.filter(e => e.type === 'tool_call_start')
       expect(toolStarts.length).toBeGreaterThanOrEqual(1)
 
       // Messages should include: user, assistant(tool_call), tool(result), assistant(text)
       expect(messages.length).toBeGreaterThanOrEqual(3)
 
       // Tool result message exists
-      const toolMsgs = messages.filter((m) => m.role === 'tool')
+      const toolMsgs = messages.filter(m => m.role === 'tool')
       expect(toolMsgs.length).toBeGreaterThanOrEqual(1)
 
       // Final assistant reply references the weather info
-      const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
+      const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant')
       expect(lastAssistant).toBeDefined()
-      const text = typeof lastAssistant!.content === 'string'
-        ? lastAssistant!.content
-        : (lastAssistant!.content as any[])
-            .filter((p: any) => p.type === 'text')
-            .map((p: any) => p.text)
-            .join('')
+      const text =
+        typeof lastAssistant!.content === 'string'
+          ? lastAssistant!.content
+          : (lastAssistant!.content as any[])
+              .filter((p: any) => p.type === 'text')
+              .map((p: any) => p.text)
+              .join('')
       expect(text.toLowerCase()).toMatch(/tokyo|sunny|22/)
     })
   })

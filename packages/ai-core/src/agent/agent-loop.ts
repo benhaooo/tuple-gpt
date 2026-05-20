@@ -11,14 +11,17 @@ import { Role, FinishReason, StreamEventType } from '../types'
 import type { Transport } from '../transport/transport'
 import type { PipelineStep } from '../pipeline/pipeline'
 import { createPipeline } from '../pipeline/pipeline'
-import type { ToolExecutor } from './tool-executor'
-import { executeToolCall } from './tool-executor'
+import type { ToolRunner } from './tool-runner'
 
 export interface AgentLoopOptions {
   messages: Message[]
   transport: Transport
   tools?: ToolDefinition[]
-  toolExecutor?: ToolExecutor
+  /**
+   * Resolves tool calls. ai-core does not care how it works internally —
+   * it only reacts to the outcome (resolved / awaiting / unknown).
+   */
+  toolRunner?: ToolRunner
   pipeline?: PipelineStep[]
   provider: ProviderConfig
   options?: RequestOptions
@@ -30,7 +33,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     messages,
     transport,
     tools,
-    toolExecutor,
+    toolRunner,
     pipeline: pipelineSteps,
     provider,
     options,
@@ -78,7 +81,6 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
           break
         }
         case StreamEventType.ToolCallEnd:
-          // Finalize arguments for this tool call
           for (const tc of pendingToolCalls) {
             if (tc.id === event.toolCallId) {
               tc.arguments = toolCallArgs.get(event.toolCallId) ?? ''
@@ -89,7 +91,6 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
           finishReason = event.finishReason
           break
         case StreamEventType.Error:
-          // Error already yielded, stop the loop
           return
       }
     }
@@ -116,37 +117,84 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     }
 
     // 4. Check termination
-    if (finishReason !== FinishReason.ToolCalls || pendingToolCalls.length === 0 || !toolExecutor) {
+    if (finishReason !== FinishReason.ToolCalls || pendingToolCalls.length === 0 || !toolRunner) {
       break
     }
 
-    // 5. Execute tools in parallel
-    const results = await Promise.all(
-      pendingToolCalls.map(async tc => {
-        const result = await executeToolCall(toolExecutor, tc.name, tc.arguments)
-        return { toolCallId: tc.id, ...result }
-      }),
+    // 5. Resolve all tool calls in parallel via the runner.
+    //    The runner decides whether each call runs locally, awaits external
+    //    input, or is unknown. ai-core only reacts to the outcome.
+    const abortController = new AbortController()
+    const signal = options?.signal ?? abortController.signal
+    const outcomes = await Promise.all(
+      pendingToolCalls.map(async tc => ({
+        call: tc,
+        outcome: await toolRunner.run(tc.name, tc.arguments, {
+          toolCallId: tc.id,
+          signal,
+        }),
+      })),
     )
 
-    // 6. Append tool results to messages
-    for (const result of results) {
-      yield {
-        type: StreamEventType.ToolResult,
-        toolCallId: result.toolCallId,
-        result: result.result,
-        ...(result.isError ? { isError: true } : {}),
+    // 6. Apply outcomes in order:
+    //    - resolved: emit ToolResult, append tool_result message
+    //    - awaiting: emit ToolInteractionRequired, mark for exit
+    //    - unknown:  treat as resolved error so the LLM can recover
+    let hasAwaiting = false
+    for (const { call, outcome } of outcomes) {
+      if (outcome.kind === 'resolved') {
+        yield {
+          type: StreamEventType.ToolResult,
+          toolCallId: call.id,
+          result: outcome.result,
+          ...(outcome.isError ? { isError: true } : {}),
+        }
+        messages.push({
+          role: Role.Tool,
+          content: [
+            {
+              type: 'tool_result',
+              toolCallId: call.id,
+              result: outcome.result,
+              isError: outcome.isError,
+            },
+          ],
+        })
+      } else if (outcome.kind === 'unknown') {
+        const errMsg = `Tool "${call.name}" is not registered`
+        yield {
+          type: StreamEventType.ToolResult,
+          toolCallId: call.id,
+          result: errMsg,
+          isError: true,
+        }
+        messages.push({
+          role: Role.Tool,
+          content: [
+            {
+              type: 'tool_result',
+              toolCallId: call.id,
+              result: errMsg,
+              isError: true,
+            },
+          ],
+        })
+      } else {
+        hasAwaiting = true
+        yield {
+          type: StreamEventType.ToolInteractionRequired,
+          toolCallId: call.id,
+          toolName: call.name,
+          arguments: call.arguments,
+          component: outcome.component,
+        }
       }
-      messages.push({
-        role: Role.Tool,
-        content: [
-          {
-            type: 'tool_result',
-            toolCallId: result.toolCallId,
-            result: result.result,
-            isError: result.isError,
-          },
-        ],
-      })
+    }
+
+    // 7. If any tool call awaits external input, exit the loop.
+    //    The caller resumes by re-invoking with tool_result messages appended.
+    if (hasAwaiting) {
+      return
     }
   }
 }

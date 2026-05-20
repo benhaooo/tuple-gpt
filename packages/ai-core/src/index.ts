@@ -5,11 +5,15 @@ export type {
   TextContentPart,
   ImageContentPart,
   ToolCallContentPart,
+  ToolCallStatus,
   ToolResultContentPart,
   Message,
   ToolDefinition,
   ToolCall,
   ToolResult,
+  ToolExecutionContext,
+  ToolHandlerResult,
+  ToolHandler,
   Usage,
   StreamEvent,
   ProviderConfig,
@@ -32,6 +36,7 @@ export { parseSSE, type SSEEvent } from './transport'
 // Agent
 export { runAgentLoop, type AgentLoopOptions } from './agent'
 export { executeToolCall, type ToolExecutor } from './agent'
+export type { ToolRunner, ToolRunOutcome } from './agent'
 
 // Client
 export { ChatClient, createClient, mergeTools } from './client'

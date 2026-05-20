@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { runAgentLoop } from '../agent/agent-loop'
 import type { StreamEvent, Message } from '../types'
 import type { ToolExecutor } from '../agent/tool-executor'
-import { createMockTransport, collect } from './helpers'
+import { createMockTransport, collect, executorRunner } from './helpers'
 
 describe('runAgentLoop', () => {
   const provider = { type: 'openai' as const, apiKey: 'test', model: 'gpt-4' }
@@ -53,12 +53,18 @@ describe('runAgentLoop', () => {
     ]
     const transport = createMockTransport([round1, round2])
     const toolExecutor: ToolExecutor = {
-      echo: args => `echoed: ${args}`,
+      echo: { execute: async args => ({ content: `echoed: ${args}` }) },
     }
     const messages: Message[] = [{ role: 'user', content: 'run echo' }]
 
     const yielded = await collect(
-      runAgentLoop({ messages, transport, provider, toolExecutor, tools: [] }),
+      runAgentLoop({
+        messages,
+        transport,
+        provider,
+        toolRunner: executorRunner(toolExecutor),
+        tools: [],
+      }),
     )
 
     // Should yield tool results between the tool-call round and final answer round
@@ -91,18 +97,30 @@ describe('runAgentLoop', () => {
     ]
     const transport = createMockTransport([round1, round2])
     const toolExecutor: ToolExecutor = {
-      a: async () => {
-        callOrder.push('a')
-        return 'result-a'
+      a: {
+        execute: async () => {
+          callOrder.push('a')
+          return { content: 'result-a' }
+        },
       },
-      b: async () => {
-        callOrder.push('b')
-        return 'result-b'
+      b: {
+        execute: async () => {
+          callOrder.push('b')
+          return { content: 'result-b' }
+        },
       },
     }
     const messages: Message[] = [{ role: 'user', content: 'go' }]
 
-    await collect(runAgentLoop({ messages, transport, provider, toolExecutor, tools: [] }))
+    await collect(
+      runAgentLoop({
+        messages,
+        transport,
+        provider,
+        toolRunner: executorRunner(toolExecutor),
+        tools: [],
+      }),
+    )
 
     // Both tools were called
     expect(callOrder).toContain('a')
@@ -128,13 +146,19 @@ describe('runAgentLoop', () => {
     ]
     const transport = createMockTransport([round1, round2])
     const toolExecutor: ToolExecutor = {
-      a: () => 'result-a',
-      b: () => 'result-b',
+      a: { execute: async () => ({ content: 'result-a' }) },
+      b: { execute: async () => ({ content: 'result-b' }) },
     }
     const messages: Message[] = [{ role: 'user', content: 'go' }]
 
     const yielded = await collect(
-      runAgentLoop({ messages, transport, provider, toolExecutor, tools: [] }),
+      runAgentLoop({
+        messages,
+        transport,
+        provider,
+        toolRunner: executorRunner(toolExecutor),
+        tools: [],
+      }),
     )
 
     expect(yielded.filter(event => event.type === 'tool_result')).toEqual([
@@ -152,11 +176,20 @@ describe('runAgentLoop', () => {
       { type: 'finish', finishReason: 'tool_calls' },
     ]
     const transport = createMockTransport([toolEvents, toolEvents, toolEvents])
-    const toolExecutor: ToolExecutor = { loop: () => 'again' }
+    const toolExecutor: ToolExecutor = {
+      loop: { execute: async () => ({ content: 'again' }) },
+    }
     const messages: Message[] = [{ role: 'user', content: 'go' }]
 
     await collect(
-      runAgentLoop({ messages, transport, provider, toolExecutor, tools: [], maxTurns: 2 }),
+      runAgentLoop({
+        messages,
+        transport,
+        provider,
+        toolRunner: executorRunner(toolExecutor),
+        tools: [],
+        maxTurns: 2,
+      }),
     )
 
     // 2 turns means 2 assistant messages and 2 tool result messages
@@ -249,10 +282,20 @@ describe('runAgentLoop', () => {
       { type: 'finish', finishReason: 'stop' },
     ]
     const transport = createMockTransport([events, round2])
-    const toolExecutor: ToolExecutor = { search: () => 'result' }
+    const toolExecutor: ToolExecutor = {
+      search: { execute: async () => ({ content: 'result' }) },
+    }
     const messages: Message[] = [{ role: 'user', content: 'find' }]
 
-    await collect(runAgentLoop({ messages, transport, provider, toolExecutor, tools: [] }))
+    await collect(
+      runAgentLoop({
+        messages,
+        transport,
+        provider,
+        toolRunner: executorRunner(toolExecutor),
+        tools: [],
+      }),
+    )
 
     // First assistant message should be ContentPart[] (text + tool_call)
     const assistantMsg = messages[1]

@@ -1,5 +1,5 @@
 import { ChatClient, FinishReason, StreamEventType, type ToolDefinition } from '@tuple-gpt/ai-core'
-import type { ToolExecutor } from '@tuple-gpt/ai-core'
+import type { ToolCallStatus, ToolRunner } from '@tuple-gpt/ai-core'
 import { buildRequestMessages, toMessages, toProviderConfig } from './request'
 import type { ChatMessage, ChatMode, MessageContent, Provider } from './types'
 import { createMessage, type IdTimeOptions } from './conversation'
@@ -34,10 +34,22 @@ export type ChatRuntimeEvent =
       error: string
     }
   | {
+      type: 'tool_call_status'
+      conversationId: string
+      turnId: string
+      toolCallId: string
+      status: ToolCallStatus
+    }
+  | {
       type: 'tool_message'
       conversationId: string
       turnId: string
       message: ChatMessage
+    }
+  | {
+      type: 'turn_paused'
+      conversationId: string
+      turnId: string
     }
   | {
       type: 'turn_done'
@@ -64,7 +76,7 @@ export interface StreamAssistantReplyInput extends IdTimeOptions {
   provider: Provider
   model: string
   tools?: ToolDefinition[]
-  toolExecutor?: ToolExecutor
+  toolRunner?: ToolRunner
   maxTurns?: number
   signal?: AbortSignal
 }
@@ -148,7 +160,7 @@ export async function* streamAssistantReply(
     const events = ChatClient.chat(aiMessages, {
       provider: toProviderConfig(input.provider, input.model),
       tools: input.tools,
-      toolExecutor: input.toolExecutor,
+      toolRunner: input.toolRunner,
       maxTurns: input.maxTurns,
       defaults: {
         maxTokens: 4096,
@@ -174,6 +186,7 @@ export async function* streamAssistantReply(
               name: event.toolCall.name,
               arguments: '',
             },
+            status: 'pending',
           },
         ]
         yield createAssistantDelta()
@@ -191,6 +204,16 @@ export async function* streamAssistantReply(
         )
         yield createAssistantDelta()
       } else if (event.type === StreamEventType.ToolResult) {
+        // Mark the corresponding tool_call as resolved (it lives in a prior
+        // assistant message that has already been finalized).
+        yield {
+          type: 'tool_call_status',
+          conversationId: input.conversationId,
+          turnId: input.turnId,
+          toolCallId: event.toolCallId,
+          status: 'resolved',
+        }
+
         const toolMessage = createMessage(
           {
             role: 'tool',
@@ -214,6 +237,31 @@ export async function* streamAssistantReply(
           turnId: input.turnId,
           message: toolMessage,
         }
+      } else if (event.type === StreamEventType.ToolInteractionRequired) {
+        // Mark this tool_call as awaiting user input. The assistant message
+        // owning this tool_call may still be open in this turn, but only if
+        // it was emitted in the current round; in practice the assistant
+        // message has already been delta'd to include the tool_call with
+        // status='pending', so we transition it to 'awaiting'.
+        yield {
+          type: 'tool_call_status',
+          conversationId: input.conversationId,
+          turnId: input.turnId,
+          toolCallId: event.toolCallId,
+          status: 'awaiting',
+        }
+
+        // Close the assistant message but do not finalize the turn —
+        // the loop will be resumed by submitToolResult later.
+        const done = createAssistantDone()
+        if (done) yield done
+
+        yield {
+          type: 'turn_paused',
+          conversationId: input.conversationId,
+          turnId: input.turnId,
+        }
+        return
       } else if (event.type === StreamEventType.Finish) {
         const done = createAssistantDone()
         if (done) yield done

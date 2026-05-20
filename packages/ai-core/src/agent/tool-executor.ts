@@ -1,20 +1,28 @@
+import type { ToolHandler, ToolExecutionContext, ToolHandlerResult } from '../types'
+
 export type ToolExecutor = {
-  [name: string]: (args: string) => string | Promise<string>
+  [name: string]: ToolHandler
+}
+
+export interface ExecuteToolCallResult {
+  result: string
+  isError: boolean
 }
 
 export async function executeToolCall(
   executor: ToolExecutor,
   name: string,
   args: string,
-): Promise<{ result: string; isError: boolean }> {
-  const fn = executor[name]
-  if (!fn) {
+  context: ToolExecutionContext,
+): Promise<ExecuteToolCallResult> {
+  const handler = executor[name]
+  if (!handler) {
     return { result: `Tool "${name}" not found`, isError: true }
   }
 
   try {
-    const result = await fn(args)
-    return { result, isError: false }
+    const res: ToolHandlerResult = await handler.execute(args, context)
+    return { result: res.content, isError: res.isError ?? false }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { result: message, isError: true }

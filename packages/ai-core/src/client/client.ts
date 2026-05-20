@@ -1,14 +1,8 @@
-import type {
-  ProviderConfig,
-  RequestOptions,
-  Message,
-  StreamEvent,
-  ToolDefinition,
-} from '../types'
+import type { ProviderConfig, RequestOptions, Message, StreamEvent, ToolDefinition } from '../types'
 import type { PipelineStep } from '../pipeline'
 import type { ContextWindowOptions } from '../pipeline'
 import type { Transport } from '../transport'
-import type { ToolExecutor } from '../agent'
+import type { ToolRunner } from '../agent'
 import { createTransport } from '../transport'
 import { createPipeline, systemPrompt, contextWindow, injectTools } from '../pipeline'
 import { runAgentLoop } from '../agent'
@@ -22,7 +16,7 @@ export interface ClientConfig {
   systemPrompt?: string
   contextWindow?: ContextWindowOptions
   tools?: ToolDefinition[]
-  toolExecutor?: ToolExecutor
+  toolRunner?: ToolRunner
   defaults?: RequestOptions
   maxTurns?: number
   pipelineSteps?: PipelineStep[]
@@ -31,7 +25,7 @@ export interface ClientConfig {
 export interface ChatOptions {
   options?: RequestOptions
   tools?: ToolDefinition[]
-  toolExecutor?: ToolExecutor
+  toolRunner?: ToolRunner
   maxTurns?: number
   systemPrompt?: string
   pipelineSteps?: PipelineStep[]
@@ -68,22 +62,19 @@ export class ChatClient {
     this.transport = createTransport(config.provider.type)
   }
 
-  async *chat(
-    messages: Message[],
-    opts?: ChatOptions,
-  ): AsyncIterable<StreamEvent> {
+  async *chat(messages: Message[], opts?: ChatOptions): AsyncIterable<StreamEvent> {
     const pipelineSteps = this.buildPipelineSteps(opts)
     const tools = mergeTools(this.config.tools, opts?.tools)
-    const executor = opts?.toolExecutor ?? this.config.toolExecutor
+    const runner = opts?.toolRunner ?? this.config.toolRunner
     const options = this.mergeOptions(opts)
     const maxTurns = opts?.maxTurns ?? this.config.maxTurns
 
-    if (tools && tools.length > 0 && executor) {
+    if (tools && tools.length > 0 && runner) {
       yield* runAgentLoop({
         messages,
         transport: this.transport,
         tools,
-        toolExecutor: executor,
+        toolRunner: runner,
         pipeline: pipelineSteps,
         provider: this.config.provider,
         options,

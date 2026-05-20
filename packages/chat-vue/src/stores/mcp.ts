@@ -47,7 +47,12 @@ export const useMcpStore = defineStore(
         const client = clients.get(serverId)
         if (!client) continue
         for (const tool of state.tools) {
-          executor[tool.name] = (args: string) => client.callTool(tool.name, args)
+          executor[tool.name] = {
+            execute: async (args: string) => {
+              const result = await client.callTool(tool.name, args)
+              return { content: result }
+            },
+          }
         }
       }
       return executor
