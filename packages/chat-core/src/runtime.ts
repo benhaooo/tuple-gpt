@@ -169,7 +169,11 @@ export async function* streamAssistantReply(
     })
 
     for await (const event of events) {
-      if (!assistantMessage && event.type !== StreamEventType.ToolResult) {
+      if (
+        !assistantMessage &&
+        event.type !== StreamEventType.ToolResult &&
+        event.type !== StreamEventType.ToolInteractionRequired
+      ) {
         yield startAssistantMessage()
       }
 
@@ -238,11 +242,9 @@ export async function* streamAssistantReply(
           message: toolMessage,
         }
       } else if (event.type === StreamEventType.ToolInteractionRequired) {
-        // Mark this tool_call as awaiting user input. The assistant message
-        // owning this tool_call may still be open in this turn, but only if
-        // it was emitted in the current round; in practice the assistant
-        // message has already been delta'd to include the tool_call with
-        // status='pending', so we transition it to 'awaiting'.
+        // The assistant message has already been finalized by the preceding
+        // Finish event. Just transition the tool_call to 'awaiting' and
+        // pause the turn — submitToolResult will resume it later.
         yield {
           type: 'tool_call_status',
           conversationId: input.conversationId,
@@ -250,11 +252,6 @@ export async function* streamAssistantReply(
           toolCallId: event.toolCallId,
           status: 'awaiting',
         }
-
-        // Close the assistant message but do not finalize the turn —
-        // the loop will be resumed by submitToolResult later.
-        const done = createAssistantDone()
-        if (done) yield done
 
         yield {
           type: 'turn_paused',
