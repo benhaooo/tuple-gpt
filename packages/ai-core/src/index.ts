@@ -39,5 +39,5 @@ export { executeToolCall, type ToolExecutor } from './agent'
 export type { ToolRunner, ToolRunOutcome } from './agent'
 
 // Client
-export { ChatClient, createClient, mergeTools } from './client'
-export type { ClientConfig, ChatOptions } from './client'
+export { chat } from './client'
+export type { ChatConfig } from './client'

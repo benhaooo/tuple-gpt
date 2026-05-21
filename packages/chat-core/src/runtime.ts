@@ -1,4 +1,4 @@
-import { ChatClient, FinishReason, StreamEventType, type ToolDefinition } from '@tuple-gpt/ai-core'
+import { chat, FinishReason, StreamEventType, type ToolDefinition } from '@tuple-gpt/ai-core'
 import type { ToolCallStatus, ToolRunner } from '@tuple-gpt/ai-core'
 import { buildRequestMessages, toMessages, toProviderConfig } from './request'
 import type { ChatMessage, MessageContent, Provider } from './types'
@@ -156,12 +156,12 @@ export async function* streamAssistantReply(
 
   try {
     const aiMessages = toMessages(buildRequestMessages(input.history))
-    const events = ChatClient.chat(aiMessages, {
+    const events = chat(aiMessages, {
       provider: toProviderConfig(input.provider, input.model),
       tools: input.tools,
       toolRunner: input.toolRunner,
       maxTurns: input.maxTurns,
-      defaults: {
+      options: {
         maxTokens: 4096,
         signal: input.signal,
       },
