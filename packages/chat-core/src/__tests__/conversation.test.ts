@@ -64,7 +64,6 @@ describe('conversation operations', () => {
   it('truncates turns after the target turn', () => {
     const turns = ['t1', 't2', 't3'].map(id => ({
       id,
-      mode: 'chat' as const,
       status: 'done' as const,
       providerId: 'provider-1',
       model: 'model-1',

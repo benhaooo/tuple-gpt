@@ -51,7 +51,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'chat',
+
         history,
         provider,
         model: 'gpt-4o',
@@ -89,7 +89,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'agent',
+
         history,
         provider,
         model: 'gpt-4o',
@@ -131,7 +131,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'chat',
+
         history,
         provider,
         model: 'gpt-4o',
@@ -164,7 +164,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'chat',
+
         history,
         provider,
         model: 'gpt-4o',

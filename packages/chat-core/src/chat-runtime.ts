@@ -358,7 +358,6 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
       for await (const event of streamAssistantReply({
         conversationId,
         turnId,
-        mode: config.mode ?? (config.tools?.length && config.toolRunner ? 'agent' : 'chat'),
         history: history.messages,
         provider: config.provider,
         model: config.model,
@@ -414,9 +413,6 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         activeConversation,
         providerId: input.config.provider.id,
         model: input.config.model,
-        mode:
-          input.config.mode ??
-          (input.config.tools?.length && input.config.toolRunner ? 'agent' : 'chat'),
         content: input.content,
         attachments: attachments.length > 0 ? attachments : undefined,
       })

@@ -9,13 +9,12 @@ import {
   type IdTimeOptions,
 } from './conversation'
 import { createTextContent, getMessageText } from './content'
-import type { ChatMessage, ChatMode, ChatTurn, Conversation, MessageAttachment } from './types'
+import type { ChatMessage, ChatTurn, Conversation, MessageAttachment } from './types'
 
 export interface PrepareSendMessageInput extends IdTimeOptions {
   activeConversation?: Conversation
   providerId: string
   model: string
-  mode?: ChatMode
   content: string
   attachments?: MessageAttachment[]
 }
@@ -55,7 +54,6 @@ export function prepareSendMessage(input: PrepareSendMessageInput): PrepareSendM
   const { turn, userMessage } = createTurn({
     providerId: input.providerId,
     model: input.model,
-    mode: input.mode,
     content: input.content,
     attachments: input.attachments,
     createId: input.createId,

@@ -2,7 +2,6 @@ export type {
   ApiFormat,
   Assistant,
   AttachmentCategory,
-  ChatMode,
   ChatMessage,
   ChatTurn,
   Conversation,

@@ -1,7 +1,7 @@
 import { ChatClient, FinishReason, StreamEventType, type ToolDefinition } from '@tuple-gpt/ai-core'
 import type { ToolCallStatus, ToolRunner } from '@tuple-gpt/ai-core'
 import { buildRequestMessages, toMessages, toProviderConfig } from './request'
-import type { ChatMessage, ChatMode, MessageContent, Provider } from './types'
+import type { ChatMessage, MessageContent, Provider } from './types'
 import { createMessage, type IdTimeOptions } from './conversation'
 import { appendTextToContent, cloneContent } from './content'
 import { getErrorMessage } from './utils/error'
@@ -71,7 +71,6 @@ export type ChatRuntimeEvent =
 export interface StreamAssistantReplyInput extends IdTimeOptions {
   conversationId: string
   turnId: string
-  mode: ChatMode
   history: ChatMessage[]
   provider: Provider
   model: string

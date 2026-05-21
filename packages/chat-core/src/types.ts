@@ -1,7 +1,5 @@
 import type { ContentPart } from '@tuple-gpt/ai-core'
 
-export type ChatMode = 'chat' | 'agent'
-
 export type TurnStatus = 'running' | 'done' | 'error' | 'aborted'
 
 export type MessageRole = 'user' | 'assistant' | 'tool'
@@ -38,7 +36,6 @@ export interface ChatMessage {
 
 export interface ChatTurn {
   id: string
-  mode: ChatMode
   status: TurnStatus
   providerId: string
   model: string

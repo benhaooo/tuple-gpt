@@ -1,7 +1,6 @@
 import { createTextContent, getMessageText } from './content'
 import type {
   ChatMessage,
-  ChatMode,
   ChatTurn,
   Conversation,
   MessageContent,
@@ -26,7 +25,6 @@ export type MessageInput = Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt'> &
   Partial<Pick<ChatMessage, 'id' | 'createdAt' | 'updatedAt'>>
 
 export interface CreateTurnInput extends IdTimeOptions {
-  mode?: ChatMode
   providerId: string
   model: string
   content: string
@@ -95,7 +93,6 @@ export function createTurn(input: CreateTurnInput): { turn: ChatTurn; userMessag
     userMessage,
     turn: {
       id: resolveId(input),
-      mode: input.mode ?? 'chat',
       status: 'running',
       providerId: input.providerId,
       model: input.model,

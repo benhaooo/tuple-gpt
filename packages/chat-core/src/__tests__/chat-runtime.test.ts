@@ -35,7 +35,6 @@ function text(value: string) {
 function turn(id: string, userId = `${id}-u`, assistantId = `${id}-a`): ChatTurn {
   return {
     id,
-    mode: 'chat',
     status: 'done',
     providerId: provider.id,
     model: 'gpt-4o',
@@ -165,7 +164,6 @@ describe('chat runtime', () => {
     expect(snapshot.isStreaming).toBe(false)
     expect(snapshot.conversations).toHaveLength(1)
     expect(createdTurn).toMatchObject({
-      mode: 'chat',
       status: 'done',
       providerId: provider.id,
       model: 'gpt-4o',
@@ -203,7 +201,7 @@ describe('chat runtime', () => {
     await runtime.hydrate()
     await runtime.sendMessage({
       content: 'search',
-      config: { ...requestConfig, mode: 'agent' },
+      config: requestConfig,
     })
 
     expect(runtime.getSnapshot().turns[0]?.messages.map(message => message.role)).toEqual([
