@@ -51,5 +51,5 @@ export type ContentPart =
 
 export interface Message {
   role: Role
-  content: string | ContentPart[]
+  content: ContentPart[]
 }

@@ -1,19 +1,14 @@
-import type { PipelineOutput, StreamEvent, Message, ContentPart, ToolDefinition } from '../../types'
+import type { PipelineOutput, StreamEvent, Message, ToolDefinition } from '../../types'
 import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 import { parseSSE } from '../sse-parser'
 
 function formatMessages(messages: Message[]): unknown[] {
-  return messages.map((msg) => {
-    if (typeof msg.content === 'string') {
-      return { role: msg.role, content: msg.content }
-    }
-
-    // Handle content parts
+  return messages.map(msg => {
     const parts: unknown[] = []
     const toolCalls: unknown[] = []
 
-    for (const part of msg.content as ContentPart[]) {
+    for (const part of msg.content) {
       switch (part.type) {
         case 'text':
           parts.push({ type: 'text', text: part.text })
@@ -46,9 +41,7 @@ function formatMessages(messages: Message[]): unknown[] {
 
     if (msg.role === Role.Tool) {
       // OpenAI expects tool role messages with tool_call_id
-      const toolResult = (msg.content as ContentPart[]).find(
-        (p) => p.type === 'tool_result',
-      )
+      const toolResult = msg.content.find(p => p.type === 'tool_result')
       if (toolResult && toolResult.type === 'tool_result') {
         result.tool_call_id = toolResult.toolCallId
         result.content = toolResult.result
@@ -60,9 +53,13 @@ function formatMessages(messages: Message[]): unknown[] {
       result.tool_calls = toolCalls
       result.content = parts.length > 0 ? parts : null
     } else {
-      result.content = parts.length === 1 && parts[0] && typeof parts[0] === 'object' && 'text' in (parts[0] as Record<string, unknown>)
-        ? (parts[0] as { text: string }).text
-        : parts
+      result.content =
+        parts.length === 1 &&
+        parts[0] &&
+        typeof parts[0] === 'object' &&
+        'text' in (parts[0] as Record<string, unknown>)
+          ? (parts[0] as { text: string }).text
+          : parts
     }
 
     return result
@@ -70,7 +67,7 @@ function formatMessages(messages: Message[]): unknown[] {
 }
 
 function formatTools(tools: ToolDefinition[]): unknown[] {
-  return tools.map((tool) => ({
+  return tools.map(tool => ({
     type: 'function',
     function: {
       name: tool.name,
@@ -115,7 +112,10 @@ export function createOpenAITransport(): Transport {
 
       if (!response.ok) {
         const text = await response.text()
-        yield { type: StreamEventType.Error, error: new Error(`OpenAI API error ${response.status}: ${text}`) }
+        yield {
+          type: StreamEventType.Error,
+          error: new Error(`OpenAI API error ${response.status}: ${text}`),
+        }
         return
       }
 
@@ -166,7 +166,9 @@ export function createOpenAITransport(): Transport {
                 }
                 if (fn?.arguments && typeof fn.arguments === 'string') {
                   // Resolve toolCallId: use tc.id if present, otherwise look up by index
-                  const toolCallId = (tc.id as string) || (index !== undefined ? toolCallIdByIndex.get(index) ?? '' : '')
+                  const toolCallId =
+                    (tc.id as string) ||
+                    (index !== undefined ? (toolCallIdByIndex.get(index) ?? '') : '')
                   yield {
                     type: StreamEventType.ToolCallDelta,
                     toolCallId,
@@ -186,7 +188,10 @@ export function createOpenAITransport(): Transport {
             }
             yield {
               type: StreamEventType.Finish,
-              finishReason: finishReason === 'tool_calls' ? FinishReason.ToolCalls : finishReason as 'stop' | 'length' | 'content_filter',
+              finishReason:
+                finishReason === 'tool_calls'
+                  ? FinishReason.ToolCalls
+                  : (finishReason as 'stop' | 'length' | 'content_filter'),
               usage: usage
                 ? {
                     promptTokens: usage.prompt_tokens,

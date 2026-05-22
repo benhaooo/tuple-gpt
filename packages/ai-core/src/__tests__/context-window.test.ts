@@ -4,7 +4,7 @@ import { createMockInput } from './helpers'
 import type { Message } from '../types'
 
 function msg(role: Message['role'], content: string): Message {
-  return { role, content }
+  return { role, content: [{ type: 'text', text: content }] }
 }
 
 describe('contextWindow', () => {
@@ -21,12 +21,7 @@ describe('contextWindow', () => {
     it('preserves system message and counts it toward maxMessages', () => {
       const step = contextWindow({ maxMessages: 3 })
       const input = createMockInput({
-        messages: [
-          msg('system', 'sys'),
-          msg('user', '1'),
-          msg('assistant', '2'),
-          msg('user', '3'),
-        ],
+        messages: [msg('system', 'sys'), msg('user', '1'), msg('assistant', '2'), msg('user', '3')],
       })
       const output = step(input)
       expect(output.messages).toHaveLength(3)
@@ -52,9 +47,9 @@ describe('contextWindow', () => {
       const input = createMockInput({
         messages: [
           msg('system', 'sysss'), // 5 chars
-          msg('user', 'aaa'),     // 3 chars
+          msg('user', 'aaa'), // 3 chars
           msg('assistant', 'bb'), // 2 chars
-          msg('user', 'ccc'),     // 3 chars
+          msg('user', 'ccc'), // 3 chars
         ],
       })
       const output = step(input)
@@ -82,7 +77,7 @@ describe('contextWindow', () => {
           {
             role: 'assistant',
             content: [
-              { type: 'text', text: 'hello' },         // 5
+              { type: 'text', text: 'hello' }, // 5
               { type: 'tool_call', toolCall: { id: '1', name: 'x', arguments: '{}' } }, // 2
             ],
           },

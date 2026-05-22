@@ -34,7 +34,9 @@ describeIf('Gemini Integration', { timeout: 60_000 }, () => {
       const transport = createGeminiTransport()
       const events = await collect(
         transport.stream({
-          messages: [{ role: 'user', content: 'Reply with exactly: hello' }],
+          messages: [
+            { role: 'user', content: [{ type: 'text', text: 'Reply with exactly: hello' }] },
+          ],
           provider,
           options: { maxTokens: 20, temperature: 0 },
         }),
@@ -84,8 +86,12 @@ describeIf('Gemini Integration', { timeout: 60_000 }, () => {
       const messages: Message[] = [
         {
           role: 'user',
-          content:
-            'Call the get_weather tool with city "Tokyo". Do not answer without using the tool.',
+          content: [
+            {
+              type: 'text',
+              text: 'Call the get_weather tool with city "Tokyo". Do not answer without using the tool.',
+            },
+          ],
         },
       ]
 

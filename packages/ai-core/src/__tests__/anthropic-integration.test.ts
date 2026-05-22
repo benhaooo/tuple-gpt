@@ -34,7 +34,9 @@ describeIf('Anthropic Integration', { timeout: 60_000 }, () => {
       const transport = createAnthropicTransport()
       const events = await collect(
         transport.stream({
-          messages: [{ role: 'user', content: 'Reply with exactly: hello' }],
+          messages: [
+            { role: 'user', content: [{ type: 'text', text: 'Reply with exactly: hello' }] },
+          ],
           provider,
           options: { maxTokens: 20, temperature: 0 },
         }),
@@ -82,7 +84,12 @@ describeIf('Anthropic Integration', { timeout: 60_000 }, () => {
       }
 
       const messages: Message[] = [
-        { role: 'user', content: 'What is the weather in Tokyo? Use the get_weather tool.' },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'What is the weather in Tokyo? Use the get_weather tool.' },
+          ],
+        },
       ]
 
       const events = await collect(

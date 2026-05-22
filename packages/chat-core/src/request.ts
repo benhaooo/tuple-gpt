@@ -1,4 +1,4 @@
-import type { ContentPart, Message, ProviderConfig } from '@tuple-gpt/ai-core'
+import type { Message, ProviderConfig } from '@tuple-gpt/ai-core'
 import { cloneContent } from './content'
 import type {
   ApiFormat,
@@ -90,7 +90,7 @@ export function toMessages(messages: ChatRequestMessage[]): Message[] {
 
     return {
       role: message.role as Message['role'],
-      content: normalizeAiContent(content),
+      content,
     }
   })
 }
@@ -107,12 +107,4 @@ function appendAttachmentContext(content: MessageContent[], context: string): Me
   return next.map((part, index) =>
     index === textIndex && part.type === 'text' ? { ...part, text: part.text + context } : part,
   )
-}
-
-function normalizeAiContent(content: ContentPart[]): Message['content'] {
-  if (content.length === 1 && content[0]?.type === 'text') {
-    return content[0].text
-  }
-
-  return content
 }

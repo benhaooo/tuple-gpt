@@ -6,6 +6,7 @@ import type {
   ProviderConfig,
   RequestOptions,
   PipelineOutput,
+  ContentPart,
 } from '../types'
 import { Role, FinishReason, StreamEventType } from '../types'
 import type { Transport } from '../transport/transport'
@@ -34,14 +35,13 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     transport,
     tools,
     toolRunner,
-    pipeline: pipelineSteps,
+    pipeline: pipelineSteps = [],
     provider,
     options,
     maxTurns = 10,
   } = opts
 
-  const pipeline =
-    pipelineSteps && pipelineSteps.length > 0 ? createPipeline(...pipelineSteps) : undefined
+  const pipeline = createPipeline(...pipelineSteps)
 
   let turn = 0
 
@@ -49,10 +49,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     turn++
 
     // 1. Pipeline — prepare request
-    let prepared: PipelineOutput = { messages, tools, provider, options }
-    if (pipeline) {
-      prepared = pipeline(prepared)
-    }
+    const prepared: PipelineOutput = pipeline({ messages, tools, provider, options })
 
     // 2. Transport — stream response
     const pendingToolCalls: ToolCall[] = []
@@ -96,24 +93,18 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     }
 
     // 3. Append assistant message to history
-    if (textContent || pendingToolCalls.length > 0) {
-      const assistantContent: import('../types').ContentPart[] = []
-      if (textContent) {
-        assistantContent.push({ type: 'text', text: textContent })
-      }
-      for (const tc of pendingToolCalls) {
-        assistantContent.push({
-          type: 'tool_call',
-          toolCall: { id: tc.id, name: tc.name, arguments: tc.arguments },
-        })
-      }
-      messages.push({
-        role: Role.Assistant,
-        content:
-          assistantContent.length === 1 && assistantContent[0].type === 'text'
-            ? textContent
-            : assistantContent,
+    const assistantContent: ContentPart[] = []
+    if (textContent) {
+      assistantContent.push({ type: 'text', text: textContent })
+    }
+    for (const tc of pendingToolCalls) {
+      assistantContent.push({
+        type: 'tool_call',
+        toolCall: { id: tc.id, name: tc.name, arguments: tc.arguments },
       })
+    }
+    if (assistantContent.length > 0) {
+      messages.push({ role: Role.Assistant, content: assistantContent })
     }
 
     // 4. Check termination

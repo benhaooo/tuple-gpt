@@ -14,14 +14,17 @@ describe('runAgentLoop', () => {
       { type: 'finish', finishReason: 'stop' },
     ]
     const transport = createMockTransport([events])
-    const messages: Message[] = [{ role: 'user', content: 'hi' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }]
 
     const yielded = await collect(runAgentLoop({ messages, transport, provider }))
 
     expect(yielded).toEqual(events)
     // Assistant message appended
     expect(messages).toHaveLength(2)
-    expect(messages[1]).toEqual({ role: 'assistant', content: 'Hello World' })
+    expect(messages[1]).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: 'Hello World' }],
+    })
   })
 
   it('concatenates multiple text deltas into one assistant message', async () => {
@@ -32,11 +35,11 @@ describe('runAgentLoop', () => {
       { type: 'finish', finishReason: 'stop' },
     ]
     const transport = createMockTransport([events])
-    const messages: Message[] = [{ role: 'user', content: 'test' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'test' }] }]
 
     await collect(runAgentLoop({ messages, transport, provider }))
 
-    expect(messages[1]).toEqual({ role: 'assistant', content: 'abc' })
+    expect(messages[1]).toEqual({ role: 'assistant', content: [{ type: 'text', text: 'abc' }] })
   })
 
   it('handles tool call → execute → second round text reply', async () => {
@@ -55,7 +58,7 @@ describe('runAgentLoop', () => {
     const toolExecutor: ToolExecutor = {
       echo: { execute: async args => ({ content: `echoed: ${args}` }) },
     }
-    const messages: Message[] = [{ role: 'user', content: 'run echo' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'run echo' }] }]
 
     const yielded = await collect(
       runAgentLoop({
@@ -77,7 +80,7 @@ describe('runAgentLoop', () => {
     expect(messages).toHaveLength(4)
     expect(messages[1].role).toBe('assistant')
     expect(messages[2].role).toBe('tool')
-    expect(messages[3]).toEqual({ role: 'assistant', content: 'Done' })
+    expect(messages[3]).toEqual({ role: 'assistant', content: [{ type: 'text', text: 'Done' }] })
   })
 
   it('executes multiple tool calls in parallel', async () => {
@@ -110,7 +113,7 @@ describe('runAgentLoop', () => {
         },
       },
     }
-    const messages: Message[] = [{ role: 'user', content: 'go' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'go' }] }]
 
     await collect(
       runAgentLoop({
@@ -149,7 +152,7 @@ describe('runAgentLoop', () => {
       a: { execute: async () => ({ content: 'result-a' }) },
       b: { execute: async () => ({ content: 'result-b' }) },
     }
-    const messages: Message[] = [{ role: 'user', content: 'go' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'go' }] }]
 
     const yielded = await collect(
       runAgentLoop({
@@ -179,7 +182,7 @@ describe('runAgentLoop', () => {
     const toolExecutor: ToolExecutor = {
       loop: { execute: async () => ({ content: 'again' }) },
     }
-    const messages: Message[] = [{ role: 'user', content: 'go' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'go' }] }]
 
     await collect(
       runAgentLoop({
@@ -203,7 +206,7 @@ describe('runAgentLoop', () => {
       { type: 'error', error: new Error('network failure') },
     ]
     const transport = createMockTransport([events])
-    const messages: Message[] = [{ role: 'user', content: 'hi' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }]
 
     const yielded = await collect(runAgentLoop({ messages, transport, provider }))
 
@@ -219,7 +222,7 @@ describe('runAgentLoop', () => {
       { type: 'finish', finishReason: 'tool_calls' },
     ]
     const transport = createMockTransport([events])
-    const messages: Message[] = [{ role: 'user', content: 'go' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'go' }] }]
 
     await collect(runAgentLoop({ messages, transport, provider }))
 
@@ -234,7 +237,7 @@ describe('runAgentLoop', () => {
       { type: 'finish', finishReason: 'stop' },
     ]
     const transport = createMockTransport([events])
-    const messages: Message[] = [{ role: 'user', content: 'hi' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }]
     const ref = messages
 
     await collect(runAgentLoop({ messages, transport, provider }))
@@ -252,12 +255,15 @@ describe('runAgentLoop', () => {
       for (const e of events) yield e
     })
     const transport = { stream: streamSpy }
-    const messages: Message[] = [{ role: 'user', content: 'hi' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }]
 
     const pipeline = [
       (input: any) => ({
         ...input,
-        messages: [{ role: 'system' as const, content: 'injected' }, ...input.messages],
+        messages: [
+          { role: 'system' as const, content: [{ type: 'text', text: 'injected' }] },
+          ...input.messages,
+        ],
       }),
     ]
 
@@ -265,7 +271,10 @@ describe('runAgentLoop', () => {
 
     // The transport should have received the pipeline-modified messages
     const callArg = (streamSpy.mock.calls as any[][])[0][0]
-    expect(callArg.messages[0]).toEqual({ role: 'system', content: 'injected' })
+    expect(callArg.messages[0]).toEqual({
+      role: 'system',
+      content: [{ type: 'text', text: 'injected' }],
+    })
   })
 
   it('builds ContentPart[] for mixed text + tool call', async () => {
@@ -285,7 +294,7 @@ describe('runAgentLoop', () => {
     const toolExecutor: ToolExecutor = {
       search: { execute: async () => ({ content: 'result' }) },
     }
-    const messages: Message[] = [{ role: 'user', content: 'find' }]
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'find' }] }]
 
     await collect(
       runAgentLoop({

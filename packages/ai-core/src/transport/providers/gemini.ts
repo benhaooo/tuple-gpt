@@ -1,4 +1,4 @@
-import type { PipelineOutput, StreamEvent, Message, ContentPart, ToolDefinition } from '../../types'
+import type { PipelineOutput, StreamEvent, Message, ToolDefinition } from '../../types'
 import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 
@@ -13,35 +13,28 @@ function formatMessages(messages: Message[]): {
 
   for (const msg of messages) {
     if (msg.role === Role.System) {
-      const text = typeof msg.content === 'string'
-        ? msg.content
-        : (msg.content as ContentPart[])
-            .filter((p) => p.type === 'text')
-            .map((p) => (p as { text: string }).text)
-            .join('\n')
+      const text = msg.content
+        .filter(p => p.type === 'text')
+        .map(p => p.text)
+        .join('\n')
       systemInstruction = { parts: [{ text }] }
       continue
     }
 
-    const geminiRole = msg.role === Role.Assistant ? 'model' : msg.role === Role.Tool ? 'function' : 'user'
-
-    if (typeof msg.content === 'string') {
-      contents.push({
-        role: geminiRole,
-        parts: [{ text: msg.content }],
-      })
-      continue
-    }
+    const geminiRole =
+      msg.role === Role.Assistant ? 'model' : msg.role === Role.Tool ? 'function' : 'user'
 
     const parts: unknown[] = []
-    for (const part of msg.content as ContentPart[]) {
+    for (const part of msg.content) {
       switch (part.type) {
         case 'text':
           parts.push({ text: part.text })
           break
         case 'image':
           if (part.image.startsWith('http')) {
-            parts.push({ fileData: { fileUri: part.image, mimeType: part.mimeType ?? 'image/png' } })
+            parts.push({
+              fileData: { fileUri: part.image, mimeType: part.mimeType ?? 'image/png' },
+            })
           } else {
             parts.push({
               inlineData: { data: part.image, mimeType: part.mimeType ?? 'image/png' },
@@ -77,7 +70,7 @@ function formatMessages(messages: Message[]): {
 function formatTools(tools: ToolDefinition[]): unknown[] {
   return [
     {
-      functionDeclarations: tools.map((tool) => ({
+      functionDeclarations: tools.map(tool => ({
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
@@ -119,7 +112,10 @@ export function createGeminiTransport(): Transport {
 
       if (!response.ok) {
         const text = await response.text()
-        yield { type: StreamEventType.Error, error: new Error(`Gemini API error ${response.status}: ${text}`) }
+        yield {
+          type: StreamEventType.Error,
+          error: new Error(`Gemini API error ${response.status}: ${text}`),
+        }
         return
       }
 
@@ -199,11 +195,15 @@ export function createGeminiTransport(): Transport {
             if (finishReason) {
               const usageMeta = chunk.usageMetadata as Record<string, number> | undefined
               // Gemini uses STOP even for tool calls, so check if we saw any function calls
-              const mappedReason = hasToolCall ? FinishReason.ToolCalls
-                : finishReason === 'STOP' ? FinishReason.Stop
-                : finishReason === 'MAX_TOKENS' ? FinishReason.Length
-                : finishReason === 'SAFETY' ? FinishReason.ContentFilter
-                : FinishReason.Stop
+              const mappedReason = hasToolCall
+                ? FinishReason.ToolCalls
+                : finishReason === 'STOP'
+                  ? FinishReason.Stop
+                  : finishReason === 'MAX_TOKENS'
+                    ? FinishReason.Length
+                    : finishReason === 'SAFETY'
+                      ? FinishReason.ContentFilter
+                      : FinishReason.Stop
               yield {
                 type: StreamEventType.Finish,
                 finishReason: mappedReason,
