@@ -2,7 +2,6 @@ export type {
   ApiFormat,
   Assistant,
   AttachmentCategory,
-  ChatMode,
   ChatMessage,
   ChatTurn,
   Conversation,
@@ -20,6 +19,7 @@ export type {
 export {
   addTurn,
   appendMessageToTurn,
+  cancelOpenToolCalls,
   createMessage,
   createConversation,
   createTurn,
@@ -34,6 +34,8 @@ export {
   truncateConversationAfterTurn,
   updateMessageContent,
   updateMessageStatus,
+  updateToolCallResult,
+  updateToolCallStatus,
   updateTurnStatus,
   upsertConversation,
   type CreateConversationInput,
@@ -121,3 +123,5 @@ export {
   type McpServerConfig,
   type McpServerState,
 } from './services/mcp-client'
+
+export { builtinTools, askUserTool, currentTimeTool } from './builtin-tools'

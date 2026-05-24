@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ChatClient, FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
+import { FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
 import { createChatRuntime, type ChatRuntime } from '../chat-runtime'
 import { cloneStorageSnapshot, normalizeStorageSnapshot } from '../ports'
 import type {
@@ -9,6 +9,13 @@ import type {
   ChatStorageSnapshot,
 } from '../ports'
 import type { ChatTurn, Conversation, Provider } from '#types'
+
+const { chatMock } = vi.hoisted(() => ({ chatMock: vi.fn() }))
+
+vi.mock('@tuple-gpt/ai-core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@tuple-gpt/ai-core')>()
+  return { ...actual, chat: chatMock }
+})
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 
@@ -35,7 +42,6 @@ function text(value: string) {
 function turn(id: string, userId = `${id}-u`, assistantId = `${id}-a`): ChatTurn {
   return {
     id,
-    mode: 'chat',
     status: 'done',
     providerId: provider.id,
     model: 'gpt-4o',
@@ -118,7 +124,7 @@ function waitForSnapshot(
 
 describe('chat runtime', () => {
   afterEach(() => {
-    vi.restoreAllMocks()
+    chatMock.mockReset()
   })
 
   it('hydrates conversations from storage and exposes turns in the snapshot', async () => {
@@ -139,7 +145,7 @@ describe('chat runtime', () => {
 
   it('sends a message, updates turn state, and persists the conversation', async () => {
     const storage = createTestChatStorage()
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+    chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.TextDelta, text: 'ok' }
       yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
     })
@@ -165,7 +171,6 @@ describe('chat runtime', () => {
     expect(snapshot.isStreaming).toBe(false)
     expect(snapshot.conversations).toHaveLength(1)
     expect(createdTurn).toMatchObject({
-      mode: 'chat',
       status: 'done',
       providerId: provider.id,
       model: 'gpt-4o',
@@ -187,9 +192,9 @@ describe('chat runtime', () => {
     ])
   })
 
-  it('persists agent tool messages inside a single turn', async () => {
+  it('persists tool result on the tool_call part inside a single turn', async () => {
     const storage = createTestChatStorage()
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+    chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.ToolCallStart, toolCall: { id: 'tc1', name: 'search' } }
       yield { type: StreamEventType.ToolCallDelta, toolCallId: 'tc1', arguments: '{"q":"x"}' }
       yield { type: StreamEventType.ToolCallEnd, toolCallId: 'tc1' }
@@ -203,15 +208,19 @@ describe('chat runtime', () => {
     await runtime.hydrate()
     await runtime.sendMessage({
       content: 'search',
-      config: { ...requestConfig, mode: 'agent' },
+      config: requestConfig,
     })
 
-    expect(runtime.getSnapshot().turns[0]?.messages.map(message => message.role)).toEqual([
-      'user',
-      'assistant',
-      'tool',
-      'assistant',
-    ])
+    const turn = runtime.getSnapshot().turns[0]
+    expect(turn?.messages.map(message => message.role)).toEqual(['user', 'assistant', 'assistant'])
+
+    const toolCallPart = turn?.messages[1]?.content.find(p => p.type === 'tool_call')
+    expect(toolCallPart).toMatchObject({
+      type: 'tool_call',
+      toolCall: { id: 'tc1', name: 'search' },
+      status: 'resolved',
+      result: 'found',
+    })
   })
 
   it('regenerates a turn by replacing that turn and dropping following turns', async () => {
@@ -224,7 +233,7 @@ describe('chat runtime', () => {
       ],
     }
     const storage = createTestChatStorage(initialState)
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+    chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.TextDelta, text: 'new answer' }
       yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
     })
@@ -255,10 +264,10 @@ describe('chat runtime', () => {
         }),
       ],
     })
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* (_messages, config) {
+    chatMock.mockImplementation(async function* (_messages, config) {
       yield { type: StreamEventType.TextDelta, text: 'partial' }
 
-      const signal = config.defaults?.signal
+      const signal = config.options?.signal
       if (!signal) throw new Error('Expected abort signal')
       if (signal.aborted) throw createAbortError()
 
@@ -298,10 +307,10 @@ describe('chat runtime', () => {
 
   it('stops the active turn stream by default and marks it aborted', async () => {
     const storage = createTestChatStorage()
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* (_messages, config) {
+    chatMock.mockImplementation(async function* (_messages, config) {
       yield { type: StreamEventType.TextDelta, text: 'partial' }
 
-      const signal = config.defaults?.signal
+      const signal = config.options?.signal
       if (!signal) throw new Error('Expected abort signal')
       if (signal.aborted) throw createAbortError()
 

@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ChatClient, FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
+import { FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
 import { streamAssistantReply, type ChatRuntimeEvent } from '../runtime'
 import type { ChatMessage, Provider } from '#types'
+
+const { chatMock } = vi.hoisted(() => ({ chatMock: vi.fn() }))
+
+vi.mock('@tuple-gpt/ai-core', async importOriginal => {
+  const actual = await importOriginal<typeof import('@tuple-gpt/ai-core')>()
+  return { ...actual, chat: chatMock }
+})
 
 const timestamp = '2026-04-29T00:00:00.000Z'
 
@@ -37,11 +44,11 @@ async function collect(input: AsyncIterable<ChatRuntimeEvent>): Promise<ChatRunt
 
 describe('streamAssistantReply', () => {
   afterEach(() => {
-    vi.restoreAllMocks()
+    chatMock.mockReset()
   })
 
   it('emits start, delta, assistant done, and turn done events', async () => {
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+    chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.TextDelta, text: 'hel' }
       yield { type: StreamEventType.TextDelta, text: 'lo' }
       yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
@@ -51,7 +58,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'chat',
+
         history,
         provider,
         model: 'gpt-4o',
@@ -75,7 +82,7 @@ describe('streamAssistantReply', () => {
   })
 
   it('emits tool messages between assistant tool call and final assistant response', async () => {
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+    chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.ToolCallStart, toolCall: { id: 'tc1', name: 'search' } }
       yield { type: StreamEventType.ToolCallDelta, toolCallId: 'tc1', arguments: '{"q":"x"}' }
       yield { type: StreamEventType.ToolCallEnd, toolCallId: 'tc1' }
@@ -89,7 +96,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'agent',
+
         history,
         provider,
         model: 'gpt-4o',
@@ -102,22 +109,27 @@ describe('streamAssistantReply', () => {
       'assistant_delta',
       'assistant_delta',
       'assistant_done',
-      'tool_message',
+      'tool_call_status',
+      'tool_call_result',
       'assistant_started',
       'assistant_delta',
       'assistant_done',
       'turn_done',
     ])
     expect(events[4]).toMatchObject({
-      message: {
-        role: 'tool',
-        content: [{ type: 'tool_result', toolCallId: 'tc1', result: 'found' }],
-      },
+      type: 'tool_call_status',
+      toolCallId: 'tc1',
+      status: 'resolved',
+    })
+    expect(events[5]).toMatchObject({
+      type: 'tool_call_result',
+      toolCallId: 'tc1',
+      result: 'found',
     })
   })
 
   it('emits assistant_error and turn_error when the stream yields an error event', async () => {
-    vi.spyOn(ChatClient, 'chat').mockImplementation(async function* () {
+    chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.Error, error: new Error('boom') }
     })
 
@@ -125,7 +137,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'chat',
+
         history,
         provider,
         model: 'gpt-4o',
@@ -142,7 +154,7 @@ describe('streamAssistantReply', () => {
   })
 
   it('treats AbortError as an aborted turn', async () => {
-    vi.spyOn(ChatClient, 'chat').mockImplementation(() => ({
+    chatMock.mockImplementation(() => ({
       [Symbol.asyncIterator]() {
         return {
           async next() {
@@ -158,7 +170,7 @@ describe('streamAssistantReply', () => {
       streamAssistantReply({
         conversationId: 'conv-1',
         turnId: 'turn-1',
-        mode: 'chat',
+
         history,
         provider,
         model: 'gpt-4o',

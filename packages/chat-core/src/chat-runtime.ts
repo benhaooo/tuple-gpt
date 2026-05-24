@@ -1,12 +1,16 @@
 import {
   appendMessageToTurn,
+  cancelOpenToolCalls,
   createConversation,
   deleteConversation as deleteConversationFromList,
   deleteTurn as deleteTurnFromList,
+  flattenConversationMessages,
   getActiveConversation,
   renameConversation as renameConversationInList,
   updateMessageContent,
   updateMessageStatus,
+  updateToolCallResult,
+  updateToolCallStatus,
   updateTurnStatus,
   upsertConversation,
 } from './conversation'
@@ -18,6 +22,7 @@ import {
 } from './flow'
 import { streamAssistantReply, type ChatRuntimeEvent } from './runtime'
 import type { Conversation, MessageAttachment } from './types'
+import type { Resolution } from '@tuple-gpt/ai-core'
 import {
   cloneStorageSnapshot,
   normalizeStorageSnapshot,
@@ -45,6 +50,18 @@ export interface ChatRuntime {
   subscribe(listener: ChatSnapshotListener): () => void
   sendMessage(input: SendMessageInput): Promise<void>
   stopStreaming(turnId?: string): void
+  /**
+   * Resolve one suspended tool call. The runtime buffers resolutions per
+   * turn and only re-launches the agent loop once every awaiting tool call
+   * in the turn has a resolution. ai-core's resume phase then applies them
+   * in order, re-running execute() on 'approve' and writing tool_result
+   * messages on 'result' / 'deny'.
+   */
+  resolveToolCall(
+    turnId: string,
+    resolution: Resolution,
+    config: ActiveChatRequestConfig,
+  ): Promise<void>
   newConversation(): Promise<Conversation | null>
   setActiveConversation(id: string): Promise<void>
   deleteConversation(id: string): Promise<void>
@@ -65,7 +82,6 @@ interface ChatRuntimeState extends ChatStorageSnapshot {
 function toSnapshot(state: ChatRuntimeState): ChatSnapshot {
   const activeConversation = getActiveConversation(state.conversations, state.activeConversationId)
   const runningTurnIds = [...state.runningTurnIds]
-  const activeTurnIds = new Set(activeConversation?.turns.map(turn => turn.id) ?? [])
 
   return {
     conversations: state.conversations,
@@ -74,7 +90,9 @@ function toSnapshot(state: ChatRuntimeState): ChatSnapshot {
     turns: activeConversation?.turns ?? [],
     isReady: state.isReady,
     runningTurnIds,
-    isStreaming: runningTurnIds.some(turnId => activeTurnIds.has(turnId)),
+    isStreaming: runningTurnIds.some(turnId =>
+      activeConversation?.turns.some(turn => turn.id === turnId),
+    ),
   }
 }
 
@@ -98,6 +116,12 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
   let unsubscribeStorage: (() => void) | null = null
   let persistPromise = Promise.resolve()
   const abortControllers = new Map<string, AbortController>()
+  /**
+   * Buffer of resolutions submitted while a turn still has other awaiting
+   * tool calls. Drained and forwarded to ai-core's resume phase once every
+   * awaiting call in the turn has been resolved.
+   */
+  const pendingResolutions = new Map<string, Resolution[]>()
 
   function emit() {
     const snapshot = toSnapshot(state)
@@ -273,16 +297,31 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
             event.error,
           ),
         }
-      case 'tool_message':
+      case 'tool_call_status':
         return {
           ...state,
-          conversations: appendMessageToTurn(
+          conversations: updateToolCallStatus(
             state.conversations,
             event.conversationId,
             event.turnId,
-            event.message,
+            event.toolCallId,
+            event.status,
           ),
         }
+      case 'tool_call_result':
+        return {
+          ...state,
+          conversations: updateToolCallResult(
+            state.conversations,
+            event.conversationId,
+            event.turnId,
+            event.toolCallId,
+            event.result,
+            event.isError,
+          ),
+        }
+      case 'turn_paused':
+        return state
       case 'turn_done':
         return {
           ...state,
@@ -297,7 +336,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         return {
           ...state,
           conversations: updateTurnStatus(
-            state.conversations,
+            cancelOpenToolCalls(state.conversations, event.conversationId, event.turnId),
             event.conversationId,
             event.turnId,
             'error',
@@ -308,7 +347,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         return {
           ...state,
           conversations: updateTurnStatus(
-            state.conversations,
+            cancelOpenToolCalls(state.conversations, event.conversationId, event.turnId),
             event.conversationId,
             event.turnId,
             'aborted',
@@ -322,6 +361,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
     turnId: string,
     history: SendMessageHistory,
     config: ActiveChatRequestConfig,
+    resolutions?: Resolution[],
   ) {
     if (isTurnRunning(turnId)) return
 
@@ -333,12 +373,11 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
       for await (const event of streamAssistantReply({
         conversationId,
         turnId,
-        mode: config.mode ?? (config.tools?.length && config.toolExecutor ? 'agent' : 'chat'),
         history: history.messages,
         provider: config.provider,
         model: config.model,
         tools: config.tools,
-        toolExecutor: config.toolExecutor,
+        resolutions,
         maxTurns: config.maxTurns,
         signal: abortController.signal,
       })) {
@@ -360,6 +399,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         abortController.abort()
       }
       abortControllers.clear()
+      pendingResolutions.clear()
       unsubscribeStorage?.()
       unsubscribeStorage = null
       listeners.clear()
@@ -389,9 +429,6 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         activeConversation,
         providerId: input.config.provider.id,
         model: input.config.model,
-        mode:
-          input.config.mode ??
-          (input.config.tools?.length && input.config.toolExecutor ? 'agent' : 'chat'),
         content: input.content,
         attachments: attachments.length > 0 ? attachments : undefined,
       })
@@ -431,6 +468,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
       for (const turn of conversation?.turns ?? []) {
         abortControllers.get(turn.id)?.abort()
         abortControllers.delete(turn.id)
+        pendingResolutions.delete(turn.id)
       }
 
       const result = deleteConversationFromList(state.conversations, state.activeConversationId, id)
@@ -459,6 +497,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
 
       abortControllers.get(turnId)?.abort()
       abortControllers.delete(turnId)
+      pendingResolutions.delete(turnId)
 
       await setState({
         ...state,
@@ -538,6 +577,7 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         abortController.abort()
       }
       abortControllers.clear()
+      pendingResolutions.clear()
 
       await setState({
         ...state,
@@ -546,7 +586,60 @@ export function createChatRuntime(options: ChatRuntimeOptions): ChatRuntime {
         runningTurnIds: [],
       })
     },
+
+    async resolveToolCall(turnId, resolution, config) {
+      await ensureReady()
+      const target = getActiveConversationTurn(turnId)
+      if (!target) return
+      if (isTurnRunning(turnId)) return
+
+      // Only awaiting tool calls accept resolutions.
+      const targetCall = findToolCall(target.turn, resolution.toolCallId)
+      if (targetCall?.status !== 'awaiting') return
+
+      const conversationId = target.conversation.id
+
+      // Buffer this resolution. ai-core's resume phase will produce the
+      // tool_result message and emit the matching status events.
+      const buffered = pendingResolutions.get(turnId) ?? []
+      buffered.push(resolution)
+      pendingResolutions.set(turnId, buffered)
+
+      // If the turn still has other awaiting calls, wait for them too.
+      const otherAwaitingExists = target.turn.messages.some(message => {
+        if (message.role !== 'assistant') return false
+        return message.content.some(part => {
+          if (part.type !== 'tool_call') return false
+          if (part.status !== 'awaiting') return false
+          return !buffered.some(r => r.toolCallId === part.toolCall.id)
+        })
+      })
+      if (otherAwaitingExists) return
+
+      pendingResolutions.delete(turnId)
+
+      await runTurnReply(
+        conversationId,
+        turnId,
+        { messages: flattenConversationMessages(target.conversation) },
+        config,
+        buffered,
+      )
+    },
   }
+}
+
+function findToolCall(
+  turn: { messages: Conversation['turns'][number]['messages'] },
+  toolCallId: string,
+) {
+  for (const message of turn.messages) {
+    if (message.role !== 'assistant') continue
+    for (const part of message.content) {
+      if (part.type === 'tool_call' && part.toolCall.id === toolCallId) return part
+    }
+  }
+  return undefined
 }
 
 interface SendMessageHistory {

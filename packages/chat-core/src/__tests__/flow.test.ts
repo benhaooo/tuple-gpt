@@ -19,7 +19,6 @@ function text(value: string) {
 function turn(id: string, userId: string, assistantId: string, userText: string): ChatTurn {
   return {
     id,
-    mode: 'chat',
     status: 'done',
     providerId: 'provider-1',
     model: 'model-1',

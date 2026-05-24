@@ -20,6 +20,7 @@ export const StreamEventType = {
   ToolCallDelta: 'tool_call_delta',
   ToolCallEnd: 'tool_call_end',
   ToolResult: 'tool_result',
+  ToolInteractionRequired: 'tool_interaction_required',
   Finish: 'finish',
   Error: 'error',
 } as const
@@ -36,6 +37,16 @@ export type StreamEvent =
       toolCallId: string
       result: string
       isError?: boolean
+    }
+  | {
+      type: typeof StreamEventType.ToolInteractionRequired
+      toolCallId: string
+      toolName: string
+      arguments: string
+      /** Why the tool suspended — forwarded from the tool's execute(). */
+      reason: string
+      /** Free-form payload forwarded from the tool's execute(). */
+      payload?: unknown
     }
   | { type: typeof StreamEventType.Finish; finishReason: FinishReason; usage?: Usage }
   | { type: typeof StreamEventType.Error; error: Error }

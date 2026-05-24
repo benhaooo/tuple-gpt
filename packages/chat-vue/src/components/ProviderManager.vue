@@ -8,78 +8,32 @@
               <div>
                 <p class="px-2 py-1 text-xs font-medium text-muted-foreground">默认服务商</p>
                 <div class="space-y-1">
-                  <Button
+                  <ProviderRow
                     v-for="p in providerStore.presetProviders"
                     :key="p.id"
-                    variant="ghost"
-                    class="h-9 w-full justify-start gap-2 px-3 text-sm font-normal"
-                    :class="
-                      providerStore.selectedProviderId === p.id &&
-                      'bg-accent text-accent-foreground hover:bg-accent'
-                    "
-                    @click="providerStore.selectProvider(p.id)"
-                  >
-                    <ProviderAvatar :provider="p" :size="18" />
-                    <span class="min-w-0 flex-1 truncate">{{ p.name }}</span>
-                    <span
-                      class="ml-auto h-2 w-2 flex-shrink-0 rounded-full"
-                      :class="p.apiKey ? 'bg-emerald-500' : 'bg-muted-foreground/30'"
-                    />
-                  </Button>
+                    :provider="p"
+                    :selected="providerStore.selectedProviderId === p.id"
+                    @select="providerStore.selectProvider(p.id)"
+                  />
                 </div>
               </div>
 
               <div v-if="providerStore.customProviders.length > 0">
                 <p class="px-2 py-1 text-xs font-medium text-muted-foreground">自定义服务商</p>
                 <div class="space-y-1">
-                  <div
+                  <ProviderRow
                     v-for="p in providerStore.customProviders"
                     :key="p.id"
-                    class="group flex items-center gap-1"
-                  >
-                    <Button
-                      variant="ghost"
-                      class="h-9 min-w-0 flex-1 justify-start gap-2 px-3 text-sm font-normal"
-                      :class="
-                        providerStore.selectedProviderId === p.id &&
-                        'bg-accent text-accent-foreground hover:bg-accent'
-                      "
-                      @click="providerStore.selectProvider(p.id)"
-                    >
-                      <ProviderAvatar :provider="p" :size="18" />
-                      <span class="min-w-0 flex-1 truncate">{{ p.name }}</span>
-                      <span
-                        class="ml-auto h-2 w-2 flex-shrink-0 rounded-full"
-                        :class="p.apiKey ? 'bg-emerald-500' : 'bg-muted-foreground/30'"
-                      />
-                    </Button>
-
-                    <AlertDialog>
-                      <AlertDialogTrigger as-child>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          class="size-7 flex-shrink-0 opacity-0 group-hover:opacity-100"
-                        >
-                          <XMarkIcon class="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>删除服务商？</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            删除后将清空该服务商的配置和模型列表，且无法恢复。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction @click="providerStore.removeProvider(p.id)">
-                            删除
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                    :provider="p"
+                    :selected="providerStore.selectedProviderId === p.id"
+                    :renaming="renamingId === p.id"
+                    custom
+                    @select="providerStore.selectProvider(p.id)"
+                    @rename-start="startRename(p.id)"
+                    @rename-commit="commitRename(p.id, $event)"
+                    @rename-cancel="cancelRename"
+                    @delete="confirmDeleteId = p.id"
+                  />
                 </div>
               </div>
             </div>
@@ -110,14 +64,32 @@
     </Card>
 
     <AddProviderDialog v-model="showAddDialog" @created="onProviderCreated" />
+
+    <AlertDialog
+      :open="confirmDeleteId !== null"
+      @update:open="v => !v && (confirmDeleteId = null)"
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除服务商？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后将清空该服务商的配置和模型列表，且无法恢复。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="confirmDeleteId = null">取消</AlertDialogCancel>
+          <AlertDialogAction @click="handleDeleteConfirmed">删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { PlusIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { PlusIcon } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '#stores/provider'
-import ProviderAvatar from './ProviderAvatar.vue'
+import ProviderRow from './ProviderRow.vue'
 import ProviderDetailPanel from './ProviderDetailPanel.vue'
 import AddProviderDialog from './AddProviderDialog.vue'
 import {
@@ -129,14 +101,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@tuple-gpt/ui-vue/components/ui/alert-dialog'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Card } from '@tuple-gpt/ui-vue/components/ui/card'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+  Button,
+  Card,
+  ScrollArea,
+} from '@tuple-gpt/ui-vue'
 
 const providerStore = useProviderStore()
 const showAddDialog = ref(false)
+const renamingId = ref<string | null>(null)
+const confirmDeleteId = ref<string | null>(null)
 
 onMounted(() => {
   providerStore.seedPresets()
@@ -144,5 +117,28 @@ onMounted(() => {
 
 function onProviderCreated(id: string) {
   providerStore.selectProvider(id)
+}
+
+function startRename(id: string) {
+  renamingId.value = id
+}
+
+function cancelRename() {
+  renamingId.value = null
+}
+
+function commitRename(id: string, name: string) {
+  const trimmed = name.trim()
+  if (trimmed) {
+    providerStore.updateProvider(id, { name: trimmed })
+  }
+  renamingId.value = null
+}
+
+function handleDeleteConfirmed() {
+  if (confirmDeleteId.value) {
+    providerStore.removeProvider(confirmDeleteId.value)
+  }
+  confirmDeleteId.value = null
 }
 </script>

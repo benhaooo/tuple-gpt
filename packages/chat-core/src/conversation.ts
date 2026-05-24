@@ -1,7 +1,6 @@
 import { createTextContent, getMessageText } from './content'
 import type {
   ChatMessage,
-  ChatMode,
   ChatTurn,
   Conversation,
   MessageContent,
@@ -9,6 +8,7 @@ import type {
   MessageAttachment,
   TurnStatus,
 } from './types'
+import type { ToolCallStatus } from '@tuple-gpt/ai-core'
 
 export interface IdTimeOptions {
   id?: string
@@ -25,7 +25,6 @@ export type MessageInput = Omit<ChatMessage, 'id' | 'createdAt' | 'updatedAt'> &
   Partial<Pick<ChatMessage, 'id' | 'createdAt' | 'updatedAt'>>
 
 export interface CreateTurnInput extends IdTimeOptions {
-  mode?: ChatMode
   providerId: string
   model: string
   content: string
@@ -94,7 +93,6 @@ export function createTurn(input: CreateTurnInput): { turn: ChatTurn; userMessag
     userMessage,
     turn: {
       id: resolveId(input),
-      mode: input.mode ?? 'chat',
       status: 'running',
       providerId: input.providerId,
       model: input.model,
@@ -327,6 +325,101 @@ export function replaceTurn(
     turns: [...conversation.turns.slice(0, index), turn],
     updatedAt: timestamp,
   }
+}
+
+export function updateToolCallStatus(
+  conversations: Conversation[],
+  conversationId: string,
+  turnId: string,
+  toolCallId: string,
+  status: ToolCallStatus,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation[] {
+  const timestamp = resolveTimestamp(options)
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      messages: turn.messages.map(message => {
+        if (message.role !== 'assistant') return message
+        let touched = false
+        const nextContent = message.content.map(part => {
+          if (part.type !== 'tool_call' || part.toolCall.id !== toolCallId) return part
+          if (part.status === status) return part
+          touched = true
+          return { ...part, status }
+        })
+        return touched ? { ...message, content: nextContent, updatedAt: timestamp } : message
+      }),
+    }),
+    timestamp,
+  )
+}
+
+export function updateToolCallResult(
+  conversations: Conversation[],
+  conversationId: string,
+  turnId: string,
+  toolCallId: string,
+  result: string,
+  isError?: boolean,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation[] {
+  const timestamp = resolveTimestamp(options)
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      messages: turn.messages.map(message => {
+        if (message.role !== 'assistant') return message
+        let touched = false
+        const nextContent = message.content.map(part => {
+          if (part.type !== 'tool_call' || part.toolCall.id !== toolCallId) return part
+          touched = true
+          return {
+            ...part,
+            result,
+            ...(isError ? { isError: true } : {}),
+          }
+        })
+        return touched ? { ...message, content: nextContent, updatedAt: timestamp } : message
+      }),
+    }),
+    timestamp,
+  )
+}
+
+export function cancelOpenToolCalls(
+  conversations: Conversation[],
+  conversationId: string,
+  turnId: string,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation[] {
+  const timestamp = resolveTimestamp(options)
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      messages: turn.messages.map(message => {
+        if (message.role !== 'assistant') return message
+        let touched = false
+        const nextContent = message.content.map(part => {
+          if (part.type !== 'tool_call') return part
+          if (part.status === 'resolved' || part.status === 'cancelled') return part
+          touched = true
+          return { ...part, status: 'cancelled' as ToolCallStatus }
+        })
+        return touched ? { ...message, content: nextContent, updatedAt: timestamp } : message
+      }),
+    }),
+    timestamp,
+  )
 }
 
 function mapTurn(

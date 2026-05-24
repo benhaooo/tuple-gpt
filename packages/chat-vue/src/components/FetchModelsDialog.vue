@@ -6,6 +6,9 @@
     >
       <DialogHeader class="px-4 pt-4 pb-3">
         <DialogTitle>选择模型</DialogTitle>
+        <DialogDescription class="sr-only"
+          >从服务商获取的可用模型列表中选择要启用的模型</DialogDescription
+        >
       </DialogHeader>
 
       <!-- Search -->
@@ -83,14 +86,15 @@ import { fetchModels } from '@tuple-gpt/chat-core'
 import type { Provider } from '@tuple-gpt/chat-core'
 import ModelAvatar from './ModelAvatar.vue'
 import {
+  Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@tuple-gpt/ui-vue/components/ui/dialog'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Input } from '@tuple-gpt/ui-vue/components/ui/input'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+  Input,
+  ScrollArea,
+} from '@tuple-gpt/ui-vue'
 
 const props = defineProps<{
   open: boolean

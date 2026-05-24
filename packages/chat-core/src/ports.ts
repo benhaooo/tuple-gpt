@@ -1,5 +1,5 @@
-import type { ToolDefinition, ToolExecutor } from '@tuple-gpt/ai-core'
-import type { ChatMode, ChatMessage, ChatTurn, Conversation, Provider } from './types'
+import type { Tool } from '@tuple-gpt/ai-core'
+import type { ChatMessage, ChatTurn, Conversation, Provider } from './types'
 import { cloneContent } from './content'
 
 export type MaybePromise<T> = T | Promise<T>
@@ -18,9 +18,7 @@ export interface ChatStorage {
 export interface ActiveChatRequestConfig {
   provider: Provider
   model: string
-  mode?: ChatMode
-  tools?: ToolDefinition[]
-  toolExecutor?: ToolExecutor
+  tools?: Tool[]
   maxTurns?: number
 }
 

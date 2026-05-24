@@ -1,30 +1,31 @@
-import type { PipelineOutput, StreamEvent, Message, ContentPart, ToolDefinition } from '../../types'
+import type { PipelineOutput, StreamEvent, Message, ToolDefinition } from '../../types'
 import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 import { parseSSE } from '../sse-parser'
 
+/**
+ * Convert internal Message[] into Anthropic wire messages. Tool results
+ * co-located on tool_call parts are emitted as a single follow-up user
+ * message containing one tool_result content block per call — matching
+ * Anthropic's "tool_result blocks live in a user message" convention.
+ */
 function formatMessages(messages: Message[]): { system?: string; messages: unknown[] } {
   let system: string | undefined
   const formatted: unknown[] = []
 
   for (const msg of messages) {
     if (msg.role === Role.System) {
-      system = typeof msg.content === 'string'
-        ? msg.content
-        : (msg.content as ContentPart[])
-            .filter((p) => p.type === 'text')
-            .map((p) => (p as { text: string }).text)
-            .join('\n')
-      continue
-    }
-
-    if (typeof msg.content === 'string') {
-      formatted.push({ role: msg.role, content: msg.content })
+      system = msg.content
+        .filter(p => p.type === 'text')
+        .map(p => p.text)
+        .join('\n')
       continue
     }
 
     const content: unknown[] = []
-    for (const part of msg.content as ContentPart[]) {
+    const toolResults: unknown[] = []
+
+    for (const part of msg.content) {
       switch (part.type) {
         case 'text':
           content.push({ type: 'text', text: part.text })
@@ -32,9 +33,10 @@ function formatMessages(messages: Message[]): { system?: string; messages: unkno
         case 'image':
           content.push({
             type: 'image',
-            source: part.image.startsWith('data:') || part.image.startsWith('http')
-              ? { type: 'url', url: part.image }
-              : { type: 'base64', media_type: part.mimeType ?? 'image/png', data: part.image },
+            source:
+              part.image.startsWith('data:') || part.image.startsWith('http')
+                ? { type: 'url', url: part.image }
+                : { type: 'base64', media_type: part.mimeType ?? 'image/png', data: part.image },
           })
           break
         case 'tool_call':
@@ -44,26 +46,30 @@ function formatMessages(messages: Message[]): { system?: string; messages: unkno
             name: part.toolCall.name,
             input: JSON.parse(part.toolCall.arguments || '{}'),
           })
-          break
-        case 'tool_result':
-          content.push({
-            type: 'tool_result',
-            tool_use_id: part.toolCallId,
-            content: part.result,
-            is_error: part.isError,
-          })
+          if (part.result !== undefined) {
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: part.toolCall.id,
+              content: part.result,
+              is_error: part.isError,
+            })
+          }
           break
       }
     }
 
-    formatted.push({ role: msg.role === Role.Tool ? 'user' : msg.role, content })
+    formatted.push({ role: msg.role, content })
+
+    if (toolResults.length > 0) {
+      formatted.push({ role: 'user', content: toolResults })
+    }
   }
 
   return { system, messages: formatted }
 }
 
 function formatTools(tools: ToolDefinition[]): unknown[] {
-  return tools.map((tool) => ({
+  return tools.map(tool => ({
     name: tool.name,
     description: tool.description,
     input_schema: tool.parameters,
@@ -104,7 +110,10 @@ export function createAnthropicTransport(): Transport {
 
       if (!response.ok) {
         const text = await response.text()
-        yield { type: StreamEventType.Error, error: new Error(`Anthropic API error ${response.status}: ${text}`) }
+        yield {
+          type: StreamEventType.Error,
+          error: new Error(`Anthropic API error ${response.status}: ${text}`),
+        }
         return
       }
 
@@ -167,7 +176,12 @@ export function createAnthropicTransport(): Transport {
             if (stopReason) {
               yield {
                 type: StreamEventType.Finish,
-                finishReason: stopReason === 'tool_use' ? FinishReason.ToolCalls : stopReason === 'end_turn' ? FinishReason.Stop : stopReason as 'length',
+                finishReason:
+                  stopReason === 'tool_use'
+                    ? FinishReason.ToolCalls
+                    : stopReason === 'end_turn'
+                      ? FinishReason.Stop
+                      : (stopReason as 'length'),
                 usage: usage
                   ? {
                       promptTokens: usage.input_tokens ?? 0,

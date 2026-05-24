@@ -173,14 +173,14 @@ import {
 } from '@heroicons/vue/24/outline'
 import type { Conversation } from '@tuple-gpt/chat-core'
 import { usePlatform } from '#composables/usePlatform'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
 import {
+  Button,
+  ScrollArea,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@tuple-gpt/ui-vue/components/ui/tooltip'
+} from '@tuple-gpt/ui-vue'
 
 const props = withDefaults(
   defineProps<{

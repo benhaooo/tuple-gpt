@@ -129,12 +129,7 @@ import { useProviderStore } from '#stores/provider'
 import type { ApiFormat, Provider } from '@tuple-gpt/chat-core'
 import ProviderAvatar from './ProviderAvatar.vue'
 import ModelAvatar from './ModelAvatar.vue'
-import { Badge } from '@tuple-gpt/ui-vue/components/ui/badge'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { Input } from '@tuple-gpt/ui-vue/components/ui/input'
-import { Label } from '@tuple-gpt/ui-vue/components/ui/label'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
-import { Separator } from '@tuple-gpt/ui-vue/components/ui/separator'
+import { Badge, Button, Input, Label, ScrollArea, Separator } from '@tuple-gpt/ui-vue'
 import FetchModelsDialog from './FetchModelsDialog.vue'
 
 const props = defineProps<{ provider: Provider }>()

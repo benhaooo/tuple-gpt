@@ -22,7 +22,7 @@ import { computed, ref, watch, nextTick } from 'vue'
 import type { ChatTurn, Provider } from '@tuple-gpt/chat-core'
 import { getContentText } from '@tuple-gpt/chat-core'
 import TurnBubble from './TurnBubble.vue'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+import { ScrollArea } from '@tuple-gpt/ui-vue'
 
 const props = withDefaults(
   defineProps<{

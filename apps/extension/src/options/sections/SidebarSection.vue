@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@tuple-gpt/chat-vue'
 import { storeToRefs } from 'pinia'
-import { Input } from '@tuple-gpt/ui-vue/components/ui/input'
-import { Label } from '@tuple-gpt/ui-vue/components/ui/label'
+import { Input, Label } from '@tuple-gpt/ui-vue'
 
 const settingsStore = useSettingsStore()
 const { settings } = storeToRefs(settingsStore)

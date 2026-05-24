@@ -8,8 +8,7 @@ import {
   CpuChipIcon,
   WrenchScrewdriverIcon,
 } from '@heroicons/vue/24/outline'
-import { Button } from '@tuple-gpt/ui-vue/components/ui/button'
-import { ScrollArea } from '@tuple-gpt/ui-vue/components/ui/scroll-area'
+import { Button, ScrollArea } from '@tuple-gpt/ui-vue'
 import GeneralSection from './sections/GeneralSection.vue'
 import SidebarSection from './sections/SidebarSection.vue'
 import UserSection from './sections/UserSection.vue'

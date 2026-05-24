@@ -21,7 +21,10 @@ export function createMockTransport(eventGroups: StreamEvent[][]): Transport {
   }
 }
 
-export function createReadableStream(text: string, chunkSize = text.length): ReadableStream<Uint8Array> {
+export function createReadableStream(
+  text: string,
+  chunkSize = text.length,
+): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder()
   const bytes = encoder.encode(text)
   let offset = 0

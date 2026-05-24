@@ -1,7 +1,7 @@
-import { ChatClient, FinishReason, StreamEventType, type ToolDefinition } from '@tuple-gpt/ai-core'
-import type { ToolExecutor } from '@tuple-gpt/ai-core'
+import { chat, FinishReason, StreamEventType, type Tool, type Resolution } from '@tuple-gpt/ai-core'
+import type { ToolCallStatus } from '@tuple-gpt/ai-core'
 import { buildRequestMessages, toMessages, toProviderConfig } from './request'
-import type { ChatMessage, ChatMode, MessageContent, Provider } from './types'
+import type { ChatMessage, MessageContent, Provider } from './types'
 import { createMessage, type IdTimeOptions } from './conversation'
 import { appendTextToContent, cloneContent } from './content'
 import { getErrorMessage } from './utils/error'
@@ -34,10 +34,24 @@ export type ChatRuntimeEvent =
       error: string
     }
   | {
-      type: 'tool_message'
+      type: 'tool_call_status'
       conversationId: string
       turnId: string
-      message: ChatMessage
+      toolCallId: string
+      status: ToolCallStatus
+    }
+  | {
+      type: 'tool_call_result'
+      conversationId: string
+      turnId: string
+      toolCallId: string
+      result: string
+      isError?: boolean
+    }
+  | {
+      type: 'turn_paused'
+      conversationId: string
+      turnId: string
     }
   | {
       type: 'turn_done'
@@ -59,12 +73,15 @@ export type ChatRuntimeEvent =
 export interface StreamAssistantReplyInput extends IdTimeOptions {
   conversationId: string
   turnId: string
-  mode: ChatMode
   history: ChatMessage[]
   provider: Provider
   model: string
-  tools?: ToolDefinition[]
-  toolExecutor?: ToolExecutor
+  tools?: Tool[]
+  /**
+   * Resolutions for tool calls left suspended at the end of `history`.
+   * Forwarded to ai-core's resume phase. Omit on a fresh turn.
+   */
+  resolutions?: Resolution[]
   maxTurns?: number
   signal?: AbortSignal
 }
@@ -145,19 +162,23 @@ export async function* streamAssistantReply(
 
   try {
     const aiMessages = toMessages(buildRequestMessages(input.history))
-    const events = ChatClient.chat(aiMessages, {
+    const events = chat(aiMessages, {
       provider: toProviderConfig(input.provider, input.model),
       tools: input.tools,
-      toolExecutor: input.toolExecutor,
+      resolutions: input.resolutions,
       maxTurns: input.maxTurns,
-      defaults: {
+      options: {
         maxTokens: 4096,
         signal: input.signal,
       },
     })
 
     for await (const event of events) {
-      if (!assistantMessage && event.type !== StreamEventType.ToolResult) {
+      if (
+        !assistantMessage &&
+        event.type !== StreamEventType.ToolResult &&
+        event.type !== StreamEventType.ToolInteractionRequired
+      ) {
         yield startAssistantMessage()
       }
 
@@ -174,6 +195,7 @@ export async function* streamAssistantReply(
               name: event.toolCall.name,
               arguments: '',
             },
+            status: 'pending',
           },
         ]
         yield createAssistantDelta()
@@ -191,29 +213,43 @@ export async function* streamAssistantReply(
         )
         yield createAssistantDelta()
       } else if (event.type === StreamEventType.ToolResult) {
-        const toolMessage = createMessage(
-          {
-            role: 'tool',
-            content: [
-              {
-                type: 'tool_result',
-                toolCallId: event.toolCallId,
-                result: event.result,
-                ...(event.isError ? { isError: true } : {}),
-              },
-            ],
-            status: event.isError ? 'error' : 'done',
-            ...(event.isError ? { error: event.result } : {}),
-          },
-          input,
-        )
-
+        // ai-core wrote the result onto the tool_call part itself; emit two
+        // runtime events so the conversation store updates that same part:
+        // status → resolved, plus result/isError fields.
         yield {
-          type: 'tool_message',
+          type: 'tool_call_status',
           conversationId: input.conversationId,
           turnId: input.turnId,
-          message: toolMessage,
+          toolCallId: event.toolCallId,
+          status: 'resolved',
         }
+
+        yield {
+          type: 'tool_call_result',
+          conversationId: input.conversationId,
+          turnId: input.turnId,
+          toolCallId: event.toolCallId,
+          result: event.result,
+          ...(event.isError ? { isError: true } : {}),
+        }
+      } else if (event.type === StreamEventType.ToolInteractionRequired) {
+        // The assistant message has already been finalized by the preceding
+        // Finish event. Just transition the tool_call to 'awaiting' and pause
+        // the turn — resolveToolCall will resume it later.
+        yield {
+          type: 'tool_call_status',
+          conversationId: input.conversationId,
+          turnId: input.turnId,
+          toolCallId: event.toolCallId,
+          status: 'awaiting',
+        }
+
+        yield {
+          type: 'turn_paused',
+          conversationId: input.conversationId,
+          turnId: input.turnId,
+        }
+        return
       } else if (event.type === StreamEventType.Finish) {
         const done = createAssistantDone()
         if (done) yield done

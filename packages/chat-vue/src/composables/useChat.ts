@@ -2,10 +2,10 @@ import { computed, onScopeDispose, shallowRef } from 'vue'
 import {
   createChatRuntime,
   type ActiveChatRequestConfig,
-  type ChatMode,
   type ChatRuntime,
   type ChatSnapshot,
 } from '@tuple-gpt/chat-core'
+import type { Resolution } from '@tuple-gpt/ai-core'
 import { useProviderStore } from '#stores/provider'
 import { usePlatform } from './usePlatform'
 import { useFileAttachments } from './useFileAttachments'
@@ -20,7 +20,7 @@ export function useChat() {
   const { attachments: fileAttachments, clear: clearFiles } = useFileAttachments()
   const toolRegistry = useToolRegistry()
 
-  function getActiveRequestConfig(mode?: ChatMode): ActiveChatRequestConfig {
+  function getActiveRequestConfig(): ActiveChatRequestConfig {
     const selection = providerStore.activeModel
     const provider = providerStore.activeProvider
     if (!selection || !provider) {
@@ -29,12 +29,8 @@ export function useChat() {
 
     const config: ActiveChatRequestConfig = { provider, model: selection.model }
 
-    if (mode === 'agent') {
-      config.mode = 'agent'
-      if (toolRegistry.hasTools.value) {
-        config.tools = toolRegistry.activeTools.value
-        config.toolExecutor = toolRegistry.executor.value
-      }
+    if (toolRegistry.hasTools.value) {
+      config.tools = toolRegistry.activeTools.value
     }
 
     return config
@@ -87,8 +83,8 @@ export function useChat() {
     activeConversation: computed(() => snapshot.value.activeConversation),
     turns: computed(() => snapshot.value.turns),
     runningTurnIds: computed(() => snapshot.value.runningTurnIds),
-    async sendMessage(content: string, mode?: ChatMode) {
-      const config = getActiveRequestConfig(mode)
+    async sendMessage(content: string) {
+      const config = getActiveRequestConfig()
       await runtime.sendMessage({
         content,
         config,
@@ -97,6 +93,8 @@ export function useChat() {
       await clearAttachmentsAfterSend()
     },
     stopStreaming: (turnId?: string) => runtime.stopStreaming(turnId),
+    resolveToolCall: (turnId: string, resolution: Resolution) =>
+      runtime.resolveToolCall(turnId, resolution, getActiveRequestConfig()),
     newConversation: () => runtime.newConversation(),
     setActiveConversation: (id: string) => runtime.setActiveConversation(id),
     deleteConversation: (id: string) => runtime.deleteConversation(id),

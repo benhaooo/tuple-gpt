@@ -1,15 +1,20 @@
 // Types
 export { ProviderType, Role, FinishReason, StreamEventType } from './types'
+export { defineTool, toToolDefinition } from './types'
 export type {
   ContentPart,
   TextContentPart,
   ImageContentPart,
   ToolCallContentPart,
-  ToolResultContentPart,
+  ToolCallStatus,
   Message,
   ToolDefinition,
   ToolCall,
   ToolResult,
+  ToolExecutionContext,
+  ToolExecution,
+  Tool,
+  Resolution,
   Usage,
   StreamEvent,
   ProviderConfig,
@@ -31,8 +36,7 @@ export { parseSSE, type SSEEvent } from './transport'
 
 // Agent
 export { runAgentLoop, type AgentLoopOptions } from './agent'
-export { executeToolCall, type ToolExecutor } from './agent'
 
 // Client
-export { ChatClient, createClient, mergeTools } from './client'
-export type { ClientConfig, ChatOptions } from './client'
+export { chat } from './client'
+export type { ChatConfig } from './client'

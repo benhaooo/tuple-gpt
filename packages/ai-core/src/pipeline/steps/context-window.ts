@@ -10,11 +10,11 @@ export interface ContextWindowOptions {
 }
 
 function messageCharLength(msg: Message): number {
-  if (typeof msg.content === 'string') return msg.content.length
   return msg.content.reduce((sum, part) => {
     if (part.type === 'text') return sum + part.text.length
-    if (part.type === 'tool_call') return sum + part.toolCall.arguments.length
-    if (part.type === 'tool_result') return sum + part.result.length
+    if (part.type === 'tool_call') {
+      return sum + part.toolCall.arguments.length + (part.result?.length ?? 0)
+    }
     return sum
   }, 0)
 }
@@ -24,7 +24,7 @@ function messageCharLength(msg: Message): number {
  * Always preserves the system message (if present) and the most recent messages.
  */
 export function contextWindow(options: ContextWindowOptions): PipelineStep {
-  return (input) => {
+  return input => {
     let messages = input.messages
 
     // Separate system message if present
@@ -34,9 +34,7 @@ export function contextWindow(options: ContextWindowOptions): PipelineStep {
 
     // Truncate by maxMessages (keep most recent)
     if (options.maxMessages !== undefined) {
-      const limit = systemMsg
-        ? options.maxMessages - 1
-        : options.maxMessages
+      const limit = systemMsg ? options.maxMessages - 1 : options.maxMessages
       if (rest.length > limit) {
         rest = rest.slice(rest.length - limit)
       }
