@@ -358,6 +358,41 @@ export function updateToolCallStatus(
   )
 }
 
+export function updateToolCallResult(
+  conversations: Conversation[],
+  conversationId: string,
+  turnId: string,
+  toolCallId: string,
+  result: string,
+  isError?: boolean,
+  options?: Pick<IdTimeOptions, 'timestamp' | 'now'>,
+): Conversation[] {
+  const timestamp = resolveTimestamp(options)
+  return mapTurn(
+    conversations,
+    conversationId,
+    turnId,
+    turn => ({
+      ...turn,
+      messages: turn.messages.map(message => {
+        if (message.role !== 'assistant') return message
+        let touched = false
+        const nextContent = message.content.map(part => {
+          if (part.type !== 'tool_call' || part.toolCall.id !== toolCallId) return part
+          touched = true
+          return {
+            ...part,
+            result,
+            ...(isError ? { isError: true } : {}),
+          }
+        })
+        return touched ? { ...message, content: nextContent, updatedAt: timestamp } : message
+      }),
+    }),
+    timestamp,
+  )
+}
+
 export function cancelOpenToolCalls(
   conversations: Conversation[],
   conversationId: string,

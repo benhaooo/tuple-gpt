@@ -3,6 +3,12 @@ import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 import { parseSSE } from '../sse-parser'
 
+/**
+ * Convert internal Message[] into Anthropic wire messages. Tool results
+ * co-located on tool_call parts are emitted as a single follow-up user
+ * message containing one tool_result content block per call — matching
+ * Anthropic's "tool_result blocks live in a user message" convention.
+ */
 function formatMessages(messages: Message[]): { system?: string; messages: unknown[] } {
   let system: string | undefined
   const formatted: unknown[] = []
@@ -17,6 +23,8 @@ function formatMessages(messages: Message[]): { system?: string; messages: unkno
     }
 
     const content: unknown[] = []
+    const toolResults: unknown[] = []
+
     for (const part of msg.content) {
       switch (part.type) {
         case 'text':
@@ -38,19 +46,23 @@ function formatMessages(messages: Message[]): { system?: string; messages: unkno
             name: part.toolCall.name,
             input: JSON.parse(part.toolCall.arguments || '{}'),
           })
-          break
-        case 'tool_result':
-          content.push({
-            type: 'tool_result',
-            tool_use_id: part.toolCallId,
-            content: part.result,
-            is_error: part.isError,
-          })
+          if (part.result !== undefined) {
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: part.toolCall.id,
+              content: part.result,
+              is_error: part.isError,
+            })
+          }
           break
       }
     }
 
-    formatted.push({ role: msg.role === Role.Tool ? 'user' : msg.role, content })
+    formatted.push({ role: msg.role, content })
+
+    if (toolResults.length > 0) {
+      formatted.push({ role: 'user', content: toolResults })
+    }
   }
 
   return { system, messages: formatted }

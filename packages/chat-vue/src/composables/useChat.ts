@@ -5,6 +5,7 @@ import {
   type ChatRuntime,
   type ChatSnapshot,
 } from '@tuple-gpt/chat-core'
+import type { Resolution } from '@tuple-gpt/ai-core'
 import { useProviderStore } from '#stores/provider'
 import { usePlatform } from './usePlatform'
 import { useFileAttachments } from './useFileAttachments'
@@ -30,7 +31,6 @@ export function useChat() {
 
     if (toolRegistry.hasTools.value) {
       config.tools = toolRegistry.activeTools.value
-      config.toolRunner = toolRegistry.runner.value
     }
 
     return config
@@ -93,12 +93,8 @@ export function useChat() {
       await clearAttachmentsAfterSend()
     },
     stopStreaming: (turnId?: string) => runtime.stopStreaming(turnId),
-    submitToolResult: (
-      turnId: string,
-      toolCallId: string,
-      result: string,
-      options?: { isError?: boolean },
-    ) => runtime.submitToolResult(turnId, toolCallId, result, getActiveRequestConfig(), options),
+    resolveToolCall: (turnId: string, resolution: Resolution) =>
+      runtime.resolveToolCall(turnId, resolution, getActiveRequestConfig()),
     newConversation: () => runtime.newConversation(),
     setActiveConversation: (id: string) => runtime.setActiveConversation(id),
     deleteConversation: (id: string) => runtime.deleteConversation(id),

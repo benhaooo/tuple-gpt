@@ -192,7 +192,7 @@ describe('chat runtime', () => {
     ])
   })
 
-  it('persists agent tool messages inside a single turn', async () => {
+  it('persists tool result on the tool_call part inside a single turn', async () => {
     const storage = createTestChatStorage()
     chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.ToolCallStart, toolCall: { id: 'tc1', name: 'search' } }
@@ -211,12 +211,16 @@ describe('chat runtime', () => {
       config: requestConfig,
     })
 
-    expect(runtime.getSnapshot().turns[0]?.messages.map(message => message.role)).toEqual([
-      'user',
-      'assistant',
-      'tool',
-      'assistant',
-    ])
+    const turn = runtime.getSnapshot().turns[0]
+    expect(turn?.messages.map(message => message.role)).toEqual(['user', 'assistant', 'assistant'])
+
+    const toolCallPart = turn?.messages[1]?.content.find(p => p.type === 'tool_call')
+    expect(toolCallPart).toMatchObject({
+      type: 'tool_call',
+      toolCall: { id: 'tc1', name: 'search' },
+      status: 'resolved',
+      result: 'found',
+    })
   })
 
   it('regenerates a turn by replacing that turn and dropping following turns', async () => {

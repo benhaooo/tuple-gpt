@@ -12,8 +12,9 @@ export interface ContextWindowOptions {
 function messageCharLength(msg: Message): number {
   return msg.content.reduce((sum, part) => {
     if (part.type === 'text') return sum + part.text.length
-    if (part.type === 'tool_call') return sum + part.toolCall.arguments.length
-    if (part.type === 'tool_result') return sum + part.result.length
+    if (part.type === 'tool_call') {
+      return sum + part.toolCall.arguments.length + (part.result?.length ?? 0)
+    }
     return sum
   }, 0)
 }

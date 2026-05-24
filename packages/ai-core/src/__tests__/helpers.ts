@@ -1,8 +1,5 @@
 import type { PipelineOutput, StreamEvent, ProviderConfig } from '../types'
 import type { Transport } from '../transport/transport'
-import type { ToolRunner } from '../agent/tool-runner'
-import type { ToolExecutor } from '../agent/tool-executor'
-import { executeToolCall } from '../agent/tool-executor'
 
 export function createMockInput(overrides?: Partial<PipelineOutput>): PipelineOutput {
   return {
@@ -50,19 +47,4 @@ export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
     result.push(item)
   }
   return result
-}
-
-/**
- * Test helper: turn a flat ToolExecutor into a ToolRunner. Real production
- * code uses chat-core's DefaultToolRunner; in unit tests we keep the executor
- * shorthand and adapt it here to avoid pulling in chat-core.
- */
-export function executorRunner(executor: ToolExecutor): ToolRunner {
-  return {
-    async run(name, args, ctx) {
-      if (!executor[name]) return { kind: 'unknown' }
-      const res = await executeToolCall(executor, name, args, ctx)
-      return { kind: 'resolved', result: res.result, isError: res.isError }
-    },
-  }
 }

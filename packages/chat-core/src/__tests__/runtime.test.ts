@@ -110,7 +110,7 @@ describe('streamAssistantReply', () => {
       'assistant_delta',
       'assistant_done',
       'tool_call_status',
-      'tool_message',
+      'tool_call_result',
       'assistant_started',
       'assistant_delta',
       'assistant_done',
@@ -122,10 +122,9 @@ describe('streamAssistantReply', () => {
       status: 'resolved',
     })
     expect(events[5]).toMatchObject({
-      message: {
-        role: 'tool',
-        content: [{ type: 'tool_result', toolCallId: 'tc1', result: 'found' }],
-      },
+      type: 'tool_call_result',
+      toolCallId: 'tc1',
+      result: 'found',
     })
   })
 

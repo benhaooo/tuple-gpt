@@ -2,7 +2,6 @@ export const Role = {
   System: 'system',
   User: 'user',
   Assistant: 'assistant',
-  Tool: 'tool',
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
@@ -21,6 +20,11 @@ export interface ImageContentPart {
 
 export type ToolCallStatus = 'pending' | 'awaiting' | 'resolved' | 'cancelled'
 
+/**
+ * A tool call produced by the assistant. The result is co-located here once
+ * the tool runs (or a Resolution is applied). Wire formats that demand a
+ * separate "tool" role message synthesize one in the transport layer.
+ */
 export interface ToolCallContentPart {
   type: 'tool_call'
   toolCall: {
@@ -29,25 +33,17 @@ export interface ToolCallContentPart {
     arguments: string
   }
   /**
-   * Lifecycle status of this tool call. Not sent to LLM providers — transports
-   * pick out only id/name/arguments. Used by the runtime/UI to track whether
-   * the call is in-flight, awaiting user input, completed, or cancelled.
+   * Lifecycle status of this tool call. Not sent to LLM providers — used by
+   * the runtime/UI to track in-flight, awaiting input, completed, cancelled.
    */
   status?: ToolCallStatus
-}
-
-export interface ToolResultContentPart {
-  type: 'tool_result'
-  toolCallId: string
-  result: string
+  /** Tool output. Undefined while pending/awaiting; set once resolved. */
+  result?: string
+  /** True when the tool surfaced a failure rather than a value. */
   isError?: boolean
 }
 
-export type ContentPart =
-  | TextContentPart
-  | ImageContentPart
-  | ToolCallContentPart
-  | ToolResultContentPart
+export type ContentPart = TextContentPart | ImageContentPart | ToolCallContentPart
 
 export interface Message {
   role: Role

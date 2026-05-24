@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, reactive, watch } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
-import type { ToolDefinition, ToolExecutor } from '@tuple-gpt/ai-core'
+import type { Tool } from '@tuple-gpt/ai-core'
 import {
   McpClient,
   type McpServerConfig,
@@ -30,32 +30,25 @@ export const useMcpStore = defineStore(
       })
     })
 
-    const allTools = computed<ToolDefinition[]>(() => {
-      const tools: ToolDefinition[] = []
-      for (const state of serverStates.values()) {
-        if (state.status === 'connected') {
-          tools.push(...state.tools)
-        }
-      }
-      return tools
-    })
-
-    const toolExecutor = computed<ToolExecutor>(() => {
-      const executor: ToolExecutor = {}
+    const allTools = computed<Tool[]>(() => {
+      const tools: Tool[] = []
       for (const [serverId, state] of serverStates.entries()) {
         if (state.status !== 'connected') continue
         const client = clients.get(serverId)
         if (!client) continue
-        for (const tool of state.tools) {
-          executor[tool.name] = {
-            execute: async (args: string) => {
-              const result = await client.callTool(tool.name, args)
-              return { content: result }
-            },
-          }
+        for (const def of state.tools) {
+          tools.push({
+            name: def.name,
+            description: def.description,
+            parameters: def.parameters,
+            execute: async args => ({
+              type: 'result',
+              content: await client.callTool(def.name, args),
+            }),
+          })
         }
       }
-      return executor
+      return tools
     })
 
     function getServerState(serverId: string): McpServerState | undefined {
@@ -202,7 +195,6 @@ export const useMcpStore = defineStore(
       selectedServer,
       connectedServers,
       allTools,
-      toolExecutor,
       getServerState,
       setServerStatus,
       addServer,

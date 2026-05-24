@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolRunner } from '@tuple-gpt/ai-core'
+import type { Tool } from '@tuple-gpt/ai-core'
 import type { ChatMessage, ChatTurn, Conversation, Provider } from './types'
 import { cloneContent } from './content'
 
@@ -18,8 +18,7 @@ export interface ChatStorage {
 export interface ActiveChatRequestConfig {
   provider: Provider
   model: string
-  tools?: ToolDefinition[]
-  toolRunner?: ToolRunner
+  tools?: Tool[]
   maxTurns?: number
 }
 

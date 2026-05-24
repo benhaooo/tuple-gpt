@@ -2,7 +2,7 @@ import type { ContentPart } from '@tuple-gpt/ai-core'
 
 export type TurnStatus = 'running' | 'done' | 'error' | 'aborted'
 
-export type MessageRole = 'user' | 'assistant' | 'tool'
+export type MessageRole = 'user' | 'assistant'
 
 export type MessageStatus = 'streaming' | 'done' | 'error'
 

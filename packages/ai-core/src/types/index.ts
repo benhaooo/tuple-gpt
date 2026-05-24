@@ -5,7 +5,6 @@ export type {
   ImageContentPart,
   ToolCallContentPart,
   ToolCallStatus,
-  ToolResultContentPart,
   Message,
 } from './message'
 
@@ -14,9 +13,11 @@ export type {
   ToolCall,
   ToolResult,
   ToolExecutionContext,
-  ToolHandlerResult,
-  ToolHandler,
+  ToolExecution,
+  Tool,
+  Resolution,
 } from './tool'
+export { defineTool, toToolDefinition } from './tool'
 
 export { FinishReason, StreamEventType } from './stream'
 export type { Usage, StreamEvent } from './stream'

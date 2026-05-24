@@ -1,34 +1,26 @@
 import { computed } from 'vue'
+import type { Tool } from '@tuple-gpt/ai-core'
+import { builtinTools } from '@tuple-gpt/chat-core'
 import { useMcpStore } from '#stores/mcp'
-import {
-  builtinDefinitions,
-  createToolRunner,
-  registerBuiltinTools,
-  type DefaultToolRunner,
-} from '@tuple-gpt/chat-core'
+
+/**
+ * Vue components used to resolve interactive tool calls. The agent loop
+ * surfaces a `reason` per suspended tool; the UI maps (toolName, reason)
+ * to a Vue component name. Add new entries as new interactive tools land.
+ */
+const interactiveComponentByTool: Record<string, string> = {
+  ask_user: 'ToolAskUser',
+}
 
 export function useToolRegistry() {
   const mcpStore = useMcpStore()
 
-  const activeTools = computed(() => [...builtinDefinitions, ...mcpStore.allTools])
+  const activeTools = computed<Tool[]>(() => [...builtinTools, ...mcpStore.allTools])
   const hasTools = computed(() => activeTools.value.length > 0)
 
-  /**
-   * Build a fresh runner each time so MCP handlers reflect the current
-   * connection state. The cost is negligible — registration is just two
-   * map inserts per tool.
-   */
-  const runner = computed<DefaultToolRunner>(() => {
-    const r = registerBuiltinTools(createToolRunner())
-    for (const [name, handler] of Object.entries(mcpStore.toolExecutor)) {
-      r.registerHandler(name, handler)
-    }
-    return r
-  })
-
   function getInteractiveComponent(toolName: string): string | undefined {
-    return runner.value.getInteractiveComponent(toolName)
+    return interactiveComponentByTool[toolName]
   }
 
-  return { activeTools, runner, hasTools, getInteractiveComponent }
+  return { activeTools, hasTools, getInteractiveComponent }
 }

@@ -34,6 +34,7 @@ export {
   truncateConversationAfterTurn,
   updateMessageContent,
   updateMessageStatus,
+  updateToolCallResult,
   updateToolCallStatus,
   updateTurnStatus,
   upsertConversation,
@@ -123,13 +124,4 @@ export {
   type McpServerState,
 } from './services/mcp-client'
 
-export {
-  builtinTools,
-  builtinDefinitions,
-  registerBuiltinTools,
-  type AutoTool,
-  type BuiltinTool,
-  type InteractiveTool,
-} from './builtin-tools'
-
-export { DefaultToolRunner, createToolRunner } from './tool-runner'
+export { builtinTools, askUserTool, currentTimeTool } from './builtin-tools'

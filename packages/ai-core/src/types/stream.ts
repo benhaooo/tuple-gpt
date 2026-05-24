@@ -43,8 +43,10 @@ export type StreamEvent =
       toolCallId: string
       toolName: string
       arguments: string
-      /** UI hint forwarded from the ToolRunner. */
-      component: string
+      /** Why the tool suspended — forwarded from the tool's execute(). */
+      reason: string
+      /** Free-form payload forwarded from the tool's execute(). */
+      payload?: unknown
     }
   | { type: typeof StreamEventType.Finish; finishReason: FinishReason; usage?: Usage }
   | { type: typeof StreamEventType.Error; error: Error }

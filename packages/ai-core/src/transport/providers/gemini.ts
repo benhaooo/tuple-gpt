@@ -2,14 +2,17 @@ import type { PipelineOutput, StreamEvent, Message, ToolDefinition } from '../..
 import { Role, StreamEventType, FinishReason } from '../../types'
 import type { Transport } from '../transport'
 
+/**
+ * Convert internal Message[] into Gemini wire `contents`. Tool results
+ * co-located on tool_call parts emit a single follow-up user message
+ * containing one functionResponse part per call.
+ */
 function formatMessages(messages: Message[]): {
   systemInstruction?: unknown
   contents: unknown[]
 } {
   let systemInstruction: unknown
   const contents: unknown[] = []
-  // Map toolCallId -> function name for resolving tool results
-  const toolCallIdToName = new Map<string, string>()
 
   for (const msg of messages) {
     if (msg.role === Role.System) {
@@ -21,10 +24,10 @@ function formatMessages(messages: Message[]): {
       continue
     }
 
-    const geminiRole =
-      msg.role === Role.Assistant ? 'model' : msg.role === Role.Tool ? 'function' : 'user'
-
+    const role = msg.role === Role.Assistant ? 'model' : 'user'
     const parts: unknown[] = []
+    const toolResponses: unknown[] = []
+
     for (const part of msg.content) {
       switch (part.type) {
         case 'text':
@@ -42,26 +45,29 @@ function formatMessages(messages: Message[]): {
           }
           break
         case 'tool_call':
-          toolCallIdToName.set(part.toolCall.id, part.toolCall.name)
           parts.push({
             functionCall: {
               name: part.toolCall.name,
               args: JSON.parse(part.toolCall.arguments || '{}'),
             },
           })
-          break
-        case 'tool_result':
-          parts.push({
-            functionResponse: {
-              name: toolCallIdToName.get(part.toolCallId) ?? part.toolCallId,
-              response: { result: part.result },
-            },
-          })
+          if (part.result !== undefined) {
+            toolResponses.push({
+              functionResponse: {
+                name: part.toolCall.name,
+                response: { result: part.result },
+              },
+            })
+          }
           break
       }
     }
 
-    contents.push({ role: geminiRole, parts })
+    contents.push({ role, parts })
+
+    if (toolResponses.length > 0) {
+      contents.push({ role: 'user', parts: toolResponses })
+    }
   }
 
   return { systemInstruction, contents }

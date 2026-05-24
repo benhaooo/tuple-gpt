@@ -368,7 +368,7 @@ const assistantCopied = ref(false)
 const isEditing = ref(false)
 const draftContent = ref('')
 
-const { submitToolResult } = useChat()
+const { resolveToolCall } = useChat()
 const { getInteractiveComponent } = useToolRegistry()
 
 function getInteractiveComponentForCall(tc: ToolCallWithResult): Component | undefined {
@@ -379,7 +379,11 @@ function getInteractiveComponentForCall(tc: ToolCallWithResult): Component | und
 }
 
 function handleToolSubmit(payload: { toolCallId: string; result: string }) {
-  void submitToolResult(props.turn.id, payload.toolCallId, payload.result)
+  void resolveToolCall(props.turn.id, {
+    toolCallId: payload.toolCallId,
+    type: 'result',
+    content: payload.result,
+  })
 }
 
 function isToolCallRunning(tc: ToolCallWithResult): boolean {
@@ -418,24 +422,12 @@ const turnError = computed(() => {
   return ''
 })
 
-// Build assistant steps: pair each assistant message with its following tool results
+// Build assistant steps: each assistant message is one step. tool_call parts
+// already carry their own result/isError, so no cross-message join is needed.
 const assistantSteps = computed<AssistantStep[]>(() => {
-  const messages = props.turn.messages
   const steps: AssistantStep[] = []
 
-  // Collect tool results so resolved/error calls can show their output.
-  const toolResultMap = new Map<string, { result: string; isError?: boolean }>()
-  for (const msg of messages) {
-    if (msg.role === 'tool') {
-      for (const part of msg.content) {
-        if (part.type === 'tool_result') {
-          toolResultMap.set(part.toolCallId, { result: part.result, isError: part.isError })
-        }
-      }
-    }
-  }
-
-  for (const msg of messages) {
+  for (const msg of props.turn.messages) {
     if (msg.role !== 'assistant') continue
 
     const text = getContentText(msg.content)
@@ -443,14 +435,13 @@ const assistantSteps = computed<AssistantStep[]>(() => {
 
     for (const part of msg.content) {
       if (part.type === 'tool_call') {
-        const result = toolResultMap.get(part.toolCall.id)
         toolCalls.push({
           id: part.toolCall.id,
           name: part.toolCall.name,
           arguments: part.toolCall.arguments,
           status: part.status ?? 'pending',
-          result: result?.result,
-          isError: result?.isError,
+          result: part.result,
+          isError: part.isError,
         })
       }
     }

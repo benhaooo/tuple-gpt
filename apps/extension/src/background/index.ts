@@ -1,11 +1,6 @@
-import {
-  registerBackgroundStreamHandlers,
-} from '../utils/ai-stream'
-import {
-  registerRpcHandlers,
-  tabClient,
-} from '../utils/messages'
-import { ChatClient } from '@tuple-gpt/ai-core'
+import { registerBackgroundStreamHandlers } from '../utils/ai-stream'
+import { registerRpcHandlers, tabClient } from '../utils/messages'
+import { chat } from '@tuple-gpt/ai-core'
 
 console.log('Tuple-GPT background script loaded')
 
@@ -39,7 +34,7 @@ registerBackgroundStreamHandlers({
   async generateAiContent(request, stream, { port }) {
     const abortController = new AbortController()
 
-    const disposeClientEvents = stream.onClientEvent((event) => {
+    const disposeClientEvents = stream.onClientEvent(event => {
       if (event.type === 'cancel') {
         abortController.abort()
       }
@@ -50,21 +45,18 @@ registerBackgroundStreamHandlers({
     })
 
     try {
-      const events = ChatClient.chat(
-        [{ role: 'user', content: request.prompt }],
-        {
-          provider: {
-            type: 'anthropic',
-            apiKey: 'sk-ae9864f2181002d22bf44f755055e0209dd062e8bccff88c028b6a8756d8c723',
-            baseUrl: 'https://pikachu.claudecode.love/v1',
-            model: 'claude-sonnet-4-5-20250929',
-          },
-          defaults: {
-            maxTokens: 4096,
-            signal: abortController.signal,
-          },
+      const events = chat([{ role: 'user', content: [{ type: 'text', text: request.prompt }] }], {
+        provider: {
+          type: 'anthropic',
+          apiKey: 'sk-ae9864f2181002d22bf44f755055e0209dd062e8bccff88c028b6a8756d8c723',
+          baseUrl: 'https://pikachu.claudecode.love/v1',
+          model: 'claude-sonnet-4-5-20250929',
         },
-      )
+        options: {
+          maxTokens: 4096,
+          signal: abortController.signal,
+        },
+      })
 
       for await (const event of events) {
         if (event.type === 'text_delta') {
@@ -79,16 +71,14 @@ registerBackgroundStreamHandlers({
       }
 
       stream.send({ type: 'done' })
-    }
-    catch (error) {
+    } catch (error) {
       if (!abortController.signal.aborted) {
         stream.send({
           type: 'error',
           error: error instanceof Error ? error.message : '处理API请求失败',
         })
       }
-    }
-    finally {
+    } finally {
       disposeClientEvents()
       stream.close()
     }
@@ -100,7 +90,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     return
   }
 
-  void tabClient.notifyUrlChanged(tabId, { url: changeInfo.url }).catch((error) => {
+  void tabClient.notifyUrlChanged(tabId, { url: changeInfo.url }).catch(error => {
     console.debug('URL change notification skipped:', error)
   })
 })
