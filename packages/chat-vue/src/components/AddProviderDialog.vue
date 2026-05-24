@@ -3,6 +3,9 @@
     <DialogContent class="max-w-md" :show-close-button="false" @pointer-down-outside.prevent>
       <DialogHeader>
         <DialogTitle>添加自定义服务商</DialogTitle>
+        <DialogDescription class="sr-only"
+          >填写服务商名称并选择 API 格式以创建新的服务商</DialogDescription
+        >
       </DialogHeader>
       <div class="space-y-4">
         <div>
@@ -39,6 +42,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
