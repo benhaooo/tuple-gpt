@@ -1,16 +1,18 @@
 // ── Schema：新增 Stream 只需在此处添加一条 ──
 
+import type { ModelSelection } from '@tuple-gpt/chat-core'
+
 export interface AiStreamSchema {
   generateAiContent: {
     req: {
       prompt: string
+      model: ModelSelection
     }
     serverEvent:
       | { type: 'chunk'; chunk: string }
       | { type: 'done' }
       | { type: 'error'; error: string }
-    clientEvent:
-      | { type: 'cancel' }
+    clientEvent: { type: 'cancel' }
   }
 }
 
@@ -92,7 +94,7 @@ function createAsyncQueue<T>() {
         return Promise.resolve({ value: undefined, done: true })
       }
 
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         resolvers.push(resolve)
       })
     },
@@ -110,7 +112,7 @@ export function openBackgroundStream<K extends AiStreamKey>(
   const queue = createAsyncQueue<StreamServerEventOf<K>>()
   let closed = false
 
-  port.onMessage.addListener((event) => {
+  port.onMessage.addListener(event => {
     queue.push(event)
   })
 
@@ -151,7 +153,7 @@ export function openBackgroundStream<K extends AiStreamKey>(
 }
 
 export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void {
-  chrome.runtime.onConnect.addListener((port) => {
+  chrome.runtime.onConnect.addListener(port => {
     const key = port.name as AiStreamKey
     const handler = handlers[key] as any
     if (!handler) return
@@ -189,12 +191,8 @@ export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void
         const request = message.data
 
         Promise.resolve()
-          .then(() => handler(
-            request,
-            stream,
-            { port },
-          ))
-          .catch((error) => {
+          .then(() => handler(request, stream, { port }))
+          .catch(error => {
             port.postMessage({
               type: 'error',
               error: error instanceof Error ? error.message : String(error),
@@ -213,8 +211,9 @@ export function registerBackgroundStreamHandlers(handlers: StreamHandlers): void
 // ── Proxy Client ──
 
 type AiStreamClient = {
-  [K in AiStreamKey]: (request: StreamRequestOf<K>) =>
-    TypedStream<StreamServerEventOf<K>, StreamClientEventOf<K>>
+  [K in AiStreamKey]: (
+    request: StreamRequestOf<K>,
+  ) => TypedStream<StreamServerEventOf<K>, StreamClientEventOf<K>>
 }
 
 const baseClient = new Proxy({} as AiStreamClient, {
