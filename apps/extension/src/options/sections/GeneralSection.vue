@@ -1,73 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useSettingsStore, useProviderStore } from '@tuple-gpt/chat-vue'
+import { useSettingsStore, ModelSelector } from '@tuple-gpt/chat-vue'
 import { storeToRefs } from 'pinia'
 import { ThemeName } from '@tuple-gpt/chat-vue'
 import { SunIcon, MoonIcon, ComputerDesktopIcon } from '@heroicons/vue/24/solid'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@tuple-gpt/ui-vue'
 import type { Component } from 'vue'
-import type { ModelSelection } from '@tuple-gpt/chat-core'
 
 const settingsStore = useSettingsStore()
-const providerStore = useProviderStore()
 const { settings } = storeToRefs(settingsStore)
 
 const themeIcons: Record<(typeof ThemeName)[keyof typeof ThemeName], Component> = {
   light: SunIcon,
   dark: MoonIcon,
   system: ComputerDesktopIcon,
-}
-
-const groupedModels = computed(() => {
-  const groups: Array<{
-    providerId: string
-    providerName: string
-    models: string[]
-  }> = []
-  for (const item of providerStore.allModels) {
-    let group = groups.find(g => g.providerId === item.providerId)
-    if (!group) {
-      group = { providerId: item.providerId, providerName: item.providerName, models: [] }
-      groups.push(group)
-    }
-    group.models.push(item.model)
-  }
-  return groups
-})
-
-function modelKey(selection: ModelSelection): string {
-  return JSON.stringify(selection)
-}
-
-function parseModelKey(key: string): ModelSelection | null {
-  try {
-    const parsed = JSON.parse(key) as ModelSelection
-    if (typeof parsed?.providerId === 'string' && typeof parsed?.model === 'string') {
-      return parsed
-    }
-  } catch {
-    // ignore parse failure — fall through to null
-  }
-  return null
-}
-
-const summaryModelKey = computed<string | undefined>(() => {
-  const sel = settings.value.summaryModel
-  return sel ? modelKey(sel) : undefined
-})
-
-function setSummaryModel(key: string) {
-  const selection = parseModelKey(key)
-  if (!selection) return
-  settingsStore.updateSettings({ summaryModel: selection })
 }
 </script>
 
@@ -168,31 +112,11 @@ function setSummaryModel(key: string) {
       <p class="mb-4 text-muted-foreground">
         选择"总结"按钮调用的模型。仅显示已配置 API Key 的服务商。
       </p>
-      <Select
-        :model-value="summaryModelKey"
-        @update:model-value="value => typeof value === 'string' && setSummaryModel(value)"
-      >
-        <SelectTrigger class="w-full">
-          <SelectValue placeholder="选择模型" />
-        </SelectTrigger>
-        <SelectContent>
-          <template v-if="groupedModels.length === 0">
-            <div class="px-2 py-3 text-sm text-muted-foreground">
-              暂无可用模型，请先在"服务商"中配置 API Key。
-            </div>
-          </template>
-          <SelectGroup v-for="group in groupedModels" :key="group.providerId">
-            <SelectLabel>{{ group.providerName }}</SelectLabel>
-            <SelectItem
-              v-for="model in group.models"
-              :key="modelKey({ providerId: group.providerId, model })"
-              :value="modelKey({ providerId: group.providerId, model })"
-            >
-              {{ model }}
-            </SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+      <ModelSelector
+        :model-value="settings.summaryModel"
+        @update:model-value="value => settingsStore.updateSettings({ summaryModel: value })"
+        empty-text='暂无可用模型，请先在"服务商"中配置 API Key。'
+      />
     </div>
   </div>
 </template>

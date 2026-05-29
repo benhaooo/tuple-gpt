@@ -1,11 +1,7 @@
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
-      <Button
-        variant="ghost"
-        size="sm"
-        class="h-8 max-w-48 md:max-w-72 rounded-full border border-border/70 bg-background/90 justify-between gap-2 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur transition-[background-color,color,box-shadow] supports-[backdrop-filter]:bg-background/70 hover:bg-accent/80 hover:text-accent-foreground data-[state=open]:bg-accent/80 data-[state=open]:text-accent-foreground"
-      >
+      <Button variant="ghost" size="sm" :class="resolvedTriggerClass">
         <span class="flex min-w-0 items-center gap-2">
           <ModelAvatar :model-id="activeModelId" :size="16" />
           <span class="truncate">{{ displayLabel }}</span>
@@ -18,7 +14,7 @@
       <Command :model-value="selectedModelKey">
         <CommandInput placeholder="搜索模型..." />
         <CommandList>
-          <CommandEmpty>暂无可用模型，请先配置服务商</CommandEmpty>
+          <CommandEmpty>{{ emptyText }}</CommandEmpty>
           <CommandGroup
             v-for="group in groupedModels"
             :key="group.providerId"
@@ -26,8 +22,8 @@
           >
             <CommandItem
               v-for="item in group.models"
-              :key="modelKey(item.providerId, item.model)"
-              :value="modelKey(item.providerId, item.model)"
+              :key="modelKey({ providerId: item.providerId, model: item.model })"
+              :value="modelKey({ providerId: item.providerId, model: item.model })"
               @select="selectModel(item.providerId, item.model)"
               class="text-xs"
             >
@@ -44,6 +40,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ChevronDownIcon } from '@heroicons/vue/24/outline'
+import type { ModelSelection } from '@tuple-gpt/chat-core'
 import { useProviderStore } from '#stores/provider'
 import ModelAvatar from './ModelAvatar.vue'
 import {
@@ -59,8 +56,31 @@ import {
   PopoverTrigger,
 } from '@tuple-gpt/ui-vue'
 
+const props = withDefaults(
+  defineProps<{
+    modelValue: ModelSelection | null
+    placeholder?: string
+    emptyText?: string
+    triggerClass?: string
+  }>(),
+  {
+    placeholder: '选择模型',
+    emptyText: '暂无可用模型，请先配置服务商',
+    triggerClass: '',
+  },
+)
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: ModelSelection): void
+}>()
+
 const providerStore = useProviderStore()
 const open = ref(false)
+
+const DEFAULT_TRIGGER_CLASS =
+  'h-9 w-full justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm font-normal shadow-sm hover:bg-accent hover:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground'
+
+const resolvedTriggerClass = computed(() => props.triggerClass || DEFAULT_TRIGGER_CLASS)
 
 const groupedModels = computed(() => {
   const groups: Array<{
@@ -81,24 +101,18 @@ const groupedModels = computed(() => {
   return groups
 })
 
-const displayLabel = computed(() => {
-  const sel = providerStore.activeModel
-  if (!sel) return '选择模型'
-  return sel.model
-})
+const displayLabel = computed(() => props.modelValue?.model ?? props.placeholder)
 
-const activeModelId = computed(() => providerStore.activeModel?.model ?? '')
-const selectedModelKey = computed(() => {
-  const sel = providerStore.activeModel
-  return sel ? modelKey(sel.providerId, sel.model) : undefined
-})
+const activeModelId = computed(() => props.modelValue?.model ?? '')
 
-function modelKey(providerId: string, model: string) {
-  return `${providerId}-${model}`
+const selectedModelKey = computed(() => (props.modelValue ? modelKey(props.modelValue) : undefined))
+
+function modelKey(selection: ModelSelection): string {
+  return JSON.stringify(selection)
 }
 
 function selectModel(providerId: string, model: string) {
-  providerStore.setActiveModel({ providerId, model })
+  emit('update:modelValue', { providerId, model })
   open.value = false
 }
 </script>
