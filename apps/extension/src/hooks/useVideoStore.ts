@@ -1,5 +1,5 @@
-import { ref, computed, watch, onMounted } from 'vue'
-import { VideoType, SubtitleLanguageInfo } from '@/utils/subtitlesApi'
+import { ref, computed, onMounted } from 'vue'
+import { VideoType, SubtitleLanguageInfo, getVideoId } from '@/utils/subtitlesApi'
 import { createSubtitleManager } from '@/managers/SubtitleManagerFactory'
 import { useVideoTimeTracker } from '@/hooks/useVideoTimeTracker'
 
@@ -12,126 +12,100 @@ export function useVideoStore(platformType: VideoType) {
   const videoId = ref('')
   const isLoading = ref(false)
   const error = ref<string | null>(null)
-  const subtitleManager = ref(createSubtitleManager(platformType))
   const currentTime = ref(0)
 
+  const subtitleManager = createSubtitleManager(platformType)
 
-  const videoTracker = useVideoTimeTracker({
-    platformType,
-    onUpdate: (time: number) => {
-      currentTime.value = time
-      if (autoScroll.value) {
-        updateActiveSubtitleIndex()
-      }
-    }
-  })
-
-
-  const subtitlesContent = computed(() => {
-    const subtitles = selectedSubtitle.value?.subtitles
-    return subtitles?.map(item => item.text).join(' ') ?? ''
-  })
-
-  const selectedSubtitle = computed(() => {
-    return availableSubtitles.value.find(sub => {
-      return sub.lan === selectedLanguage.value;
-    })
-  })
-
-
-  watch(
-    () => [selectedSubtitle.value?.lan, videoId.value],
-    async ([newLan, newVideoId], [oldLan, oldVideoId]) => {
-      // 只有当语言或视频ID发生变化时才执行
-      if (newLan === oldLan && newVideoId === oldVideoId) return
-      if (!newLan || !newVideoId || !selectedSubtitle.value || !subtitleManager.value) return
-
-      isLoading.value = true
-      error.value = null
-
-      const subtitleInfo = await subtitleManager.value.loadSubtitlesByLanguage(selectedSubtitle.value)
-
-      selectedSubtitle.value.subtitles = subtitleInfo
-      isLoading.value = false
-    }
+  const selectedSubtitle = computed(() =>
+    availableSubtitles.value.find(sub => sub.lan === selectedLanguage.value),
   )
 
+  const subtitlesContent = computed(
+    () => selectedSubtitle.value?.subtitles?.map(item => item.text).join(' ') ?? '',
+  )
+
+  const tracker = useVideoTimeTracker({
+    platformType,
+    onUpdate: time => {
+      currentTime.value = time
+      if (autoScroll.value) updateActiveSubtitleIndex()
+    },
+  })
+
+  async function loadSubtitlesFor(target: SubtitleLanguageInfo) {
+    if (!subtitleManager) return
+    isLoading.value = true
+    error.value = null
+    try {
+      target.subtitles = await subtitleManager.loadSubtitlesByLanguage(target)
+      // 字幕到位后立即重算高亮，否则要等到下一次 timeupdate 才生效。
+      updateActiveSubtitleIndex()
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // 切换到某个语言：选中 + 按需加载（已加载过则命中缓存）。
+  // init 和用户操作都走这里，保证语义统一。
+  async function selectLanguage(lan: string) {
+    const target = availableSubtitles.value.find(s => s.lan === lan)
+    if (!target) return
+    selectedLanguage.value = lan
+    if (target.subtitles?.length) return
+    await loadSubtitlesFor(target)
+  }
+
   async function initializeSubtitles() {
-    if (!subtitleManager.value) return
+    if (!subtitleManager) return
     isLoading.value = true
     error.value = null
 
-    const result = await subtitleManager.value.initialize()
-    isLoading.value = false
+    try {
+      const result = await subtitleManager.initialize()
+      availableSubtitles.value = result.availableLanguages
+      videoTitle.value = result.videoTitle
+      videoId.value = result.videoId
 
-    if(!result) return
-    availableSubtitles.value = result.availableLanguages
-    videoTitle.value = result.videoTitle
-    videoId.value = result.videoId
-    // 自动选择第一个语言（如果有）
-    if (result.availableLanguages.length > 0) {
-      selectedLanguage.value = result.availableLanguages[0].lan
+      const first = result.availableLanguages[0]
+      if (!first) return
+      await selectLanguage(first.lan)
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      isLoading.value = false
     }
   }
 
-  function setAutoScroll(enabled: boolean) {
-    autoScroll.value = enabled
-    if (enabled) {
-      updateActiveSubtitleIndex()
-    }
+  // 仅在视频真的换了时才重新初始化；同一视频内的 URL 抖动（spm_id_from 等）忽略。
+  async function refresh() {
+    const nextId = getVideoId(platformType)
+    if (!nextId || nextId === videoId.value) return
+    await initializeSubtitles()
   }
-
-  function setActiveSubtitleIndex(index: number | null) {
-    activeSubtitleIndex.value = index
-  }
-
 
   function updateActiveSubtitleIndex() {
-    const newIndex = findSubtitleIndexByTime(currentTime.value)
-    if (newIndex !== null && newIndex !== activeSubtitleIndex.value) {
+    const subtitles = selectedSubtitle.value?.subtitles
+    if (!subtitles?.length) return
+
+    const time = currentTime.value
+    const newIndex = subtitles.findIndex((subtitle, index, array) => {
+      const start = subtitle.startTime / 1000
+      const end = index < array.length - 1 ? array[index + 1].startTime / 1000 : start + 5
+      return time >= start && time < end
+    })
+
+    if (newIndex !== -1 && newIndex !== activeSubtitleIndex.value) {
       activeSubtitleIndex.value = newIndex
     }
   }
 
-  function findSubtitleIndexByTime(timeInSeconds: number): number | null {
-    const subtitles = selectedSubtitle.value?.subtitles
-    if (!subtitles?.length) return null
-
-    return subtitles.findIndex((subtitle, index, array) => {
-      const startTimeInSeconds = subtitle.startTime / 1000
-
-      let endTimeInSeconds
-      if (index < array.length - 1) {
-        endTimeInSeconds = array[index + 1].startTime / 1000
-      } else {
-        endTimeInSeconds = startTimeInSeconds + 5
-      }
-
-      return timeInSeconds >= startTimeInSeconds && timeInSeconds < endTimeInSeconds
-    })
-  }
-
   function jumpToTime(timeInMs: number) {
-    videoTracker.jumpToTime(timeInMs / 1000)
+    tracker.jumpToTime(timeInMs / 1000)
   }
 
-  function jumpToTimeString(timeStr: string) {
-    if (!timeStr) return
-    // 解析时间字符串 mm:ss 或 h:mm:ss 并转换为毫秒
-    const parts = timeStr.split(':').map(Number)
-    let totalSeconds = 0
-    if (parts.length === 2) { // mm:ss
-      totalSeconds = parts[0] * 60 + parts[1]
-    } else if (parts.length === 3) { // h:mm:ss
-      totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2]
-    }
-    videoTracker.jumpToTime(totalSeconds)
-  }
-
-
-  onMounted(() => {
-    initializeSubtitles()
-  })
+  onMounted(initializeSubtitles)
 
   return {
     autoScroll,
@@ -141,16 +115,11 @@ export function useVideoStore(platformType: VideoType) {
     isLoading,
     error,
     availableSubtitles,
-
-    // Getters
     subtitlesContent,
     selectedSubtitle,
-
-    // Actions
-    setAutoScroll,
-    setActiveSubtitleIndex,
     initializeSubtitles,
+    refresh,
+    selectLanguage,
     jumpToTime,
-    jumpToTimeString,
   }
 }

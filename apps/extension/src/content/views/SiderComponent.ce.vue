@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, useShadowRoot } from 'vue'
-import { VideoType } from '@/utils/subtitlesApi'
+import { VideoType, type SubtitleLanguageInfo } from '@/utils/subtitlesApi'
 import { useVideoStore } from '@/hooks/useVideoStore'
 import { backgroundClient } from '@/utils/messages'
 import SubtitleViewer from './cpnt/subtitle/SubtitleViewer.vue'
@@ -37,7 +37,7 @@ const {
   isLoading,
   error,
   activeSubtitleIndex,
-  initializeSubtitles,
+  refresh,
 } = videoStore
 
 // 视图状态
@@ -59,8 +59,8 @@ const openSettings = async () => {
 }
 
 // 语言选择处理函数
-const selectLanguage = async (language: any) => {
-  selectedLanguage.value = language.lan
+const selectLanguage = (language: SubtitleLanguageInfo) => {
+  videoStore.selectLanguage(language.lan)
   showLanguageDropdown.value = false
 }
 
@@ -99,12 +99,7 @@ const summarizeVideo = () => {
   activeTab.value = TabTypes.SUMMARY
 }
 
-// 刷新组件方法
-const refresh = () => {
-  initializeSubtitles()
-}
-
-// 暴露方法给外部调用
+// 刷新组件方法（视频切换时由 content script 调用，内部会判断是否真的换了视频）
 defineExpose({
   refresh,
 })
@@ -153,6 +148,7 @@ defineExpose({
         <div class="relative">
           <button
             @click.stop="toggleLanguageDropdown"
+            :disabled="isLoading"
             class="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>{{ selectedSubtitle?.lan_doc }}</span>

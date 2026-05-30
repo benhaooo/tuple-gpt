@@ -5,8 +5,14 @@ import { toProviderConfig, type Provider } from '@tuple-gpt/chat-core'
 
 console.log('Tuple-GPT background script loaded')
 
-function isBilibiliVideoUrl(url?: string): boolean {
-  return typeof url === 'string' && url.startsWith('https://www.bilibili.com/video/')
+// 仅广播视频页域名下的 URL 变化；是否真的需要响应（视频是否真的换了），由各 content script 自己判断。
+const VIDEO_URL_PATTERNS = [
+  /^https:\/\/www\.bilibili\.com\/video\//,
+  /^https:\/\/www\.youtube\.com\/watch/,
+]
+
+function isVideoUrl(url?: string): boolean {
+  return typeof url === 'string' && VIDEO_URL_PATTERNS.some(p => p.test(url))
 }
 
 async function loadProvider(providerId: string): Promise<Provider | undefined> {
@@ -98,7 +104,7 @@ registerBackgroundStreamHandlers({
 })
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (!changeInfo.url || !isBilibiliVideoUrl(changeInfo.url)) {
+  if (!changeInfo.url || !isVideoUrl(changeInfo.url)) {
     return
   }
 
