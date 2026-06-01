@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSettingsStore } from '@tuple-gpt/chat-vue'
+import { useSettingsStore, ModelSelector } from '@tuple-gpt/chat-vue'
 import { storeToRefs } from 'pinia'
 import { ThemeName } from '@tuple-gpt/chat-vue'
 import { SunIcon, MoonIcon, ComputerDesktopIcon } from '@heroicons/vue/24/solid'
@@ -105,6 +105,18 @@ const themeIcons: Record<(typeof ThemeName)[keyof typeof ThemeName], Component> 
           </button>
         </div>
       </div>
+    </div>
+    <!-- 一键总结模型 -->
+    <div>
+      <h2 class="mb-4 text-xl font-semibold text-foreground">一键总结模型</h2>
+      <p class="mb-4 text-muted-foreground">
+        选择"总结"按钮调用的模型。仅显示已配置 API Key 的服务商。
+      </p>
+      <ModelSelector
+        :model-value="settings.summaryModel"
+        @update:model-value="value => settingsStore.updateSettings({ summaryModel: value })"
+        empty-text='暂无可用模型，请先在"服务商"中配置 API Key。'
+      />
     </div>
   </div>
 </template>

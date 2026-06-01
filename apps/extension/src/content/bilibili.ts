@@ -1,15 +1,9 @@
 import SiderComponent from '@/content/views/SiderComponent.ce.vue'
 import { injectCustomElement } from '@/content/TwindShadowWrapper'
 import { onDOMReady } from '@/utils/domUtils'
-import {
-  registerRpcHandlers,
-  type BilibiliAudioTranscriptionRequest,
-} from '@/utils/messages'
+import { registerRpcHandlers, type BilibiliAudioTranscriptionRequest } from '@/utils/messages'
 import { VideoType } from '@/utils/subtitlesApi'
-import {
-  transcribeBilibiliAudio,
-  transcriptionToSubtitles,
-} from '@/utils/audioUtils'
+import { transcribeBilibiliAudio, transcriptionToSubtitles } from '@/utils/audioUtils'
 import '@/styles/variables.css'
 
 async function injectComponent() {
@@ -57,6 +51,7 @@ registerRpcHandlers({
 
   notifyUrlChanged(data) {
     console.log('[Tuple-GPT] URL 变化:', data.url)
+    // 是否真的换了视频由 store.refresh 内部判断
     componentInstance?.refresh()
   },
 })

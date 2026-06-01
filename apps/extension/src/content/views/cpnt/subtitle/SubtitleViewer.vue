@@ -188,6 +188,17 @@ watch(
     }
   },
 )
+
+// 字幕数据本身变化（切换语言、刷新）时，list 会重建、scrollTop 归零；
+// 即使 activeSubtitleIndex 数值没变，watcher 也不会 fire——所以这里独立滚一次。
+watch(
+  () => props.selectedSubtitle?.subtitles,
+  () => {
+    const index = props.activeSubtitleIndex
+    if (index === null || !autoScrollEnabled.value) return
+    nextTick(() => scrollToCurrentSubtitle(index))
+  },
+)
 </script>
 
 <template>

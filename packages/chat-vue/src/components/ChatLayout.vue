@@ -48,7 +48,11 @@
         </div>
 
         <div class="justify-self-center">
-          <ModelSelector />
+          <ModelSelector
+            :model-value="providerStore.activeModel"
+            @update:model-value="providerStore.setActiveModel"
+            :trigger-class="chatTriggerClass"
+          />
         </div>
 
         <div class="flex justify-end md:invisible">
@@ -77,6 +81,7 @@ import { useMediaQuery } from '@vueuse/core'
 import { Bars3Icon, PlusIcon } from '@heroicons/vue/24/outline'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next'
 import { useChat } from '#composables/useChat'
+import { useProviderStore } from '#stores/provider'
 import ConversationSidebar from './ConversationSidebar.vue'
 import ChatView from './ChatView.vue'
 import ModelSelector from './ModelSelector.vue'
@@ -91,11 +96,15 @@ import {
 } from '@tuple-gpt/ui-vue'
 
 const chat = useChat()
+const providerStore = useProviderStore()
 const { conversations, activeConversationId, activeConversation } = chat
 const isDesktop = useMediaQuery('(min-width: 768px)')
 const sidebarOpen = ref(false)
 const desktopSidebarOpen = computed(() => isDesktop.value && sidebarOpen.value)
 const mobileSidebarOpen = computed(() => !isDesktop.value && sidebarOpen.value)
+
+const chatTriggerClass =
+  'h-8 max-w-48 md:max-w-72 rounded-full border border-border/70 bg-background/90 justify-between gap-2 px-3 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur transition-[background-color,color,box-shadow] supports-[backdrop-filter]:bg-background/70 hover:bg-accent/80 hover:text-accent-foreground data-[state=open]:bg-accent/80 data-[state=open]:text-accent-foreground'
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value

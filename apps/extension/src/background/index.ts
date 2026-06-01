@@ -1,11 +1,24 @@
 import { registerBackgroundStreamHandlers } from '../utils/ai-stream'
 import { registerRpcHandlers, tabClient } from '../utils/messages'
 import { chat } from '@tuple-gpt/ai-core'
+import { toProviderConfig, type Provider } from '@tuple-gpt/chat-core'
 
 console.log('Tuple-GPT background script loaded')
 
-function isBilibiliVideoUrl(url?: string): boolean {
-  return typeof url === 'string' && url.startsWith('https://www.bilibili.com/video/')
+// 仅广播视频页域名下的 URL 变化；是否真的需要响应（视频是否真的换了），由各 content script 自己判断。
+const VIDEO_URL_PATTERNS = [
+  /^https:\/\/www\.bilibili\.com\/video\//,
+  /^https:\/\/www\.youtube\.com\/watch/,
+]
+
+function isVideoUrl(url?: string): boolean {
+  return typeof url === 'string' && VIDEO_URL_PATTERNS.some(p => p.test(url))
+}
+
+async function loadProvider(providerId: string): Promise<Provider | undefined> {
+  const result = await chrome.storage.sync.get('providers')
+  const providers = result.providers?.providers as Provider[] | undefined
+  return providers?.find(p => p.id === providerId)
 }
 
 registerRpcHandlers({
@@ -45,13 +58,18 @@ registerBackgroundStreamHandlers({
     })
 
     try {
+      const provider = await loadProvider(request.model.providerId)
+      if (!provider) {
+        stream.send({ type: 'error', error: '所选模型对应的服务商已被删除，请在选项页重新选择。' })
+        return
+      }
+      if (!provider.apiKey) {
+        stream.send({ type: 'error', error: `服务商「${provider.name}」未配置 API Key。` })
+        return
+      }
+
       const events = chat([{ role: 'user', content: [{ type: 'text', text: request.prompt }] }], {
-        provider: {
-          type: 'anthropic',
-          apiKey: 'sk-ae9864f2181002d22bf44f755055e0209dd062e8bccff88c028b6a8756d8c723',
-          baseUrl: 'https://pikachu.claudecode.love/v1',
-          model: 'claude-sonnet-4-5-20250929',
-        },
+        provider: toProviderConfig(provider, request.model.model),
         options: {
           maxTokens: 4096,
           signal: abortController.signal,
@@ -86,7 +104,7 @@ registerBackgroundStreamHandlers({
 })
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (!changeInfo.url || !isBilibiliVideoUrl(changeInfo.url)) {
+  if (!changeInfo.url || !isVideoUrl(changeInfo.url)) {
     return
   }
 

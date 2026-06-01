@@ -1,5 +1,7 @@
 import { onBeforeUnmount, ref } from 'vue'
 import { marked } from 'marked'
+import { storeToRefs } from 'pinia'
+import { useSettingsStore } from '@tuple-gpt/chat-vue'
 import { aiStreamClient } from '@/utils/ai-stream'
 
 export interface AIContentOptions {
@@ -11,6 +13,7 @@ export function useAIContent(options: AIContentOptions = {}) {
   const isGenerating = ref(false)
   const error = ref('')
   const copySuccess = ref(false)
+  const { settings } = storeToRefs(useSettingsStore())
   let activeStream: ReturnType<typeof aiStreamClient.generateAiContent> | null = null
 
   const stopActiveStream = () => {
@@ -44,7 +47,15 @@ export function useAIContent(options: AIContentOptions = {}) {
     error.value = ''
     content.value = ''
 
-    const stream = aiStreamClient.generateAiContent({ prompt })
+    const model = settings.value.summaryModel
+    if (!model) {
+      const message = '请先在选项页"通用"中为一键总结选择一个模型。'
+      error.value = message
+      isGenerating.value = false
+      throw new Error(message)
+    }
+
+    const stream = aiStreamClient.generateAiContent({ prompt, model })
     activeStream = stream
 
     try {
@@ -72,13 +83,11 @@ export function useAIContent(options: AIContentOptions = {}) {
       }
 
       return content.value
-    }
-    catch (streamError) {
+    } catch (streamError) {
       console.error('处理API请求失败:', streamError)
       error.value = streamError instanceof Error ? streamError.message : '生成失败'
       throw streamError
-    }
-    finally {
+    } finally {
       if (activeStream === stream) {
         activeStream = null
       }
@@ -102,8 +111,7 @@ export function useAIContent(options: AIContentOptions = {}) {
       setTimeout(() => {
         copySuccess.value = false
       }, 2000)
-    }
-    catch (clipboardError) {
+    } catch (clipboardError) {
       console.error('复制失败:', clipboardError)
       throw clipboardError
     }
