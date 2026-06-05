@@ -141,25 +141,16 @@
               <!-- Tool calls with inline results -->
               <div v-if="step.toolCalls.length" class="mt-2 space-y-1.5">
                 <template v-for="tc in step.toolCalls" :key="tc.id">
-                  <!-- Interactive tool: render dynamic component when result missing -->
-                  <component
-                    :is="getInteractiveComponentForCall(tc)"
-                    v-if="getInteractiveComponentForCall(tc)"
-                    :tool-call-id="tc.id"
-                    :arguments="tc.arguments"
-                    :result="tc.result"
-                    @submit="handleToolSubmit"
-                  />
-
-                  <!-- Default: collapsible details -->
+                  <!-- Awaiting tools are rendered in InterruptiveToolInteraction, not here -->
+                  <!-- Only show tool calls that are resolved or in other states -->
                   <details
-                    v-else
+                    v-if="tc.status !== 'awaiting'"
                     :class="[
                       'rounded-md border px-2 py-1.5',
                       isToolCallError(tc)
                         ? 'border-destructive/35 bg-destructive/5'
                         : isToolCallRunning(tc)
-                          ? 'border-amber-500/40 bg-amber-500/5'
+                          ? 'border-primary/40 bg-primary/5'
                           : 'border-border/60 bg-muted/30',
                     ]"
                   >
@@ -170,7 +161,7 @@
                       <span class="truncate">{{ tc.name }}</span>
                       <span
                         v-if="isToolCallRunning(tc)"
-                        class="ml-auto inline-flex items-center gap-1 text-amber-600"
+                        class="ml-auto inline-flex items-center gap-1 text-primary"
                       >
                         <ArrowPathIcon class="h-3 w-3 animate-spin" />
                       </span>
@@ -297,7 +288,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, type Component } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   LinkIcon,
   DocumentIcon,
@@ -317,13 +308,6 @@ import type { ChatTurn } from '@tuple-gpt/chat-core'
 import type { ToolCallStatus } from '@tuple-gpt/ai-core'
 import { Button, Textarea } from '@tuple-gpt/ui-vue'
 import ModelAvatar from './ModelAvatar.vue'
-import ToolAskUser from './tools/ToolAskUser.vue'
-import { useChat } from '../composables/useChat'
-import { useToolRegistry } from '../composables/useToolRegistry'
-
-const interactiveToolComponents: Record<string, Component> = {
-  ToolAskUser,
-}
 
 interface AssistantMeta {
   model: string
@@ -367,24 +351,6 @@ const userCopied = ref(false)
 const assistantCopied = ref(false)
 const isEditing = ref(false)
 const draftContent = ref('')
-
-const { resolveToolCall } = useChat()
-const { getInteractiveComponent } = useToolRegistry()
-
-function getInteractiveComponentForCall(tc: ToolCallWithResult): Component | undefined {
-  if (tc.status !== 'awaiting') return undefined
-  const componentName = getInteractiveComponent(tc.name)
-  if (!componentName) return undefined
-  return interactiveToolComponents[componentName]
-}
-
-function handleToolSubmit(payload: { toolCallId: string; result: string }) {
-  void resolveToolCall(props.turn.id, {
-    toolCallId: payload.toolCallId,
-    type: 'result',
-    content: payload.result,
-  })
-}
 
 function isToolCallRunning(tc: ToolCallWithResult): boolean {
   return tc.status === 'pending' || tc.status === 'awaiting'
