@@ -131,35 +131,35 @@ const handleGenerate = () => {
 <style scoped>
 /* 自定义 prose 样式变体，确保链接颜色与主题一致 */
 .prose.prose-primary a {
-  color: oklch(var(--primary));
+  color: var(--primary);
 }
 .prose.prose-primary a:hover {
-  color: oklch(var(--primary) / 0.8);
+  color: oklch(from var(--primary) l c h / 80%);
 }
 
 .prose.prose-secondary a {
-  color: oklch(var(--secondary));
+  color: var(--secondary);
 }
 .prose.prose-secondary a:hover {
-  color: oklch(var(--secondary) / 0.8);
+  color: oklch(from var(--secondary) l c h / 80%);
 }
 
 .prose.prose-accent a {
-  color: oklch(var(--accent));
+  color: var(--accent);
 }
 .prose.prose-accent a:hover {
-  color: oklch(var(--accent) / 0.8);
+  color: oklch(from var(--accent) l c h / 80%);
 }
 
 /* 暗色模式下的链接颜色调整 */
 .dark .prose.prose-primary a {
-  color: oklch(var(--primary-foreground));
+  color: var(--primary-foreground);
 }
 .dark .prose.prose-secondary a {
-  color: oklch(var(--secondary-foreground));
+  color: var(--secondary-foreground);
 }
 .dark .prose.prose-accent a {
-  color: oklch(var(--accent-foreground));
+  color: var(--accent-foreground);
 }
 
 /* 确保时间链接样式一致 */

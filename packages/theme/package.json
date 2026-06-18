@@ -8,7 +8,6 @@
   ],
   "exports": {
     "./tokens.css": "./src/tokens.css",
-    "./uno.css": "./src/uno.css",
-    "./tailwind.css": "./src/tailwind.css"
+    "./uno.css": "./src/uno.css"
   }
 }

@@ -1,11 +1,11 @@
 @import './tokens.css';
 
 * {
-  border-color: oklch(var(--border));
+  border-color: var(--border);
 }
 
 body {
-  background-color: oklch(var(--background));
-  color: oklch(var(--foreground));
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: var(--font-sans);
 }
