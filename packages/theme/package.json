@@ -1,0 +1,14 @@
+{
+  "name": "@tuple-gpt/theme",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    "./tokens.css": "./src/tokens.css",
+    "./uno.css": "./src/uno.css",
+    "./tailwind.css": "./src/tailwind.css"
+  }
+}

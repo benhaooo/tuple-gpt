@@ -1,6 +1,13 @@
-import { defineConfig, presetAttributify, presetWind4, presetTypography, transformerDirectives, transformerVariantGroup } from 'unocss'
-import presetAnimations from "unocss-preset-animations";
-import presetShadcn from "unocss-preset-shadcn";
+import {
+  defineConfig,
+  presetAttributify,
+  presetWind4,
+  presetTypography,
+  transformerDirectives,
+  transformerVariantGroup,
+} from 'unocss'
+import presetAnimations from 'unocss-preset-animations'
+import presetShadcn from 'unocss-preset-shadcn'
 
 export default defineConfig({
   presets: [
@@ -13,12 +20,15 @@ export default defineConfig({
       },
     }),
     presetAnimations(),
-    presetShadcn({
-      color: "neutral",
-    }),
+    presetShadcn(
+      {
+        color: false,
+        radius: false,
+      },
+      {
+        globals: false,
+      },
+    ),
   ],
-  transformers: [
-    transformerDirectives(),
-    transformerVariantGroup(),
-  ],
+  transformers: [transformerDirectives(), transformerVariantGroup()],
 })

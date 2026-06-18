@@ -2,7 +2,7 @@ import { injectCustomElement } from '@/content/TwindShadowWrapper'
 import { VideoType } from '@/utils/subtitlesApi'
 import SiderComponent from './views/SiderComponent.ce.vue'
 import { onDOMReady } from '@/utils/domUtils'
-import '@/styles/variables.css?inline'
+import '@tuple-gpt/theme/uno.css?inline'
 console.log('[Tuple-GPT] YouTube content script loaded!')
 
 /**

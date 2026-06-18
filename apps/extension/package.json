@@ -13,6 +13,7 @@
     "@tuple-gpt/ai-core": "workspace:*",
     "@tuple-gpt/chat-core": "workspace:*",
     "@tuple-gpt/chat-vue": "workspace:*",
+    "@tuple-gpt/theme": "workspace:*",
     "@tuple-gpt/ui-vue": "workspace:*",
     "await-to-js": "^3.0.0"
   },

@@ -1,12 +1,12 @@
 import { defineCustomElement, type App } from 'vue'
 import { waitFor } from '@/utils/domUtils'
 import restStyles from '@unocss/reset/tailwind.css?inline'
-import themeStyles from '@/styles/variables.css?inline'
-import { createPinia } from 'pinia';
+import themeStyles from '@tuple-gpt/theme/uno.css?inline'
+import { createPinia } from 'pinia'
 import { piniaChormeStorage } from '@/plugin/pinia-chrome-storage'
 
 interface MyComponentElement extends HTMLElement {
-  refresh: () => void;
+  refresh: () => void
 }
 
 /**
@@ -19,7 +19,7 @@ export const InsertPosition = {
   BEFORE_ELEMENT: 'beforeElement',
 } as const
 
-export type InsertPosition = typeof InsertPosition[keyof typeof InsertPosition]
+export type InsertPosition = (typeof InsertPosition)[keyof typeof InsertPosition]
 
 /**
  * 将自定义元素注入到页面中的指定容器
@@ -27,14 +27,14 @@ export type InsertPosition = typeof InsertPosition[keyof typeof InsertPosition]
  * @returns 返回挂载的自定义元素实例
  */
 export async function injectCustomElement(options: {
-  containerSelector: string,     // 容器选择器
-  tagName: string,              // 自定义元素标签名
-  component: any,               // 要注入的Vue组件
-  elementId: string,            // 注入元素的ID
-  position?: InsertPosition, // 插入位置
-  targetElementSelector?: string, // 目标元素选择器（用于afterElement和beforeElement）
-  styles?: Partial<CSSStyleDeclaration>, // 额外的样式
-  props?: Record<string, any>,  // 传递给组件的属性
+  containerSelector: string // 容器选择器
+  tagName: string // 自定义元素标签名
+  component: any // 要注入的Vue组件
+  elementId: string // 注入元素的ID
+  position?: InsertPosition // 插入位置
+  targetElementSelector?: string // 目标元素选择器（用于afterElement和beforeElement）
+  styles?: Partial<CSSStyleDeclaration> // 额外的样式
+  props?: Record<string, any> // 传递给组件的属性
 }) {
   const {
     containerSelector,
@@ -47,31 +47,30 @@ export async function injectCustomElement(options: {
       position: 'relative',
       zIndex: '9999',
       pointerEvents: 'auto',
-      ...options.styles
+      ...options.styles,
     },
-    props = {}
+    props = {},
   } = options
 
   if (!customElements.get(tagName)) {
     const CustomElement = defineCustomElement({
       ...component,
-      styles: [
-        ...component.styles,
-        themeStyles,
-        restStyles
-      ],
+      styles: [...component.styles, themeStyles, restStyles],
       props: {
         ...component.props,
-        ...Object.keys(props).reduce((acc, key) => {
-          acc[key] = { type: null, default: () => props[key] }
-          return acc
-        }, {} as Record<string, any>)
+        ...Object.keys(props).reduce(
+          (acc, key) => {
+            acc[key] = { type: null, default: () => props[key] }
+            return acc
+          },
+          {} as Record<string, any>,
+        ),
       },
       configureApp(app: App) {
-        const pinia = createPinia();
+        const pinia = createPinia()
         pinia.use(piniaChormeStorage)
         app.use(pinia)
-      }
+      },
     })
 
     customElements.define(tagName, CustomElement)
@@ -123,4 +122,4 @@ export async function injectCustomElement(options: {
   console.log(`[Tuple-GPT] Component injected with ID ${elementId} using Shadow DOM.`)
 
   return mountPoint
-} 
+}
