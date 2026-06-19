@@ -65,11 +65,17 @@ export default mergeConfigs([
         serif: 'var(--font-serif)',
         mono: 'var(--font-mono)',
       },
+      spacing: {
+        DEFAULT: 'var(--spacing)',
+      },
+      tracking: {
+        normal: 'var(--tracking-normal)',
+      },
       radius: {
-        sm: 'calc(var(--radius) - 4px)',
-        md: 'calc(var(--radius) - 2px)',
-        lg: 'var(--radius)',
-        xl: 'calc(var(--radius) + 4px)',
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
       },
       shadow: {
         '2xs': 'var(--shadow-2xs)',
