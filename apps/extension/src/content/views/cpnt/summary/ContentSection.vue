@@ -1,53 +1,53 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { 
-  ClipboardDocumentIcon, 
-  ArrowPathRoundedSquareIcon, 
-  CheckIcon 
+import {
+  ClipboardDocumentIcon,
+  ArrowPathRoundedSquareIcon,
+  CheckIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps<{
-  title: string;
-  content: string;
-  isGenerating: boolean;
-  colorTheme: 'primary' | 'secondary' | 'accent' | 'default';
-  icon?: any;
+  title: string
+  content: string
+  isGenerating: boolean
+  colorTheme: 'primary' | 'secondary' | 'accent' | 'default'
+  icon?: any
 }>()
 
 const emit = defineEmits<{
-  (e: 'generate'): void;
-  (e: 'copy'): void;
+  (e: 'generate'): void
+  (e: 'copy'): void
 }>()
 
 // 复制状态
 const isCopied = ref(false)
 
-// Map color themes to the new 'soft' background and text color classes
+// Map color themes directly to theme token classes.
 const themeClasses = computed(() => {
   switch (props.colorTheme) {
     case 'primary':
       return {
-        bg: 'bg-primary-soft',
-        text: 'text-primary-soft-foreground',
-        prose: 'prose-primary'
+        bg: 'bg-primary/10',
+        text: 'text-primary',
+        prose: 'prose-primary',
       }
     case 'secondary':
       return {
-        bg: 'bg-secondary-soft',
-        text: 'text-secondary-soft-foreground',
-        prose: 'prose-secondary'
+        bg: 'bg-secondary',
+        text: 'text-secondary-foreground',
+        prose: 'prose-secondary',
       }
     case 'accent':
       return {
-        bg: 'bg-accent-soft',
-        text: 'text-accent-soft-foreground',
-        prose: 'prose-accent'
+        bg: 'bg-accent',
+        text: 'text-accent-foreground',
+        prose: 'prose-accent',
       }
     default:
       return {
         bg: 'bg-background',
         text: 'text-foreground',
-        prose: ''
+        prose: '',
       }
   }
 })
@@ -72,42 +72,48 @@ const handleGenerate = () => {
     <div class="flex justify-between items-center mb-2">
       <h3 :class="[themeClasses.text, 'font-semibold']">{{ title }}</h3>
       <div class="flex items-center gap-1" :class="themeClasses.text" v-if="content">
-        <button 
-          @click="handleCopy" 
+        <button
+          @click="handleCopy"
           class="p-1 text-xs opacity-70 hover:opacity-100"
           title="复制内容"
         >
           <CheckIcon v-if="isCopied" class="h-4 w-4 text-green-500" />
           <ClipboardDocumentIcon v-else class="h-4 w-4" />
         </button>
-        <button 
-          @click="handleGenerate" 
+        <button
+          @click="handleGenerate"
           :disabled="isGenerating"
           class="p-1 text-xs opacity-70 hover:opacity-100"
-          :class="{'opacity-50 cursor-not-allowed': isGenerating}"
+          :class="{ 'opacity-50 cursor-not-allowed': isGenerating }"
           title="重新生成"
         >
-          <ArrowPathRoundedSquareIcon class="h-4 w-4" :class="{'animate-spin': isGenerating}" />
+          <ArrowPathRoundedSquareIcon class="h-4 w-4" :class="{ 'animate-spin': isGenerating }" />
         </button>
       </div>
     </div>
-    
+
     <!-- 内容开始生成 -->
-    <div v-if="content || isGenerating"> 
-      <div 
-        v-if="content" 
-        class="prose prose-sm dark:prose-invert max-w-none" 
-        :class="[themeClasses.text, themeClasses.prose]" 
+    <div v-if="content || isGenerating">
+      <div
+        v-if="content"
+        class="prose prose-sm dark:prose-invert max-w-none"
+        :class="[themeClasses.text, themeClasses.prose]"
         v-html="content"
       ></div>
-      <div v-else :class="['prose prose-sm dark:prose-invert max-w-none min-h-[50px] animate-pulse', themeClasses.text]">
+      <div
+        v-else
+        :class="[
+          'prose prose-sm dark:prose-invert max-w-none min-h-[50px] animate-pulse',
+          themeClasses.text,
+        ]"
+      >
         生成中...
       </div>
     </div>
-    
+
     <!-- 未生成状态 -->
     <div v-else class="flex justify-center items-center py-2">
-      <button 
+      <button
         @click="handleGenerate"
         class="bg-primary text-primary-foreground px-2 py-1.5 text-xs font-semibold rounded-md flex items-center hover:bg-primary/90"
       >
@@ -116,44 +122,44 @@ const handleGenerate = () => {
       </button>
     </div>
   </div>
-</template> 
+</template>
 
 <style>
-@unocss-placeholder
+/* @unocss-placeholder */
 </style>
 
 <style scoped>
 /* 自定义 prose 样式变体，确保链接颜色与主题一致 */
 .prose.prose-primary a {
-  color: oklch(var(--primary));
+  color: var(--primary);
 }
 .prose.prose-primary a:hover {
-  color: oklch(var(--primary) / 0.8);
+  color: oklch(from var(--primary) l c h / 80%);
 }
 
 .prose.prose-secondary a {
-  color: oklch(var(--secondary));
+  color: var(--secondary);
 }
 .prose.prose-secondary a:hover {
-  color: oklch(var(--secondary) / 0.8);
+  color: oklch(from var(--secondary) l c h / 80%);
 }
 
 .prose.prose-accent a {
-  color: oklch(var(--accent));
+  color: var(--accent);
 }
 .prose.prose-accent a:hover {
-  color: oklch(var(--accent) / 0.8);
+  color: oklch(from var(--accent) l c h / 80%);
 }
 
 /* 暗色模式下的链接颜色调整 */
 .dark .prose.prose-primary a {
-  color: oklch(var(--primary-foreground));
+  color: var(--primary-foreground);
 }
 .dark .prose.prose-secondary a {
-  color: oklch(var(--secondary-foreground));
+  color: var(--secondary-foreground);
 }
 .dark .prose.prose-accent a {
-  color: oklch(var(--accent-foreground));
+  color: var(--accent-foreground);
 }
 
 /* 确保时间链接样式一致 */
@@ -162,4 +168,4 @@ const handleGenerate = () => {
   text-decoration-style: dotted;
   text-underline-offset: 2px;
 }
-</style> 
+</style>

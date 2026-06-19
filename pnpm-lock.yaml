@@ -137,6 +137,9 @@ importers:
       '@tuple-gpt/chat-vue':
         specifier: workspace:*
         version: link:../../packages/chat-vue
+      '@tuple-gpt/theme':
+        specifier: workspace:*
+        version: link:../../packages/theme
       '@tuple-gpt/ui-vue':
         specifier: workspace:*
         version: link:../../packages/ui-vue
@@ -211,6 +214,8 @@ importers:
       vue:
         specifier: ^3.5.0
         version: 3.5.27(typescript@5.7.3)
+
+  packages/theme: {}
 
   packages/ui-vue:
     dependencies:
@@ -1605,6 +1610,7 @@ packages:
 
   lucide-vue-next@0.575.0:
     resolution: {integrity: sha512-UHzA3cYMCgBLyGay5R9IQaidwV0NLocx7cIBnFt8vJ9Xhl6IM/oKD0fUhoCUuouFta15SX1rLXVoko9s3TzWMA==}
+    deprecated: Package deprecated. Please use @lucide/vue instead.
     peerDependencies:
       vue: '>=3.0.1'
 

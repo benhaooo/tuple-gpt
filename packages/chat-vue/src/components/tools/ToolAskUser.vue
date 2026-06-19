@@ -1,56 +1,65 @@
 <template>
-  <div class="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 space-y-2">
-    <div class="flex items-center gap-1.5 text-xs font-medium text-amber-700">
-      <ChatBubbleLeftRightIcon class="h-3.5 w-3.5 shrink-0" />
-      <span>Agent 在等你回答</span>
+  <div
+    class="overflow-hidden rounded-3xl border bg-background/80 p-2 shadow-lg transition-all animate-slide-up-fade-in"
+    :class="resolved ? 'border-input' : 'border-primary'"
+  >
+    <!-- 问题内容 -->
+    <div class="px-3 pt-2 pb-2">
+      <p v-if="question" class="text-sm whitespace-pre-wrap break-words text-foreground">
+        {{ question }}
+      </p>
     </div>
 
-    <p v-if="question" class="text-sm whitespace-pre-wrap break-words text-foreground">
-      {{ question }}
-    </p>
+    <!-- 交互区域 -->
+    <div class="px-3 pb-2">
+      <template v-if="!resolved">
+        <!-- 选项按钮 -->
+        <div v-if="options.length" class="flex flex-wrap gap-2">
+          <Button
+            v-for="opt in options"
+            :key="opt"
+            size="default"
+            variant="outline"
+            class="h-9 px-4"
+            :disabled="submitting"
+            @click="submit(opt)"
+          >
+            {{ opt }}
+          </Button>
+        </div>
 
-    <template v-if="!resolved">
-      <div v-if="options.length" class="flex flex-wrap gap-1.5">
-        <Button
-          v-for="opt in options"
-          :key="opt"
-          size="sm"
-          variant="outline"
-          class="h-7 px-2.5 text-xs"
-          :disabled="submitting"
-          @click="submit(opt)"
-        >
-          {{ opt }}
-        </Button>
-      </div>
+        <!-- 自由输入 -->
+        <div v-else class="space-y-2">
+          <Textarea
+            v-model="freeText"
+            rows="1"
+            placeholder="输入你的回答..."
+            class="min-h-20 max-h-56 w-full resize-none overflow-y-auto rounded-2xl border-0 bg-transparent px-3 pt-3 pb-2 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0"
+            :disabled="submitting"
+            @keydown.enter.exact.prevent="submitFreeText"
+          />
+          <div class="flex justify-end px-1 py-1">
+            <Button
+              size="icon-sm"
+              class="size-8 rounded-full"
+              :disabled="submitting || !freeText.trim()"
+              @click="submitFreeText"
+            >
+              <PaperAirplaneIcon class="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </template>
 
-      <div v-else class="flex items-end gap-1.5">
-        <Textarea
-          v-model="freeText"
-          rows="2"
-          placeholder="输入你的回答..."
-          class="min-h-[56px] flex-1 resize-none text-sm"
-          :disabled="submitting"
-          @keydown.enter.exact.prevent="submitFreeText"
-        />
-        <Button
-          size="sm"
-          class="h-8 px-3 text-xs"
-          :disabled="submitting || !freeText.trim()"
-          @click="submitFreeText"
-        >
-          提交
-        </Button>
-      </div>
-    </template>
-
-    <p v-else class="text-xs text-muted-foreground">已回答：{{ resolvedAnswer }}</p>
+      <!-- 已回答状态 -->
+      <p v-else class="text-sm text-muted-foreground">已回答：{{ resolvedAnswer }}</p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ChatBubbleLeftRightIcon } from '@heroicons/vue/24/outline'
+import { PaperAirplaneIcon } from '@heroicons/vue/24/solid'
 import { Button, Textarea } from '@tuple-gpt/ui-vue'
 
 const props = defineProps<{
@@ -91,3 +100,20 @@ function submitFreeText() {
   submit(trimmed)
 }
 </script>
+
+<style scoped>
+@keyframes slide-up-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-fade-in {
+  animation: slide-up-fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+</style>

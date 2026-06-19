@@ -236,7 +236,7 @@ defineExpose({
 </template>
 
 <style>
-@unocss-placeholder;
+/* @unocss-placeholder */
 </style>
 
 <style scoped>
@@ -249,13 +249,13 @@ defineExpose({
 
 :deep(main::-webkit-scrollbar-track),
 :deep(*::-webkit-scrollbar-track) {
-  background: oklch(var(--muted) / 0.5);
+  background: oklch(from var(--muted) l c h / 50%);
   border-radius: 4px;
 }
 
 :deep(main::-webkit-scrollbar-thumb),
 :deep(*::-webkit-scrollbar-thumb) {
-  background: oklch(var(--primary) / 0.5);
+  background: oklch(from var(--primary) l c h / 50%);
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -263,7 +263,7 @@ defineExpose({
 
 :deep(main::-webkit-scrollbar-thumb:hover),
 :deep(*::-webkit-scrollbar-thumb:hover) {
-  background: oklch(var(--primary));
+  background: var(--primary);
   background-clip: content-box;
 }
 </style>

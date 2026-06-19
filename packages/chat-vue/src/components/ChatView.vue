@@ -21,8 +21,16 @@
       class="flex-1 min-h-0"
     />
 
-    <!-- Chat input -->
+    <!-- 打断式交互组件：当有待交互的tool call时显示 -->
+    <InterruptiveToolInteraction
+      v-if="hasPendingInteraction"
+      :pending-tool-call="pendingToolCall"
+      class="flex-shrink-0"
+    />
+
+    <!-- Chat input：无待交互时显示 -->
     <ChatInput
+      v-else
       @send="content => chat.sendMessage(content)"
       @stop="chat.stopStreaming"
       :is-streaming="isStreaming"
@@ -35,13 +43,18 @@
 <script setup lang="ts">
 import { ChatBubbleLeftRightIcon } from '@heroicons/vue/24/outline'
 import { useChat } from '#composables/useChat'
+import { usePendingToolCall } from '#composables/usePendingToolCall'
 import { useProviderStore } from '#stores/provider'
 import TurnList from './TurnList.vue'
 import ChatInput from './ChatInput.vue'
+import InterruptiveToolInteraction from './InterruptiveToolInteraction.vue'
 
 const chat = useChat()
 const { activeConversation, turns, isStreaming } = chat
 const providerStore = useProviderStore()
+
+// 检测是否有待交互的 tool call
+const { pendingToolCall, hasPendingInteraction } = usePendingToolCall(turns)
 
 async function handleDeleteTurn(turnId: string) {
   await chat.deleteTurn(turnId)

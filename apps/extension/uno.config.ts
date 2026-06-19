@@ -1,51 +1,92 @@
 import { mergeConfigs } from 'unocss'
 import baseConfig from '../../uno.config.base'
 
-export default mergeConfigs([baseConfig, {
-  theme: {
-    colors: {
-      border: 'oklch(var(--border))',
-      input: 'oklch(var(--input))',
-      ring: 'oklch(var(--ring))',
-      background: 'oklch(var(--background))',
-      foreground: 'oklch(var(--foreground))',
-      primary: {
-        DEFAULT: 'oklch(var(--primary))',
-        foreground: 'oklch(var(--primary-foreground))',
-        soft: 'hsl(var(--primary-soft))',
-        'soft-foreground': 'hsl(var(--primary-soft-foreground))',
+export default mergeConfigs([
+  baseConfig,
+  {
+    theme: {
+      colors: {
+        border: 'var(--border)',
+        input: 'var(--input)',
+        ring: 'var(--ring)',
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        primary: {
+          DEFAULT: 'var(--primary)',
+          foreground: 'var(--primary-foreground)',
+        },
+        secondary: {
+          DEFAULT: 'var(--secondary)',
+          foreground: 'var(--secondary-foreground)',
+        },
+        destructive: {
+          DEFAULT: 'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
+        },
+        muted: {
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
+        },
+        popover: {
+          DEFAULT: 'var(--popover)',
+          foreground: 'var(--popover-foreground)',
+        },
+        card: {
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
+        },
+        chart: {
+          1: 'var(--chart-1)',
+          2: 'var(--chart-2)',
+          3: 'var(--chart-3)',
+          4: 'var(--chart-4)',
+          5: 'var(--chart-5)',
+        },
+        sidebar: {
+          DEFAULT: 'var(--sidebar)',
+          foreground: 'var(--sidebar-foreground)',
+          primary: 'var(--sidebar-primary)',
+          'primary-foreground': 'var(--sidebar-primary-foreground)',
+          accent: 'var(--sidebar-accent)',
+          'accent-foreground': 'var(--sidebar-accent-foreground)',
+          border: 'var(--sidebar-border)',
+          ring: 'var(--sidebar-ring)',
+        },
+        surface: 'var(--card)',
+        'text-primary': 'var(--foreground)',
+        'text-secondary': 'var(--muted-foreground)',
       },
-      secondary: {
-        DEFAULT: 'oklch(var(--secondary))',
-        foreground: 'oklch(var(--secondary-foreground))',
-        soft: 'hsl(var(--secondary-soft))',
-        'soft-foreground': 'hsl(var(--secondary-soft-foreground))',
+      font: {
+        sans: 'var(--font-sans)',
+        serif: 'var(--font-serif)',
+        mono: 'var(--font-mono)',
       },
-      destructive: {
-        DEFAULT: 'oklch(var(--destructive))',
-        foreground: 'oklch(var(--destructive-foreground))',
+      spacing: {
+        DEFAULT: 'var(--spacing)',
       },
-      muted: {
-        DEFAULT: 'oklch(var(--muted))',
-        foreground: 'oklch(var(--muted-foreground))',
+      tracking: {
+        normal: 'var(--tracking-normal)',
       },
-      accent: {
-        DEFAULT: 'oklch(var(--accent))',
-        foreground: 'oklch(var(--accent-foreground))',
-        soft: 'hsl(var(--accent-soft))',
-        'soft-foreground': 'hsl(var(--accent-soft-foreground))',
+      radius: {
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
       },
-      popover: {
-        DEFAULT: 'oklch(var(--popover))',
-        foreground: 'oklch(var(--popover-foreground))',
+      shadow: {
+        '2xs': 'var(--shadow-2xs)',
+        xs: 'var(--shadow-xs)',
+        sm: 'var(--shadow-sm)',
+        DEFAULT: 'var(--shadow)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        '2xl': 'var(--shadow-2xl)',
       },
-      card: {
-        DEFAULT: 'oklch(var(--card))',
-        foreground: 'oklch(var(--card-foreground))',
-      },
-      'surface': 'oklch(var(--card))',
-      'text-primary': 'oklch(var(--foreground))',
-      'text-secondary': 'oklch(var(--muted-foreground))',
     },
   },
-}])
+])
