@@ -4,7 +4,8 @@
   border-color: var(--border);
 }
 
-body {
+body,
+:host {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);

@@ -4,7 +4,6 @@ import { onDOMReady } from '@/utils/domUtils'
 import { registerRpcHandlers, type BilibiliAudioTranscriptionRequest } from '@/utils/messages'
 import { VideoType } from '@/utils/subtitlesApi'
 import { transcribeBilibiliAudio, transcriptionToSubtitles } from '@/utils/audioUtils'
-import '@tuple-gpt/theme/uno.css'
 
 async function injectComponent() {
   const elementId = 'tuple-gpt-bilibili'
