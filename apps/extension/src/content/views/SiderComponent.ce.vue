@@ -236,7 +236,7 @@ defineExpose({
 </template>
 
 <style>
-@unocss-placeholder;
+/* @unocss-placeholder */
 </style>
 
 <style scoped>
