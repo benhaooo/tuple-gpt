@@ -2,6 +2,7 @@ import { createApp, type App, type ComponentPublicInstance } from 'vue'
 import { waitFor } from '@/utils/domUtils'
 import restStyles from '@unocss/reset/tailwind.css?inline'
 import themeStyles from '@tuple-gpt/theme/uno.css?inline'
+import shadowUnoStyles from 'virtual:tuple-gpt-shadow-uno-styles'
 import { createPinia } from 'pinia'
 import { piniaChormeStorage } from '@/plugin/pinia-chrome-storage'
 
@@ -101,7 +102,12 @@ export async function injectCustomElement(options: {
   }
 
   const shadowRoot = hostElement.attachShadow({ mode: 'open' })
-  const shadowRootStyleTexts = [...(component.styles ?? []), themeStyles, restStyles].flat()
+  const shadowRootStyleTexts = [
+    restStyles,
+    shadowUnoStyles,
+    ...(component.styles ?? []),
+    themeStyles,
+  ].flat()
   for (const styleText of shadowRootStyleTexts) {
     const style = document.createElement('style')
     style.textContent = styleText
