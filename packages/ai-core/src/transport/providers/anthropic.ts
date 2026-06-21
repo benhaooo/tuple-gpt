@@ -76,6 +76,13 @@ function formatTools(tools: ToolDefinition[]): unknown[] {
   }))
 }
 
+function formatWebSearchTool(): unknown {
+  return {
+    type: 'web_search_20250305',
+    name: 'web_search',
+  }
+}
+
 export function createAnthropicTransport(): Transport {
   return {
     async *stream(request: PipelineOutput): AsyncIterable<StreamEvent> {
@@ -91,7 +98,9 @@ export function createAnthropicTransport(): Transport {
       }
 
       if (system) body.system = system
-      if (tools && tools.length > 0) body.tools = formatTools(tools)
+      const formattedTools = formatTools(tools ?? [])
+      if (provider.webSearch) formattedTools.push(formatWebSearchTool())
+      if (formattedTools.length > 0) body.tools = formattedTools
       if (options?.temperature !== undefined) body.temperature = options.temperature
       if (options?.topP !== undefined) body.top_p = options.topP
       if (options?.stop) body.stop_sequences = options.stop

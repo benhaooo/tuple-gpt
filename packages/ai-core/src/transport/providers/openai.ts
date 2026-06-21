@@ -93,6 +93,9 @@ export function createOpenAITransport(): Transport {
       if (tools && tools.length > 0) {
         body.tools = formatTools(tools)
       }
+      if (provider.webSearch) {
+        body.web_search_options = {}
+      }
       if (options?.temperature !== undefined) body.temperature = options.temperature
       if (options?.maxTokens !== undefined) body.max_tokens = options.maxTokens
       if (options?.topP !== undefined) body.top_p = options.topP

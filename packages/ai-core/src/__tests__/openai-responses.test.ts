@@ -30,6 +30,7 @@ const provider = {
   apiKey: 'key',
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-5.4',
+  webSearch: true,
 }
 
 describe('createOpenAIResponsesTransport', () => {
@@ -75,7 +76,8 @@ describe('createOpenAIResponsesTransport', () => {
       'https://api.openai.com/v1/responses',
       expect.objectContaining({ method: 'POST' }),
     )
-    expect(getRequestBody(fetchMock)).toMatchObject({
+    const body = getRequestBody(fetchMock)
+    expect(body).toMatchObject({
       model: 'gpt-5.4',
       input: [{ type: 'message', role: 'user', content: 'Hello' }],
       stream: true,
@@ -83,6 +85,7 @@ describe('createOpenAIResponsesTransport', () => {
       max_output_tokens: 20,
       temperature: 0,
     })
+    expect(body.tools).toEqual([{ type: 'web_search' }])
     expect(events).toEqual([
       { type: StreamEventType.TextDelta, text: 'Hi' },
       {
@@ -230,7 +233,8 @@ describe('createOpenAIResponsesTransport', () => {
 
     await collect(transport.stream({ messages, tools, provider }))
 
-    expect(getRequestBody(fetchMock)).toMatchObject({
+    const body = getRequestBody(fetchMock)
+    expect(body).toMatchObject({
       input: [
         { type: 'message', role: 'user', content: 'weather' },
         {
@@ -245,7 +249,9 @@ describe('createOpenAIResponsesTransport', () => {
           output: '{"condition":"sunny"}',
         },
       ],
-      tools: [
+    })
+    expect(body.tools).toEqual(
+      expect.arrayContaining([
         {
           type: 'function',
           name: 'get_weather',
@@ -253,7 +259,9 @@ describe('createOpenAIResponsesTransport', () => {
           parameters: { type: 'object', properties: {} },
           strict: false,
         },
-      ],
-    })
+        { type: 'web_search' },
+      ]),
+    )
+    expect(body.tools).toHaveLength(2)
   })
 })

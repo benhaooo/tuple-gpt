@@ -73,6 +73,7 @@ export function toProviderConfig(provider: Provider, model: string): ProviderCon
     apiKey: provider.apiKey,
     baseUrl: `${base}${prefix}`,
     model,
+    webSearch: true,
   }
 }
 

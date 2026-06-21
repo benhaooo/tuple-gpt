@@ -87,6 +87,7 @@ describe('request helpers', () => {
       apiKey: 'key',
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-4o',
+      webSearch: true,
     })
   })
 
@@ -108,6 +109,68 @@ describe('request helpers', () => {
       apiKey: 'key',
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-5.4',
+      webSearch: true,
+    })
+  })
+
+  it('enables native web search for provider configs by default', () => {
+    const openAIProvider: Provider = {
+      id: 'openai',
+      name: 'OpenAI',
+      baseUrl: 'https://api.openai.com',
+      apiKey: 'key',
+      format: 'openai',
+      models: ['gpt-5-search-api'],
+      presetId: 'openai',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+    const claudeProvider: Provider = {
+      id: 'claude',
+      name: 'Claude',
+      baseUrl: 'https://api.anthropic.com',
+      apiKey: 'key',
+      format: 'claude',
+      models: ['claude-sonnet-4-20250514'],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+
+    expect(toProviderConfig(openAIProvider, 'gpt-5-search-api')).toEqual({
+      type: 'openai',
+      apiKey: 'key',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-5-search-api',
+      webSearch: true,
+    })
+    expect(toProviderConfig(claudeProvider, 'claude-sonnet-4-20250514')).toEqual({
+      type: 'anthropic',
+      apiKey: 'key',
+      baseUrl: 'https://api.anthropic.com/v1',
+      model: 'claude-sonnet-4-20250514',
+      webSearch: true,
+    })
+  })
+
+  it('also passes native web search to OpenAI-compatible presets', () => {
+    const provider: Provider = {
+      id: 'openrouter',
+      name: 'OpenRouter',
+      baseUrl: 'https://openrouter.ai/api',
+      apiKey: 'key',
+      format: 'openai',
+      presetId: 'openrouter',
+      models: ['some-model'],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+
+    expect(toProviderConfig(provider, 'some-model')).toEqual({
+      type: 'openai',
+      apiKey: 'key',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      model: 'some-model',
+      webSearch: true,
     })
   })
 

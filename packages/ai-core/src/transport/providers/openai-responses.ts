@@ -112,14 +112,20 @@ function formatFileData(file: string, mimeType: string): string {
   return `data:${mimeType};base64,${file}`
 }
 
-function formatTools(tools: ToolDefinition[]): unknown[] {
-  return tools.map(tool => ({
+function formatWebSearchTool(): unknown {
+  return { type: 'web_search' }
+}
+
+function formatTools(tools: ToolDefinition[] = [], webSearch?: boolean): unknown[] {
+  const formatted: unknown[] = tools.map(tool => ({
     type: 'function',
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters,
     strict: false,
   }))
+  if (webSearch) formatted.push(formatWebSearchTool())
+  return formatted
 }
 
 function mapUsage(usage: Record<string, unknown> | undefined): Usage | undefined {
@@ -178,9 +184,8 @@ export function createOpenAIResponsesTransport(): Transport {
       }
       previousOutputItemsForNextRequest = []
 
-      if (tools && tools.length > 0) {
-        body.tools = formatTools(tools)
-      }
+      const formattedTools = formatTools(tools, provider.webSearch)
+      if (formattedTools.length > 0) body.tools = formattedTools
       if (options?.temperature !== undefined) body.temperature = options.temperature
       if (options?.maxTokens !== undefined) body.max_output_tokens = options.maxTokens
       if (options?.topP !== undefined) body.top_p = options.topP
