@@ -25,6 +25,7 @@ const FORMAT_TO_PROVIDER_TYPE = {
 // endpoint paths and expect the version prefix here.
 const VERSION_PREFIX: Record<ProviderConfig['type'], string> = {
   openai: '/v1',
+  'openai-responses': '/v1',
   anthropic: '/v1',
   gemini: '/v1beta',
 }
@@ -64,15 +65,23 @@ export function getBinaryAttachments(attachments?: MessageAttachment[]): Message
 }
 
 export function toProviderConfig(provider: Provider, model: string): ProviderConfig {
-  const type = FORMAT_TO_PROVIDER_TYPE[provider.format]
+  const type = toProviderType(provider)
   const base = provider.baseUrl.replace(/\/$/, '')
-  const prefix = VERSION_PREFIX[type] ?? ''
+  const prefix = VERSION_PREFIX[type]
   return {
     type,
     apiKey: provider.apiKey,
     baseUrl: `${base}${prefix}`,
     model,
   }
+}
+
+function toProviderType(provider: Provider): ProviderConfig['type'] {
+  if (provider.format === 'openai' && provider.useOpenAIResponsesApi) {
+    return 'openai-responses'
+  }
+
+  return FORMAT_TO_PROVIDER_TYPE[provider.format]
 }
 
 export function toMessages(messages: ChatRequestMessage[]): Message[] {

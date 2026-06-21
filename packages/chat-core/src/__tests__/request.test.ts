@@ -90,6 +90,27 @@ describe('request helpers', () => {
     })
   })
 
+  it('maps OpenAI Responses API usage to the responses provider', () => {
+    const provider: Provider = {
+      id: 'openai',
+      name: 'OpenAI',
+      baseUrl: 'https://api.openai.com',
+      apiKey: 'key',
+      format: 'openai',
+      useOpenAIResponsesApi: true,
+      models: ['gpt-5.4'],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+
+    expect(toProviderConfig(provider, 'gpt-5.4')).toEqual({
+      type: 'openai-responses',
+      apiKey: 'key',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-5.4',
+    })
+  })
+
   it('converts binary attachments into multimodal ai-core messages', () => {
     const result = toMessages([
       {

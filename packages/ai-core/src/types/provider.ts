@@ -1,5 +1,6 @@
 export const ProviderType = {
   OpenAI: 'openai',
+  OpenAIResponses: 'openai-responses',
   Anthropic: 'anthropic',
   Gemini: 'gemini',
 } as const
