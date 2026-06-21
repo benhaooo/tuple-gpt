@@ -11,6 +11,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./shadow-styles.json": "./shadow-styles.json",
     "./components/ui/alert-dialog": "./src/components/ui/alert-dialog/index.ts",
     "./components/ui/badge": "./src/components/ui/badge/index.ts",
     "./components/ui/button": "./src/components/ui/button/index.ts",

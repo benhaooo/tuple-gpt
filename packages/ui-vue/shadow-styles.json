@@ -1,0 +1,8 @@
+{
+  "sources": [
+    {
+      "dir": "src/components/ui",
+      "extensions": [".vue", ".ts"]
+    }
+  ]
+}

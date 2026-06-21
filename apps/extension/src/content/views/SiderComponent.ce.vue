@@ -107,7 +107,7 @@ defineExpose({
 
 <template>
   <div
-    class="w-full h-full bg-surface text-foreground rounded-lg shadow-lg font-sans text-sm overflow-hidden flex flex-col"
+    class="flex w-full flex-col overflow-hidden rounded-lg bg-surface font-sans text-sm text-foreground shadow-lg"
   >
     <!-- 头部ne -->
     <header class="flex justify-between items-center p-3 border-b border-border flex-shrink-0">
@@ -185,7 +185,7 @@ defineExpose({
     </header>
 
     <!-- 主体内容 -->
-    <main class="flex-grow overflow-y-auto min-h-0">
+    <main>
       <div v-show="activeTab === TabTypes.SUBTITLES" class="p-3">
         <SubtitleViewer
           :platform-type="props.platformType"
@@ -237,33 +237,4 @@ defineExpose({
 
 <style>
 /* @unocss-placeholder */
-</style>
-
-<style scoped>
-/* 美化滚动条 */
-:deep(main::-webkit-scrollbar),
-:deep(*::-webkit-scrollbar) {
-  width: 8px;
-  height: 8px;
-}
-
-:deep(main::-webkit-scrollbar-track),
-:deep(*::-webkit-scrollbar-track) {
-  background: oklch(from var(--muted) l c h / 50%);
-  border-radius: 4px;
-}
-
-:deep(main::-webkit-scrollbar-thumb),
-:deep(*::-webkit-scrollbar-thumb) {
-  background: oklch(from var(--primary) l c h / 50%);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-:deep(main::-webkit-scrollbar-thumb:hover),
-:deep(*::-webkit-scrollbar-thumb:hover) {
-  background: var(--primary);
-  background-clip: content-box;
-}
 </style>

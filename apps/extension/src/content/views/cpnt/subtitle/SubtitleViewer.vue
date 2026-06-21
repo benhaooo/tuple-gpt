@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, type ComponentPublicInstance } from 'vue'
 import { VideoType } from '@/utils/subtitlesApi'
 import { useSettingsStore } from '@tuple-gpt/chat-vue'
 import {
@@ -10,6 +10,7 @@ import {
   SpeakerWaveIcon,
 } from '@heroicons/vue/24/outline'
 import { backgroundClient, type BilibiliAudioTranscriptionPayload } from '@/utils/messages'
+import { ScrollArea } from '@tuple-gpt/ui-vue'
 
 const props = defineProps<{
   platformType: VideoType
@@ -48,6 +49,10 @@ const isTranscribing = ref(false)
 const transcriptionProgress = ref('')
 
 const settingsStore = useSettingsStore()
+
+const setSubtitlesViewport = (el: Element | ComponentPublicInstance | null) => {
+  subtitlesRef.value = el instanceof HTMLElement ? el : null
+}
 
 const toggleBilingual = () => {
   bilingualMode.value = !bilingualMode.value
@@ -266,40 +271,43 @@ watch(
     </div>
 
     <!-- 字幕列表 -->
-    <div
+    <ScrollArea
       v-else
-      class="space-y-1 max-h-96 overflow-y-auto"
-      style="scroll-behavior: smooth"
-      ref="subtitlesRef"
+      class="max-h-96"
+      viewport-class="max-h-96 scroll-smooth"
+      :viewport-ref="setSubtitlesViewport"
       @scroll="handleUserScroll"
     >
-      <div
-        v-for="(subtitle, index) in selectedSubtitle?.subtitles || []"
-        :key="`${subtitle.startTime}-${subtitle.endTime}`"
-        class="flex gap-3 leading-relaxed py-1.5 px-2 rounded-md transition-colors duration-200 subtitle-item cursor-pointer"
-        :class="[
-          props.activeSubtitleIndex === index
-            ? 'bg-accent'
-            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-        ]"
-        @click="jumpToTime(subtitle.startTime)"
-      >
-        <span
-          class="font-mono w-12 flex-shrink-0"
-          :class="[props.activeSubtitleIndex === index ? 'text-primary' : '']"
-          >{{ subtitle.time }}</span
+      <div class="space-y-1 pr-2">
+        <div
+          v-for="(subtitle, index) in selectedSubtitle?.subtitles || []"
+          :key="`${subtitle.startTime}-${subtitle.endTime}`"
+          class="flex gap-3 leading-relaxed py-1.5 px-2 rounded-md transition-colors duration-200 subtitle-item cursor-pointer"
+          :class="[
+            props.activeSubtitleIndex === index
+              ? 'bg-accent'
+              : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+          ]"
+          @click="jumpToTime(subtitle.startTime)"
         >
-        <div class="flex flex-col">
-          <span>{{ subtitle.text }}</span>
           <span
-            v-if="bilingualMode && subtitle.translatedText"
-            class="text-muted-foreground/80 text-xs mt-1"
+            class="font-mono w-12 flex-shrink-0"
+            :class="[props.activeSubtitleIndex === index ? 'text-primary' : '']"
           >
-            {{ subtitle.translatedText }}
+            {{ subtitle.time }}
           </span>
+          <div class="flex flex-col">
+            <span>{{ subtitle.text }}</span>
+            <span
+              v-if="bilingualMode && subtitle.translatedText"
+              class="text-muted-foreground/80 text-xs mt-1"
+            >
+              {{ subtitle.translatedText }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </ScrollArea>
 
     <!-- 操作按钮 -->
     <div class="mt-2 flex items-center gap-2">
