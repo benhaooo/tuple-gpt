@@ -1,5 +1,6 @@
 export const ProviderType = {
   OpenAI: 'openai',
+  OpenAIResponses: 'openai-responses',
   Anthropic: 'anthropic',
   Gemini: 'gemini',
 } as const
@@ -13,4 +14,6 @@ export interface ProviderConfig {
   model: string
   /** Extra headers to include in requests */
   headers?: Record<string, string>
+  /** Enable native web search when supported by the provider */
+  webSearch?: boolean
 }

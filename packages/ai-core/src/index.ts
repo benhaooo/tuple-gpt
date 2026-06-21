@@ -30,6 +30,7 @@ export { systemPrompt, contextWindow, injectTools, type ContextWindowOptions } f
 // Transport
 export { createTransport, type Transport } from './transport'
 export { createOpenAITransport } from './transport'
+export { createOpenAIResponsesTransport } from './transport'
 export { createAnthropicTransport } from './transport'
 export { createGeminiTransport } from './transport'
 export { parseSSE, type SSEEvent } from './transport'

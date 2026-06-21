@@ -61,6 +61,7 @@ export interface Provider {
   baseUrl: string
   apiKey: string
   format: ApiFormat
+  useOpenAIResponsesApi?: boolean
   /** Available model IDs for this provider */
   models: string[]
   /** Links to a preset provider (undefined for custom providers) */

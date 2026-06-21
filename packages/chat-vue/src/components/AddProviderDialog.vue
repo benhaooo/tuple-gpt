@@ -19,7 +19,7 @@
               <SelectValue placeholder="选择 API 格式" />
             </SelectTrigger>
             <SelectContent alignItemWithTrigger="{true}">
-              <SelectItem value="openai"> OpenAI 兼容 </SelectItem>
+              <SelectItem value="openai"> OpenAI </SelectItem>
               <SelectItem value="claude"> Claude </SelectItem>
               <SelectItem value="gemini"> Gemini </SelectItem>
             </SelectContent>

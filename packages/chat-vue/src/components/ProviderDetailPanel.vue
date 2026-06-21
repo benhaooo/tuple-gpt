@@ -56,6 +56,30 @@
         </p>
       </div>
 
+      <div
+        v-if="provider.format === 'openai'"
+        class="flex items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2"
+      >
+        <div class="min-w-0">
+          <Label class="text-sm">Responses API</Label>
+          <p class="mt-0.5 truncate text-xs text-muted-foreground">使用 /v1/responses</p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          :aria-checked="isOpenAIResponsesMode"
+          aria-label="启用 Responses API"
+          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          :class="isOpenAIResponsesMode ? 'bg-emerald-500' : 'bg-muted'"
+          @click="toggleOpenAIResponses(!isOpenAIResponsesMode)"
+        >
+          <span
+            class="pointer-events-none inline-block size-5 transform rounded-full bg-background shadow-sm ring-0 transition-transform duration-200"
+            :class="isOpenAIResponsesMode ? 'translate-x-[22px]' : 'translate-x-0.5'"
+          />
+        </button>
+      </div>
+
       <Separator />
 
       <div class="flex items-center justify-between gap-2">
@@ -151,6 +175,7 @@ const showFetchDialog = ref(false)
 const addingModel = ref(false)
 const newModelId = ref('')
 const addModelInput = ref<{ focus: () => void } | null>(null)
+const isOpenAIResponsesMode = computed(() => !!props.provider.useOpenAIResponsesApi)
 
 // Sync local state when provider changes
 watch(
@@ -170,7 +195,7 @@ const previewUrl = computed(() => {
   const base = localBaseUrl.value.replace(/\/+$/, '')
   switch (props.provider.format) {
     case 'openai':
-      return `${base}/v1/chat/completions`
+      return `${base}/v1/${isOpenAIResponsesMode.value ? 'responses' : 'chat/completions'}`
     case 'claude':
       return `${base}/v1/messages`
     case 'gemini':
@@ -187,6 +212,12 @@ function saveApiKey() {
 
 function saveBaseUrl() {
   providerStore.updateProvider(props.provider.id, { baseUrl: localBaseUrl.value })
+}
+
+function toggleOpenAIResponses(enabled: boolean) {
+  providerStore.updateProvider(props.provider.id, {
+    useOpenAIResponsesApi: enabled,
+  })
 }
 
 async function handleVerify() {
