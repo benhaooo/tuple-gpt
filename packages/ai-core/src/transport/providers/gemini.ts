@@ -73,16 +73,23 @@ function formatMessages(messages: Message[]): {
   return { systemInstruction, contents }
 }
 
-function formatTools(tools: ToolDefinition[]): unknown[] {
-  return [
-    {
+function formatWebSearchTool(): unknown {
+  return { google_search: {} }
+}
+
+function formatTools(tools: ToolDefinition[] = [], webSearch?: boolean): unknown[] {
+  const formatted: unknown[] = []
+  if (tools.length > 0) {
+    formatted.push({
       functionDeclarations: tools.map(tool => ({
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
       })),
-    },
-  ]
+    })
+  }
+  if (webSearch) formatted.push(formatWebSearchTool())
+  return formatted
 }
 
 export function createGeminiTransport(): Transport {
@@ -95,7 +102,8 @@ export function createGeminiTransport(): Transport {
 
       const body: Record<string, unknown> = { contents }
       if (systemInstruction) body.systemInstruction = systemInstruction
-      if (tools && tools.length > 0) body.tools = formatTools(tools)
+      const formattedTools = formatTools(tools, provider.webSearch)
+      if (formattedTools.length > 0) body.tools = formattedTools
 
       const generationConfig: Record<string, unknown> = {}
       if (options?.temperature !== undefined) generationConfig.temperature = options.temperature
