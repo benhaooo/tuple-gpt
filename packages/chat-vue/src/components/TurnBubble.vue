@@ -134,77 +134,32 @@
 
           <!-- Steps: each assistant message + its tool results -->
           <div class="space-y-3">
-            <div v-for="(step, idx) in assistantSteps" :key="idx">
-              <!-- Text content -->
-              <MarkdownRenderer v-if="step.text" :content="step.text" />
+            <div v-for="(step, idx) in assistantSteps" :key="idx" class="space-y-2">
+              <template
+                v-for="(item, itemIndex) in step.items"
+                :key="formatStepItemKey(item, itemIndex)"
+              >
+                <TextMessagePart
+                  v-if="item.type === 'text'"
+                  :text="item.text"
+                  :citations="item.citations"
+                />
+                <NativeToolMessagePart
+                  v-else-if="item.type === 'native_tool'"
+                  :native-tool="item.nativeTool"
+                />
+                <ReasoningMessagePart
+                  v-else-if="item.type === 'reasoning'"
+                  :summary="item.summary"
+                />
+                <ToolCallMessagePart
+                  v-else-if="item.type === 'tool_call'"
+                  :tool-call="item.toolCall"
+                />
+              </template>
 
-              <!-- Tool calls with inline results -->
-              <div v-if="step.toolCalls.length" class="mt-2 space-y-1.5">
-                <template v-for="tc in step.toolCalls" :key="tc.id">
-                  <!-- Awaiting tools are rendered in InterruptiveToolInteraction, not here -->
-                  <!-- Only show tool calls that are resolved or in other states -->
-                  <details
-                    v-if="tc.status !== 'awaiting'"
-                    :class="[
-                      'rounded-md border px-2 py-1.5',
-                      isToolCallError(tc)
-                        ? 'border-destructive/35 bg-destructive/5'
-                        : isToolCallRunning(tc)
-                          ? 'border-primary/40 bg-primary/5'
-                          : 'border-border/60 bg-muted/30',
-                    ]"
-                  >
-                    <summary
-                      class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground"
-                    >
-                      <WrenchScrewdriverIcon class="h-3.5 w-3.5 shrink-0" />
-                      <span class="truncate">{{ tc.name }}</span>
-                      <span
-                        v-if="isToolCallRunning(tc)"
-                        class="ml-auto inline-flex items-center gap-1 text-primary"
-                      >
-                        <ArrowPathIcon class="h-3 w-3 animate-spin" />
-                      </span>
-                      <span
-                        v-else-if="isToolCallError(tc)"
-                        class="ml-auto inline-flex items-center gap-1 text-destructive"
-                      >
-                        <XCircleIcon class="h-3 w-3" />
-                      </span>
-                      <span
-                        v-else-if="tc.status === 'resolved' && tc.result !== undefined"
-                        class="ml-auto inline-flex items-center gap-1 text-emerald-600"
-                      >
-                        <CheckCircleIcon class="h-3 w-3" />
-                      </span>
-                    </summary>
-                    <div class="mt-1.5 space-y-1.5">
-                      <pre
-                        class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-background/70 p-2 text-[11px] leading-5 text-muted-foreground"
-                        >{{ formatToolArguments(tc.arguments) }}</pre
-                      >
-                      <div
-                        v-if="tc.result !== undefined"
-                        :class="[
-                          'rounded border px-2 py-1.5',
-                          isToolCallError(tc)
-                            ? 'border-destructive/35 bg-destructive/5'
-                            : 'border-border/40 bg-background/50',
-                        ]"
-                      >
-                        <pre
-                          class="max-h-56 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-5 text-muted-foreground"
-                          >{{ tc.result }}</pre
-                        >
-                      </div>
-                    </div>
-                  </details>
-                </template>
-              </div>
-
-              <!-- Streaming placeholder -->
               <div
-                v-if="step.isStreaming && !step.text && !step.toolCalls.length"
+                v-if="step.isStreaming && !step.items.length"
                 class="flex gap-1 items-center py-1"
               >
                 <span
@@ -290,7 +245,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import {
-  LinkIcon,
   DocumentIcon,
   DocumentTextIcon,
   TrashIcon,
@@ -298,34 +252,29 @@ import {
   CheckIcon,
   ArrowPathIcon,
   PencilSquareIcon,
-  WrenchScrewdriverIcon,
-  XCircleIcon,
-  CheckCircleIcon,
 } from '@heroicons/vue/24/outline'
-import { MarkdownRenderer } from '@tuple-gpt/ai-ui'
 import { getContentText } from '@tuple-gpt/chat-core'
 import type { ChatTurn } from '@tuple-gpt/chat-core'
-import type { ToolCallStatus } from '@tuple-gpt/ai-core'
 import { Button, Textarea } from '@tuple-gpt/ui-vue'
 import ModelAvatar from './ModelAvatar.vue'
+import NativeToolMessagePart from './message-parts/NativeToolMessagePart.vue'
+import ReasoningMessagePart from './message-parts/ReasoningMessagePart.vue'
+import TextMessagePart from './message-parts/TextMessagePart.vue'
+import ToolCallMessagePart from './message-parts/ToolCallMessagePart.vue'
+import { uniqueCitations } from './message-parts/citation'
+import type {
+  AssistantStepItem,
+  NativeToolMessagePartModel,
+  ToolCallMessagePartModel,
+} from './message-parts/types'
 
 interface AssistantMeta {
   model: string
   providerName: string
 }
 
-interface ToolCallWithResult {
-  id: string
-  name: string
-  arguments: string
-  status: ToolCallStatus
-  result?: string
-  isError?: boolean
-}
-
 interface AssistantStep {
-  text: string
-  toolCalls: ToolCallWithResult[]
+  items: AssistantStepItem[]
   isStreaming: boolean
 }
 
@@ -351,14 +300,6 @@ const userCopied = ref(false)
 const assistantCopied = ref(false)
 const isEditing = ref(false)
 const draftContent = ref('')
-
-function isToolCallRunning(tc: ToolCallWithResult): boolean {
-  return tc.status === 'pending' || tc.status === 'awaiting'
-}
-
-function isToolCallError(tc: ToolCallWithResult): boolean {
-  return tc.status === 'cancelled' || tc.isError === true
-}
 
 const userMessage = computed(() => props.turn.messages.find(m => m.role === 'user'))
 const hasUserMessage = computed(() => !!userMessage.value)
@@ -388,33 +329,58 @@ const turnError = computed(() => {
   return ''
 })
 
-// Build assistant steps: each assistant message is one step. tool_call parts
-// already carry their own result/isError, so no cross-message join is needed.
+// Build assistant steps in the original content order. tool_call parts already
+// carry their own result/isError, so no cross-message join is needed.
 const assistantSteps = computed<AssistantStep[]>(() => {
   const steps: AssistantStep[] = []
 
   for (const msg of props.turn.messages) {
     if (msg.role !== 'assistant') continue
 
-    const text = getContentText(msg.content)
-    const toolCalls: ToolCallWithResult[] = []
+    const items: AssistantStepItem[] = []
 
     for (const part of msg.content) {
+      if (part.type === 'text' && part.text) {
+        items.push({
+          type: 'text',
+          text: part.text,
+          citations: uniqueCitations(part.citations ?? []),
+        })
+      }
+      if (part.type === 'native_tool') {
+        const nativeTool: NativeToolMessagePartModel = {
+          id: part.nativeTool.id,
+          kind: part.nativeTool.kind,
+          status: part.nativeTool.status,
+          action: part.nativeTool.action,
+          sources: part.nativeTool.sources ?? [],
+        }
+        items.push({
+          type: 'native_tool',
+          nativeTool,
+        })
+      }
       if (part.type === 'tool_call') {
-        toolCalls.push({
+        const toolCall: ToolCallMessagePartModel = {
           id: part.toolCall.id,
           name: part.toolCall.name,
           arguments: part.toolCall.arguments,
           status: part.status ?? 'pending',
           result: part.result,
           isError: part.isError,
+        }
+        items.push({
+          type: 'tool_call',
+          toolCall,
         })
+      }
+      if (part.type === 'reasoning' && part.reasoning.summary) {
+        items.push({ type: 'reasoning', summary: part.reasoning.summary })
       }
     }
 
     steps.push({
-      text,
-      toolCalls,
+      items,
       isStreaming: msg.status === 'streaming',
     })
   }
@@ -466,7 +432,9 @@ function copyUserContent() {
 
 function copyAssistantContent() {
   const text = assistantSteps.value
-    .map(s => s.text)
+    .flatMap(s => s.items)
+    .filter(item => item.type === 'text')
+    .map(item => item.text)
     .filter(Boolean)
     .join('\n\n')
   navigator.clipboard.writeText(text)
@@ -476,13 +444,11 @@ function copyAssistantContent() {
   }, 2000)
 }
 
-function formatToolArguments(value: string) {
-  if (!value) return '{}'
-  try {
-    return JSON.stringify(JSON.parse(value), null, 2)
-  } catch {
-    return value
-  }
+function formatStepItemKey(item: AssistantStepItem, index: number) {
+  if (item.type === 'native_tool') return `native_tool:${item.nativeTool.id}`
+  if (item.type === 'tool_call') return `tool_call:${item.toolCall.id}`
+  if (item.type === 'reasoning') return `reasoning:${index}:${item.summary}`
+  return `text:${index}:${item.text.length}`
 }
 
 function formatMessageTimestamp(timestamp: string) {

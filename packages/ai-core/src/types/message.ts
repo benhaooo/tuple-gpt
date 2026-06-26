@@ -9,6 +9,7 @@ export type Role = (typeof Role)[keyof typeof Role]
 export interface TextContentPart {
   type: 'text'
   text: string
+  citations?: Citation[]
 }
 
 export interface ImageContentPart {
@@ -43,7 +44,66 @@ export interface ToolCallContentPart {
   isError?: boolean
 }
 
-export type ContentPart = TextContentPart | ImageContentPart | ToolCallContentPart
+export type NativeToolKind =
+  | 'web_search'
+  | 'file_search'
+  | 'code_interpreter'
+  | 'computer_use'
+  | 'mcp'
+  | 'image_generation'
+  | 'unknown'
+
+export type NativeToolStatus = 'pending' | 'in_progress' | 'searching' | 'completed' | 'failed'
+
+export interface NativeToolAction {
+  type: string
+  query?: string
+  queries?: string[]
+  url?: string
+  pattern?: string
+}
+
+export interface Citation {
+  type: 'url'
+  url: string
+  title?: string
+  startIndex?: number
+  endIndex?: number
+  text?: string
+  raw?: unknown
+}
+
+export interface NativeToolContentPart {
+  type: 'native_tool'
+  nativeTool: {
+    id: string
+    provider: string
+    kind: NativeToolKind
+    status: NativeToolStatus
+    name?: string
+    action?: NativeToolAction
+    sources?: Citation[]
+    raw?: unknown
+  }
+}
+
+export interface ReasoningContentPart {
+  type: 'reasoning'
+  reasoning: {
+    id?: string
+    provider: string
+    summary?: string
+    encryptedContent?: string
+    raw?: unknown
+  }
+}
+
+export type ContentPart =
+  | TextContentPart
+  | ImageContentPart
+  | ToolCallContentPart
+  | NativeToolContentPart
+  | ReasoningContentPart
 
 export interface Message {
   role: Role

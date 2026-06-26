@@ -5,6 +5,12 @@ export type {
   ImageContentPart,
   ToolCallContentPart,
   ToolCallStatus,
+  NativeToolAction,
+  NativeToolContentPart,
+  NativeToolKind,
+  NativeToolStatus,
+  ReasoningContentPart,
+  Citation,
   Message,
 } from './message'
 

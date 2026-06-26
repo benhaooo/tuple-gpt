@@ -128,6 +128,99 @@ describe('streamAssistantReply', () => {
     })
   })
 
+  it('streams native tool state, citations, and reasoning into assistant content', async () => {
+    chatMock.mockImplementation(async function* () {
+      yield {
+        type: StreamEventType.NativeToolStart,
+        nativeTool: {
+          id: 'ws1',
+          provider: 'openai-responses',
+          kind: 'web_search',
+          name: 'web_search',
+          status: 'in_progress',
+        },
+      }
+      yield {
+        type: StreamEventType.NativeToolDelta,
+        nativeToolId: 'ws1',
+        status: 'searching',
+      }
+      yield {
+        type: StreamEventType.NativeToolEnd,
+        nativeToolId: 'ws1',
+        status: 'completed',
+        action: { type: 'search', query: 'tuple gpt' },
+      }
+      yield { type: StreamEventType.TextDelta, text: 'found' }
+      yield {
+        type: StreamEventType.TextAnnotations,
+        citations: [{ type: 'url', url: 'https://example.com', title: 'Example' }],
+      }
+      yield {
+        type: StreamEventType.ReasoningState,
+        reasoning: {
+          id: 'rs1',
+          provider: 'openai-responses',
+          summary: 'Checked one source.',
+          encryptedContent: 'encrypted',
+        },
+      }
+      yield { type: StreamEventType.Finish, finishReason: FinishReason.Stop }
+    })
+
+    const events = await collect(
+      streamAssistantReply({
+        conversationId: 'conv-1',
+        turnId: 'turn-1',
+
+        history,
+        provider,
+        model: 'gpt-4o',
+        now: () => timestamp,
+      }),
+    )
+
+    expect(events.map(event => event.type)).toEqual([
+      'assistant_started',
+      'assistant_delta',
+      'assistant_delta',
+      'assistant_delta',
+      'assistant_delta',
+      'assistant_delta',
+      'assistant_delta',
+      'assistant_done',
+      'turn_done',
+    ])
+    expect(events[6]).toMatchObject({
+      type: 'assistant_delta',
+      content: [
+        {
+          type: 'native_tool',
+          nativeTool: {
+            id: 'ws1',
+            kind: 'web_search',
+            status: 'completed',
+            action: { type: 'search', query: 'tuple gpt' },
+          },
+        },
+        {
+          type: 'text',
+          text: 'found',
+          citations: [{ type: 'url', url: 'https://example.com', title: 'Example' }],
+        },
+        {
+          type: 'reasoning',
+          reasoning: {
+            id: 'rs1',
+            provider: 'openai-responses',
+            summary: 'Checked one source.',
+            encryptedContent: 'encrypted',
+          },
+        },
+      ],
+    })
+  })
+
   it('emits assistant_error and turn_error when the stream yields an error event', async () => {
     chatMock.mockImplementation(async function* () {
       yield { type: StreamEventType.Error, error: new Error('boom') }
