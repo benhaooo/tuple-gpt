@@ -78,4 +78,127 @@ describe('createAnthropicTransport web search', () => {
     )
     expect(body.tools).toHaveLength(2)
   })
+
+  it('maps server web search, citations, and thinking blocks to native events', async () => {
+    mockFetch([
+      {
+        type: 'content_block_start',
+        index: 0,
+        content_block: {
+          type: 'server_tool_use',
+          id: 'srv_1',
+          name: 'web_search',
+        },
+      },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'input_json_delta', partial_json: '{"query":"OpenAI news"}' },
+      },
+      {
+        type: 'content_block_stop',
+        index: 0,
+      },
+      {
+        type: 'content_block_start',
+        index: 1,
+        content_block: {
+          type: 'web_search_tool_result',
+          tool_use_id: 'srv_1',
+          content: [{ title: 'OpenAI', url: 'https://openai.com/news/' }],
+        },
+      },
+      {
+        type: 'content_block_start',
+        index: 2,
+        content_block: { type: 'thinking' },
+      },
+      {
+        type: 'content_block_delta',
+        index: 2,
+        delta: { type: 'thinking_delta', thinking: 'I should verify this.' },
+      },
+      {
+        type: 'content_block_delta',
+        index: 2,
+        delta: { type: 'signature_delta', signature: 'sig_123' },
+      },
+      {
+        type: 'content_block_delta',
+        index: 3,
+        delta: {
+          type: 'text_delta',
+          text: 'Found it.',
+          citations: [
+            {
+              type: 'web_search_result_location',
+              url: 'https://openai.com/news/',
+              title: 'OpenAI',
+              cited_text: 'Found it',
+              start_char_index: 0,
+              end_char_index: 8,
+            },
+          ],
+        },
+      },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn' },
+        usage: { input_tokens: 2, output_tokens: 1 },
+      },
+    ])
+
+    const transport = createAnthropicTransport()
+    const events = await collect(
+      transport.stream({
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Search for this' }] }],
+        provider,
+      }),
+    )
+
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'native_tool_start',
+          nativeTool: expect.objectContaining({
+            id: 'srv_1',
+            provider: 'anthropic',
+            kind: 'web_search',
+            status: 'in_progress',
+          }),
+        }),
+        expect.objectContaining({
+          type: 'native_tool_end',
+          nativeToolId: 'srv_1',
+          status: 'completed',
+          sources: expect.arrayContaining([
+            expect.objectContaining({
+              url: 'https://openai.com/news/',
+              title: 'OpenAI',
+            }),
+          ]),
+          raw: expect.objectContaining({ type: 'web_search_tool_result' }),
+        }),
+        expect.objectContaining({
+          type: 'reasoning_state',
+          reasoning: expect.objectContaining({
+            provider: 'anthropic',
+            summary: 'I should verify this.',
+            encryptedContent: 'sig_123',
+          }),
+        }),
+        expect.objectContaining({
+          type: 'text_annotations',
+          citations: expect.arrayContaining([
+            expect.objectContaining({
+              url: 'https://openai.com/news/',
+              title: 'OpenAI',
+              startIndex: 0,
+              endIndex: 8,
+            }),
+          ]),
+        }),
+      ]),
+    )
+  })
 })

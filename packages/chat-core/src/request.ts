@@ -1,13 +1,6 @@
-import type { Message, ProviderConfig } from '@tuple-gpt/ai-core'
+import { ProviderType, type Message, type ProviderConfig } from '@tuple-gpt/ai-core'
 import { cloneContent } from './content'
-import type {
-  ApiFormat,
-  ChatMessage,
-  MessageAttachment,
-  MessageContent,
-  MessageRole,
-  Provider,
-} from './types'
+import type { ChatMessage, MessageAttachment, MessageContent, MessageRole, Provider } from './types'
 
 export interface ChatRequestMessage {
   role: MessageRole
@@ -15,19 +8,14 @@ export interface ChatRequestMessage {
   attachments?: MessageAttachment[]
 }
 
-const FORMAT_TO_PROVIDER_TYPE = {
-  openai: 'openai',
-  claude: 'anthropic',
-  gemini: 'gemini',
-} as const satisfies Record<ApiFormat, ProviderConfig['type']>
-
 // Stored baseUrl values omit the version prefix; ai-core transports append only
 // endpoint paths and expect the version prefix here.
 const VERSION_PREFIX: Record<ProviderConfig['type'], string> = {
-  openai: '/v1',
-  'openai-responses': '/v1',
-  anthropic: '/v1',
-  gemini: '/v1beta',
+  [ProviderType.OpenAI]: '/v1',
+  [ProviderType.OpenAIResponses]: '/v1',
+  [ProviderType.Anthropic]: '/v1',
+  [ProviderType.Gemini]: '/v1beta',
+  [ProviderType.GeminiInteractions]: '/v1beta',
 }
 
 export function formatAttachmentsAsContext(attachments: MessageAttachment[]): string {
@@ -78,11 +66,14 @@ export function toProviderConfig(provider: Provider, model: string): ProviderCon
 }
 
 function toProviderType(provider: Provider): ProviderConfig['type'] {
-  if (provider.format === 'openai' && provider.useOpenAIResponsesApi) {
-    return 'openai-responses'
+  if (provider.format === ProviderType.OpenAI && provider.useAgentApi) {
+    return ProviderType.OpenAIResponses
+  }
+  if (provider.format === ProviderType.Gemini && provider.useAgentApi) {
+    return ProviderType.GeminiInteractions
   }
 
-  return FORMAT_TO_PROVIDER_TYPE[provider.format]
+  return provider.format
 }
 
 export function toMessages(messages: ChatRequestMessage[]): Message[] {

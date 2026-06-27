@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { FinishReason, StreamEventType } from '@tuple-gpt/ai-core'
+import { FinishReason, ProviderType, StreamEventType } from '@tuple-gpt/ai-core'
 import { createChatRuntime, type ChatRuntime } from '../chat-runtime'
 import { cloneStorageSnapshot, normalizeStorageSnapshot } from '../ports'
 import type {
@@ -24,7 +24,7 @@ const provider: Provider = {
   name: 'OpenAI',
   baseUrl: 'https://api.openai.com',
   apiKey: 'key',
-  format: 'openai',
+  format: ProviderType.OpenAI,
   models: ['gpt-4o'],
   createdAt: timestamp,
   updatedAt: timestamp,

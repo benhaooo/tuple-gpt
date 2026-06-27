@@ -1,5 +1,4 @@
 export type {
-  ApiFormat,
   Assistant,
   AttachmentCategory,
   ChatMessage,

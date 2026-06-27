@@ -1,4 +1,4 @@
-import type { ContentPart } from '@tuple-gpt/ai-core'
+import { ProviderType, type ContentPart } from '@tuple-gpt/ai-core'
 
 export type TurnStatus = 'running' | 'done' | 'error' | 'aborted'
 
@@ -53,15 +53,13 @@ export interface Conversation {
   updatedAt: string
 }
 
-export type ApiFormat = 'openai' | 'claude' | 'gemini'
-
 export interface Provider {
   id: string
   name: string
   baseUrl: string
   apiKey: string
-  format: ApiFormat
-  useOpenAIResponsesApi?: boolean
+  format: ProviderType
+  useAgentApi?: boolean
   /** Available model IDs for this provider */
   models: string[]
   /** Links to a preset provider (undefined for custom providers) */
@@ -73,7 +71,7 @@ export interface Provider {
 export interface ProviderPreset {
   id: string
   name: string
-  format: ApiFormat
+  format: ProviderType
   defaultBaseUrl: string
   defaultModels: string[]
 }

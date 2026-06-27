@@ -3,6 +3,7 @@ export const ProviderType = {
   OpenAIResponses: 'openai-responses',
   Anthropic: 'anthropic',
   Gemini: 'gemini',
+  GeminiInteractions: 'gemini-interactions',
 } as const
 
 export type ProviderType = (typeof ProviderType)[keyof typeof ProviderType]

@@ -57,25 +57,27 @@
       </div>
 
       <div
-        v-if="provider.format === 'openai'"
+        v-if="agentApiToggle"
         class="flex items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2"
       >
         <div class="min-w-0">
-          <Label class="text-sm">Responses API</Label>
-          <p class="mt-0.5 truncate text-xs text-muted-foreground">使用 /v1/responses</p>
+          <Label class="text-sm">{{ agentApiToggle.label }}</Label>
+          <p class="mt-0.5 truncate text-xs text-muted-foreground">
+            {{ agentApiToggle.description }}
+          </p>
         </div>
         <button
           type="button"
           role="switch"
-          :aria-checked="isOpenAIResponsesMode"
-          aria-label="启用 Responses API"
+          :aria-checked="isAgentApiMode"
+          :aria-label="`启用 ${agentApiToggle.label}`"
           class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          :class="isOpenAIResponsesMode ? 'bg-emerald-500' : 'bg-muted'"
-          @click="toggleOpenAIResponses(!isOpenAIResponsesMode)"
+          :class="isAgentApiMode ? 'bg-emerald-500' : 'bg-muted'"
+          @click="toggleAgentApi(!isAgentApiMode)"
         >
           <span
             class="pointer-events-none inline-block size-5 transform rounded-full bg-background shadow-sm ring-0 transition-transform duration-200"
-            :class="isOpenAIResponsesMode ? 'translate-x-[22px]' : 'translate-x-0.5'"
+            :class="isAgentApiMode ? 'translate-x-[22px]' : 'translate-x-0.5'"
           />
         </button>
       </div>
@@ -150,7 +152,8 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { EyeIcon, EyeSlashIcon, XMarkIcon, PlusIcon as PlusIcon2 } from '@heroicons/vue/24/outline'
 import { useProviderStore } from '#stores/provider'
-import type { ApiFormat, Provider } from '@tuple-gpt/chat-core'
+import { ProviderType } from '@tuple-gpt/ai-core'
+import type { Provider } from '@tuple-gpt/chat-core'
 import ProviderAvatar from './ProviderAvatar.vue'
 import ModelAvatar from './ModelAvatar.vue'
 import { Badge, Button, Input, Label, ScrollArea, Separator } from '@tuple-gpt/ui-vue'
@@ -159,10 +162,10 @@ import FetchModelsDialog from './FetchModelsDialog.vue'
 const props = defineProps<{ provider: Provider }>()
 const providerStore = useProviderStore()
 
-const formatLabels: Record<ApiFormat, string> = {
-  openai: 'OpenAI',
-  claude: 'Claude',
-  gemini: 'Gemini',
+const formatLabels: Partial<Record<ProviderType, string>> = {
+  [ProviderType.OpenAI]: 'OpenAI',
+  [ProviderType.Anthropic]: 'Claude',
+  [ProviderType.Gemini]: 'Gemini',
 }
 
 // Local editable state
@@ -175,7 +178,16 @@ const showFetchDialog = ref(false)
 const addingModel = ref(false)
 const newModelId = ref('')
 const addModelInput = ref<{ focus: () => void } | null>(null)
-const isOpenAIResponsesMode = computed(() => !!props.provider.useOpenAIResponsesApi)
+const isAgentApiMode = computed(() => !!props.provider.useAgentApi)
+const agentApiToggle = computed(() => {
+  if (props.provider.format === ProviderType.OpenAI) {
+    return { label: 'Responses API', description: '使用 /v1/responses' }
+  }
+  if (props.provider.format === ProviderType.Gemini) {
+    return { label: 'Interactions API', description: '使用 /v1beta/interactions' }
+  }
+  return null
+})
 
 // Sync local state when provider changes
 watch(
@@ -194,12 +206,14 @@ watch(
 const previewUrl = computed(() => {
   const base = localBaseUrl.value.replace(/\/+$/, '')
   switch (props.provider.format) {
-    case 'openai':
-      return `${base}/v1/${isOpenAIResponsesMode.value ? 'responses' : 'chat/completions'}`
-    case 'claude':
+    case ProviderType.OpenAI:
+      return `${base}/v1/${isAgentApiMode.value ? 'responses' : 'chat/completions'}`
+    case ProviderType.Anthropic:
       return `${base}/v1/messages`
-    case 'gemini':
-      return `${base}/v1beta/models/{model}:generateContent`
+    case ProviderType.Gemini:
+      return isAgentApiMode.value
+        ? `${base}/v1beta/interactions`
+        : `${base}/v1beta/models/{model}:generateContent`
     default:
       return base
   }
@@ -214,9 +228,9 @@ function saveBaseUrl() {
   providerStore.updateProvider(props.provider.id, { baseUrl: localBaseUrl.value })
 }
 
-function toggleOpenAIResponses(enabled: boolean) {
+function toggleAgentApi(enabled: boolean) {
   providerStore.updateProvider(props.provider.id, {
-    useOpenAIResponsesApi: enabled,
+    useAgentApi: enabled,
   })
 }
 
