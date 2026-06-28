@@ -132,6 +132,11 @@ const copyAll = () => {
   closeDropdownMenu()
 }
 
+const regenerateAll = () => {
+  void generateAllSelected()
+  closeDropdownMenu()
+}
+
 // 关闭下拉菜单
 const closeDropdownMenu = () => {
   showDropdownMenu.value = false
@@ -285,10 +290,7 @@ const contentIcons = {
                 <span>复制全部</span>
               </button>
               <button
-                @click="
-                  generateAllSelected()
-                  closeDropdownMenu()
-                "
+                @click="regenerateAll"
                 class="w-full px-4 py-2 text-left text-sm text-popover-foreground hover:bg-accent flex items-center gap-2"
               >
                 <ArrowPathRoundedSquareIcon class="h-4 w-4" />
