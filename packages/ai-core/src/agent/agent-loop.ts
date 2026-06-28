@@ -11,7 +11,10 @@ import type {
   RequestOptions,
   PipelineOutput,
   ContentPart,
+  Citation,
+  NativeToolContentPart,
   ToolCallContentPart,
+  ReasoningContentPart,
 } from '../types'
 import { Role, FinishReason, StreamEventType, toToolDefinition } from '../types'
 import type { Transport } from '../transport/transport'
@@ -142,9 +145,11 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
     })
 
     // 2. Transport — stream response
+    const assistantContent: ContentPart[] = []
     const pendingToolCalls: ToolCall[] = []
     const toolCallArgs: Map<string, string> = new Map()
-    let textContent = ''
+    const toolCallParts: Map<string, ToolCallContentPart> = new Map()
+    const nativeToolParts: Map<string, NativeToolContentPart> = new Map()
     let finishReason: string | undefined
 
     for await (const event of transport.stream(prepared)) {
@@ -152,7 +157,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
 
       switch (event.type) {
         case StreamEventType.TextDelta:
-          textContent += event.text
+          appendTextPart(assistantContent, event.text)
           break
         case StreamEventType.ToolCallStart:
           pendingToolCalls.push({
@@ -161,10 +166,21 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
             arguments: '',
           })
           toolCallArgs.set(event.toolCall.id, '')
+          {
+            const part: ToolCallContentPart = {
+              type: 'tool_call',
+              toolCall: { id: event.toolCall.id, name: event.toolCall.name, arguments: '' },
+            }
+            toolCallParts.set(event.toolCall.id, part)
+            assistantContent.push(part)
+          }
           break
         case StreamEventType.ToolCallDelta: {
           const existing = toolCallArgs.get(event.toolCallId) ?? ''
-          toolCallArgs.set(event.toolCallId, existing + event.arguments)
+          const nextArguments = existing + event.arguments
+          toolCallArgs.set(event.toolCallId, nextArguments)
+          const part = toolCallParts.get(event.toolCallId)
+          if (part) part.toolCall.arguments = nextArguments
           break
         }
         case StreamEventType.ToolCallEnd:
@@ -173,6 +189,51 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
               tc.arguments = toolCallArgs.get(event.toolCallId) ?? ''
             }
           }
+          {
+            const part = toolCallParts.get(event.toolCallId)
+            if (part) part.toolCall.arguments = toolCallArgs.get(event.toolCallId) ?? ''
+          }
+          break
+        case StreamEventType.NativeToolStart: {
+          const part: NativeToolContentPart = {
+            type: 'native_tool',
+            nativeTool: { ...event.nativeTool },
+          }
+          nativeToolParts.set(event.nativeTool.id, part)
+          assistantContent.push(part)
+          break
+        }
+        case StreamEventType.NativeToolDelta: {
+          const part = nativeToolParts.get(event.nativeToolId)
+          if (part) {
+            part.nativeTool = {
+              ...part.nativeTool,
+              ...(event.status ? { status: event.status } : {}),
+              ...(event.action ? { action: event.action } : {}),
+              ...(event.sources ? { sources: event.sources } : {}),
+              ...(event.raw ? { raw: event.raw } : {}),
+            }
+          }
+          break
+        }
+        case StreamEventType.NativeToolEnd: {
+          const part = nativeToolParts.get(event.nativeToolId)
+          if (part) {
+            part.nativeTool = {
+              ...part.nativeTool,
+              status: event.status,
+              ...(event.action ? { action: event.action } : {}),
+              ...(event.sources ? { sources: event.sources } : {}),
+              ...(event.raw ? { raw: event.raw } : {}),
+            }
+          }
+          break
+        }
+        case StreamEventType.TextAnnotations:
+          applyCitationsToLastText(assistantContent, event.citations)
+          break
+        case StreamEventType.ReasoningState:
+          upsertReasoningPart(assistantContent, event.reasoning)
           break
         case StreamEventType.Finish:
           finishReason = event.finishReason
@@ -184,19 +245,9 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
 
     // 3. Append assistant message to history. tool_call parts start with
     //    no result; the dispatch step below fills them in.
-    const assistantContent: ContentPart[] = []
-    if (textContent) {
-      assistantContent.push({ type: 'text', text: textContent })
-    }
-    const newToolCallParts: ToolCallContentPart[] = []
-    for (const tc of pendingToolCalls) {
-      const part: ToolCallContentPart = {
-        type: 'tool_call',
-        toolCall: { id: tc.id, name: tc.name, arguments: tc.arguments },
-      }
-      newToolCallParts.push(part)
-      assistantContent.push(part)
-    }
+    const newToolCallParts = pendingToolCalls
+      .map(tc => toolCallParts.get(tc.id))
+      .filter((part): part is ToolCallContentPart => !!part)
     if (assistantContent.length > 0) {
       messages.push({ role: Role.Assistant, content: assistantContent })
     }
@@ -242,6 +293,58 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
         ...(execution.isError ? { isError: true } : {}),
       }
     }
+  }
+}
+
+function appendTextPart(content: ContentPart[], text: string): void {
+  if (!text) return
+
+  const last = content[content.length - 1]
+  if (last?.type === 'text') {
+    last.text += text
+    return
+  }
+
+  content.push({ type: 'text', text })
+}
+
+function applyCitationsToLastText(content: ContentPart[], citations: Citation[]): void {
+  if (citations.length === 0) return
+
+  const lastText = [...content].reverse().find(part => part.type === 'text')
+  if (lastText?.type !== 'text') return
+
+  lastText.citations = [...(lastText.citations ?? []), ...citations]
+}
+
+function upsertReasoningPart(
+  content: ContentPart[],
+  reasoning: ReasoningContentPart['reasoning'],
+): void {
+  const index = content.findIndex(
+    part => part.type === 'reasoning' && part.reasoning.id === reasoning.id,
+  )
+  const existing = index === -1 ? undefined : content[index]
+  const part: ReasoningContentPart = {
+    type: 'reasoning',
+    reasoning:
+      existing?.type === 'reasoning'
+        ? {
+            ...existing.reasoning,
+            ...reasoning,
+            ...(reasoning.summary !== undefined ? { summary: reasoning.summary } : {}),
+            ...(reasoning.encryptedContent !== undefined
+              ? { encryptedContent: reasoning.encryptedContent }
+              : {}),
+            ...(reasoning.raw !== undefined ? { raw: reasoning.raw } : {}),
+          }
+        : { ...reasoning },
+  }
+
+  if (index === -1) {
+    content.push(part)
+  } else {
+    content[index] = part
   }
 }
 

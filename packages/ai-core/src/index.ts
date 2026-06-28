@@ -7,6 +7,13 @@ export type {
   ImageContentPart,
   ToolCallContentPart,
   ToolCallStatus,
+  Citation,
+  NativeToolAction,
+  NativeToolContentPart,
+  NativeToolKind,
+  NativeToolStatus,
+  ReasoningContentPart,
+  ReasoningStatus,
   Message,
   ToolDefinition,
   ToolCall,
@@ -33,6 +40,7 @@ export { createOpenAITransport } from './transport'
 export { createOpenAIResponsesTransport } from './transport'
 export { createAnthropicTransport } from './transport'
 export { createGeminiTransport } from './transport'
+export { createGeminiInteractionsTransport } from './transport'
 export { parseSSE, type SSEEvent } from './transport'
 
 // Agent

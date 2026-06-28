@@ -1,3 +1,11 @@
+import type {
+  Citation,
+  NativeToolAction,
+  NativeToolContentPart,
+  NativeToolStatus,
+  ReasoningContentPart,
+} from './message'
+
 export const FinishReason = {
   Stop: 'stop',
   ToolCalls: 'tool_calls',
@@ -19,6 +27,11 @@ export const StreamEventType = {
   ToolCallStart: 'tool_call_start',
   ToolCallDelta: 'tool_call_delta',
   ToolCallEnd: 'tool_call_end',
+  NativeToolStart: 'native_tool_start',
+  NativeToolDelta: 'native_tool_delta',
+  NativeToolEnd: 'native_tool_end',
+  TextAnnotations: 'text_annotations',
+  ReasoningState: 'reasoning_state',
   ToolResult: 'tool_result',
   ToolInteractionRequired: 'tool_interaction_required',
   Finish: 'finish',
@@ -32,6 +45,31 @@ export type StreamEvent =
   | { type: typeof StreamEventType.ToolCallStart; toolCall: { id: string; name: string } }
   | { type: typeof StreamEventType.ToolCallDelta; toolCallId: string; arguments: string }
   | { type: typeof StreamEventType.ToolCallEnd; toolCallId: string }
+  | {
+      type: typeof StreamEventType.NativeToolStart
+      nativeTool: NativeToolContentPart['nativeTool']
+    }
+  | {
+      type: typeof StreamEventType.NativeToolDelta
+      nativeToolId: string
+      status?: NativeToolStatus
+      action?: NativeToolAction
+      sources?: Citation[]
+      raw?: unknown
+    }
+  | {
+      type: typeof StreamEventType.NativeToolEnd
+      nativeToolId: string
+      status: NativeToolStatus
+      action?: NativeToolAction
+      sources?: Citation[]
+      raw?: unknown
+    }
+  | { type: typeof StreamEventType.TextAnnotations; citations: Citation[] }
+  | {
+      type: typeof StreamEventType.ReasoningState
+      reasoning: ReasoningContentPart['reasoning']
+    }
   | {
       type: typeof StreamEventType.ToolResult
       toolCallId: string

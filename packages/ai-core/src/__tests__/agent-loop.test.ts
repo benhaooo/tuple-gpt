@@ -54,6 +54,51 @@ describe('runAgentLoop', () => {
     expect(messages[1]).toEqual({ role: 'assistant', content: [{ type: 'text', text: 'abc' }] })
   })
 
+  it('merges reasoning updates with the same id', async () => {
+    const events: StreamEvent[] = [
+      {
+        type: 'reasoning_state',
+        reasoning: {
+          id: 'rs1',
+          provider: 'openai-responses',
+          status: 'in_progress',
+          summary: 'Check',
+        },
+      },
+      {
+        type: 'reasoning_state',
+        reasoning: {
+          id: 'rs1',
+          provider: 'openai-responses',
+          status: 'completed',
+          summary: 'Check sources',
+          encryptedContent: 'encrypted',
+        },
+      },
+      { type: 'finish', finishReason: 'stop' },
+    ]
+    const transport = createMockTransport([events])
+    const messages: Message[] = [{ role: 'user', content: [{ type: 'text', text: 'test' }] }]
+
+    await collect(runAgentLoop({ messages, transport, provider }))
+
+    expect(messages[1]).toEqual({
+      role: 'assistant',
+      content: [
+        {
+          type: 'reasoning',
+          reasoning: {
+            id: 'rs1',
+            provider: 'openai-responses',
+            status: 'completed',
+            summary: 'Check sources',
+            encryptedContent: 'encrypted',
+          },
+        },
+      ],
+    })
+  })
+
   it('handles tool call → execute → second round text reply', async () => {
     const round1: StreamEvent[] = [
       { type: 'tool_call_start', toolCall: { id: 'tc1', name: 'echo' } },

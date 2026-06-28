@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ProviderType } from '@tuple-gpt/ai-core'
 import {
   buildRequestMessages,
   formatAttachmentsAsContext,
@@ -76,18 +77,19 @@ describe('request helpers', () => {
       name: 'OpenAI',
       baseUrl: 'https://api.openai.com',
       apiKey: 'key',
-      format: 'openai',
+      format: ProviderType.OpenAI,
       models: ['gpt-4o'],
       createdAt: timestamp,
       updatedAt: timestamp,
     }
 
     expect(toProviderConfig(provider, 'gpt-4o')).toEqual({
-      type: 'openai',
+      type: ProviderType.OpenAI,
       apiKey: 'key',
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-4o',
       webSearch: true,
+      reasoning: true,
     })
   })
 
@@ -97,19 +99,43 @@ describe('request helpers', () => {
       name: 'OpenAI',
       baseUrl: 'https://api.openai.com',
       apiKey: 'key',
-      format: 'openai',
-      useOpenAIResponsesApi: true,
+      format: ProviderType.OpenAI,
+      useAgentApi: true,
       models: ['gpt-5.4'],
       createdAt: timestamp,
       updatedAt: timestamp,
     }
 
     expect(toProviderConfig(provider, 'gpt-5.4')).toEqual({
-      type: 'openai-responses',
+      type: ProviderType.OpenAIResponses,
       apiKey: 'key',
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-5.4',
       webSearch: true,
+      reasoning: true,
+    })
+  })
+
+  it('maps Gemini Interactions API usage to the interactions provider', () => {
+    const provider: Provider = {
+      id: 'gemini',
+      name: 'Gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com',
+      apiKey: 'key',
+      format: ProviderType.Gemini,
+      useAgentApi: true,
+      models: ['gemini-2.5-pro'],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+
+    expect(toProviderConfig(provider, 'gemini-2.5-pro')).toEqual({
+      type: ProviderType.GeminiInteractions,
+      apiKey: 'key',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      model: 'gemini-2.5-pro',
+      webSearch: true,
+      reasoning: true,
     })
   })
 
@@ -119,7 +145,7 @@ describe('request helpers', () => {
       name: 'OpenAI',
       baseUrl: 'https://api.openai.com',
       apiKey: 'key',
-      format: 'openai',
+      format: ProviderType.OpenAI,
       models: ['gpt-5-search-api'],
       presetId: 'openai',
       createdAt: timestamp,
@@ -130,25 +156,27 @@ describe('request helpers', () => {
       name: 'Claude',
       baseUrl: 'https://api.anthropic.com',
       apiKey: 'key',
-      format: 'claude',
+      format: ProviderType.Anthropic,
       models: ['claude-sonnet-4-20250514'],
       createdAt: timestamp,
       updatedAt: timestamp,
     }
 
     expect(toProviderConfig(openAIProvider, 'gpt-5-search-api')).toEqual({
-      type: 'openai',
+      type: ProviderType.OpenAI,
       apiKey: 'key',
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-5-search-api',
       webSearch: true,
+      reasoning: true,
     })
     expect(toProviderConfig(claudeProvider, 'claude-sonnet-4-20250514')).toEqual({
-      type: 'anthropic',
+      type: ProviderType.Anthropic,
       apiKey: 'key',
       baseUrl: 'https://api.anthropic.com/v1',
       model: 'claude-sonnet-4-20250514',
       webSearch: true,
+      reasoning: true,
     })
   })
 
@@ -158,7 +186,7 @@ describe('request helpers', () => {
       name: 'OpenRouter',
       baseUrl: 'https://openrouter.ai/api',
       apiKey: 'key',
-      format: 'openai',
+      format: ProviderType.OpenAI,
       presetId: 'openrouter',
       models: ['some-model'],
       createdAt: timestamp,
@@ -166,11 +194,12 @@ describe('request helpers', () => {
     }
 
     expect(toProviderConfig(provider, 'some-model')).toEqual({
-      type: 'openai',
+      type: ProviderType.OpenAI,
       apiKey: 'key',
       baseUrl: 'https://openrouter.ai/api/v1',
       model: 'some-model',
       webSearch: true,
+      reasoning: true,
     })
   })
 

@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
-import type { ApiFormat, ModelSelection, Provider } from '@tuple-gpt/chat-core'
+import type { ProviderType } from '@tuple-gpt/ai-core'
+import type { ModelSelection, Provider } from '@tuple-gpt/chat-core'
 import { PROVIDER_PRESETS, getPresetById, fetchModels, validateApiKey } from '@tuple-gpt/chat-core'
 
 export const useProviderStore = defineStore(
@@ -16,7 +17,7 @@ export const useProviderStore = defineStore(
         providerId: string
         providerName: string
         model: string
-        format: ApiFormat
+        format: ProviderType
       }> = []
       for (const p of providers.value) {
         if (!p.apiKey) continue
@@ -80,7 +81,7 @@ export const useProviderStore = defineStore(
       name: string
       baseUrl: string
       apiKey: string
-      format: ApiFormat
+      format: ProviderType
       models: string[]
       presetId?: string
     }): Provider {

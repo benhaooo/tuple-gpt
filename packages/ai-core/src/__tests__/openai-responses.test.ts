@@ -84,6 +84,7 @@ describe('createOpenAIResponsesTransport', () => {
       store: false,
       max_output_tokens: 20,
       temperature: 0,
+      reasoning: { summary: 'auto' },
     })
     expect(body.tools).toEqual([{ type: 'web_search' }])
     expect(events).toEqual([
@@ -198,6 +199,278 @@ describe('createOpenAIResponsesTransport', () => {
       { type: StreamEventType.ToolCallDelta, toolCallId: 'call_1', arguments: ':"x"}' },
       { type: StreamEventType.ToolCallEnd, toolCallId: 'call_1' },
       { type: StreamEventType.Finish, finishReason: FinishReason.ToolCalls, usage: undefined },
+    ])
+  })
+
+  it('maps web search calls, citations, and reasoning state', async () => {
+    const webSearchItem = {
+      id: 'ws_1',
+      type: 'web_search_call',
+      status: 'completed',
+      action: { type: 'search', query: 'tuple gpt', queries: ['tuple gpt'] },
+    }
+    const reasoningItem = {
+      id: 'rs_1',
+      type: 'reasoning',
+      encrypted_content: 'encrypted',
+      summary: [{ type: 'summary_text', text: 'Checked sources.' }],
+    }
+    const fetchMock = mockFetch([
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { id: 'ws_1', type: 'web_search_call', status: 'in_progress' },
+        sequence_number: 1,
+      },
+      {
+        type: 'response.web_search_call.searching',
+        item_id: 'ws_1',
+        output_index: 0,
+        sequence_number: 2,
+      },
+      {
+        type: 'response.output_item.done',
+        output_index: 0,
+        item: webSearchItem,
+        sequence_number: 3,
+      },
+      {
+        type: 'response.output_text.delta',
+        item_id: 'msg_1',
+        output_index: 1,
+        content_index: 0,
+        delta: 'Answer',
+        sequence_number: 4,
+      },
+      {
+        type: 'response.output_text.done',
+        item_id: 'msg_1',
+        output_index: 1,
+        content_index: 0,
+        text: 'Answer',
+        annotations: [
+          {
+            type: 'url_citation',
+            url: 'https://example.com/source',
+            title: 'Example Source',
+            start_index: 0,
+            end_index: 6,
+          },
+        ],
+        sequence_number: 5,
+      },
+      {
+        type: 'response.output_item.done',
+        output_index: 2,
+        item: reasoningItem,
+        sequence_number: 6,
+      },
+      {
+        type: 'response.completed',
+        response: {
+          status: 'completed',
+          output: [webSearchItem, reasoningItem],
+        },
+        sequence_number: 7,
+      },
+    ])
+    const transport = createOpenAIResponsesTransport()
+
+    const events = await collect(
+      transport.stream({
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Search' }] }],
+        provider,
+      }),
+    )
+
+    expect(getRequestBody(fetchMock).include).toEqual(['reasoning.encrypted_content'])
+    expect(getRequestBody(fetchMock).reasoning).toEqual({ summary: 'auto' })
+    expect(events).toMatchObject([
+      {
+        type: StreamEventType.NativeToolStart,
+        nativeTool: {
+          id: 'ws_1',
+          provider: 'openai-responses',
+          kind: 'web_search',
+          status: 'in_progress',
+        },
+      },
+      {
+        type: StreamEventType.NativeToolDelta,
+        nativeToolId: 'ws_1',
+        status: 'searching',
+      },
+      {
+        type: StreamEventType.NativeToolEnd,
+        nativeToolId: 'ws_1',
+        status: 'completed',
+        action: {
+          type: 'search',
+          query: 'tuple gpt',
+          queries: ['tuple gpt'],
+        },
+      },
+      { type: StreamEventType.TextDelta, text: 'Answer' },
+      {
+        type: StreamEventType.TextAnnotations,
+        citations: [
+          {
+            type: 'url',
+            url: 'https://example.com/source',
+            title: 'Example Source',
+            startIndex: 0,
+            endIndex: 6,
+          },
+        ],
+      },
+      {
+        type: StreamEventType.ReasoningState,
+        reasoning: {
+          id: 'openai-responses:rs_1',
+          provider: 'openai-responses',
+          status: 'completed',
+          summary: 'Checked sources.',
+          encryptedContent: 'encrypted',
+        },
+      },
+      { type: StreamEventType.Finish, finishReason: FinishReason.Stop },
+    ])
+  })
+
+  it('accumulates streamed reasoning summaries into one reasoning state', async () => {
+    mockFetch([
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { id: 'rs_1', type: 'reasoning' },
+        sequence_number: 1,
+      },
+      {
+        type: 'response.reasoning_summary_text.delta',
+        item_id: 'rs_1',
+        output_index: 0,
+        delta: 'Check',
+        sequence_number: 2,
+      },
+      {
+        type: 'response.reasoning_summary_text.delta',
+        item_id: 'rs_1',
+        output_index: 0,
+        delta: ' sources',
+        sequence_number: 3,
+      },
+      {
+        type: 'response.output_item.done',
+        output_index: 0,
+        item: {
+          id: 'rs_1',
+          type: 'reasoning',
+          encrypted_content: 'encrypted',
+          summary: [{ type: 'summary_text', text: 'Check sources' }],
+        },
+        sequence_number: 4,
+      },
+      {
+        type: 'response.completed',
+        response: { status: 'completed', output: [] },
+        sequence_number: 5,
+      },
+    ])
+    const transport = createOpenAIResponsesTransport()
+
+    const events = await collect(
+      transport.stream({
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Think' }] }],
+        provider,
+      }),
+    )
+    const reasoningEvents = events.filter(event => event.type === StreamEventType.ReasoningState)
+
+    expect(reasoningEvents).toMatchObject([
+      {
+        reasoning: { id: 'openai-responses:rs_1', status: 'in_progress' },
+      },
+      {
+        reasoning: { id: 'openai-responses:rs_1', status: 'in_progress', summary: 'Check' },
+      },
+      {
+        reasoning: {
+          id: 'openai-responses:rs_1',
+          status: 'in_progress',
+          summary: 'Check sources',
+        },
+      },
+      {
+        reasoning: {
+          id: 'openai-responses:rs_1',
+          status: 'completed',
+          summary: 'Check sources',
+          encryptedContent: 'encrypted',
+        },
+      },
+    ])
+  })
+
+  it('replays persisted native tool and reasoning output items', async () => {
+    const fetchMock = mockFetch([
+      {
+        type: 'response.completed',
+        response: { status: 'completed', output: [] },
+        sequence_number: 1,
+      },
+    ])
+    const transport = createOpenAIResponsesTransport()
+    const webSearchItem = {
+      id: 'ws_1',
+      type: 'web_search_call',
+      status: 'completed',
+      action: { type: 'open_page', url: 'https://example.com' },
+    }
+    const reasoningItem = {
+      id: 'rs_1',
+      type: 'reasoning',
+      encrypted_content: 'encrypted',
+      summary: [],
+    }
+
+    await collect(
+      transport.stream({
+        messages: [
+          { role: 'user', content: [{ type: 'text', text: 'Search' }] },
+          {
+            role: 'assistant',
+            content: [
+              {
+                type: 'native_tool',
+                nativeTool: {
+                  id: 'ws_1',
+                  provider: 'openai-responses',
+                  kind: 'web_search',
+                  status: 'completed',
+                  raw: webSearchItem,
+                },
+              },
+              {
+                type: 'reasoning',
+                reasoning: {
+                  id: 'rs_1',
+                  provider: 'openai-responses',
+                  status: 'completed',
+                  encryptedContent: 'encrypted',
+                  raw: reasoningItem,
+                },
+              },
+            ],
+          },
+        ],
+        provider,
+      }),
+    )
+
+    expect(getRequestBody(fetchMock).input).toEqual([
+      { type: 'message', role: 'user', content: 'Search' },
+      webSearchItem,
+      reasoningItem,
     ])
   })
 

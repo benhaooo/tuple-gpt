@@ -3,7 +3,14 @@ import type { ToolCallStatus } from '@tuple-gpt/ai-core'
 import { buildRequestMessages, toMessages, toProviderConfig } from './request'
 import type { ChatMessage, MessageContent, Provider } from './types'
 import { createMessage, type IdTimeOptions } from './conversation'
-import { appendTextToContent, cloneContent } from './content'
+import {
+  appendNativeToolToContent,
+  appendReasoningToContent,
+  appendTextToContent,
+  applyCitationsToLastText,
+  cloneContent,
+  updateNativeToolInContent,
+} from './content'
 import { getErrorMessage } from './utils/error'
 
 export type ChatRuntimeEvent =
@@ -211,6 +218,31 @@ export async function* streamAssistantReply(
               }
             : part,
         )
+        yield createAssistantDelta()
+      } else if (event.type === StreamEventType.NativeToolStart) {
+        assistantContent = appendNativeToolToContent(assistantContent, event.nativeTool)
+        yield createAssistantDelta()
+      } else if (event.type === StreamEventType.NativeToolDelta) {
+        assistantContent = updateNativeToolInContent(assistantContent, event.nativeToolId, {
+          ...(event.status ? { status: event.status } : {}),
+          ...(event.action ? { action: event.action } : {}),
+          ...(event.sources ? { sources: event.sources } : {}),
+          ...(event.raw ? { raw: event.raw } : {}),
+        })
+        yield createAssistantDelta()
+      } else if (event.type === StreamEventType.NativeToolEnd) {
+        assistantContent = updateNativeToolInContent(assistantContent, event.nativeToolId, {
+          status: event.status,
+          ...(event.action ? { action: event.action } : {}),
+          ...(event.sources ? { sources: event.sources } : {}),
+          ...(event.raw ? { raw: event.raw } : {}),
+        })
+        yield createAssistantDelta()
+      } else if (event.type === StreamEventType.TextAnnotations) {
+        assistantContent = applyCitationsToLastText(assistantContent, event.citations)
+        yield createAssistantDelta()
+      } else if (event.type === StreamEventType.ReasoningState) {
+        assistantContent = appendReasoningToContent(assistantContent, event.reasoning)
         yield createAssistantDelta()
       } else if (event.type === StreamEventType.ToolResult) {
         // ai-core wrote the result onto the tool_call part itself; emit two

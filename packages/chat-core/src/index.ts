@@ -1,5 +1,4 @@
 export type {
-  ApiFormat,
   Assistant,
   AttachmentCategory,
   ChatMessage,
@@ -46,12 +45,16 @@ export {
 } from './conversation'
 
 export {
+  appendNativeToolToContent,
+  appendReasoningToContent,
   appendTextToContent,
+  applyCitationsToLastText,
   cloneContent,
   cloneContentPart,
   createTextContent,
   getContentText,
   getMessageText,
+  updateNativeToolInContent,
 } from './content'
 
 export {

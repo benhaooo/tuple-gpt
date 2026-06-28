@@ -19,9 +19,9 @@
               <SelectValue placeholder="选择 API 格式" />
             </SelectTrigger>
             <SelectContent alignItemWithTrigger="{true}">
-              <SelectItem value="openai"> OpenAI </SelectItem>
-              <SelectItem value="claude"> Claude </SelectItem>
-              <SelectItem value="gemini"> Gemini </SelectItem>
+              <SelectItem :value="ProviderType.OpenAI"> OpenAI </SelectItem>
+              <SelectItem :value="ProviderType.Anthropic"> Claude </SelectItem>
+              <SelectItem :value="ProviderType.Gemini"> Gemini </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -37,7 +37,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useProviderStore } from '#stores/provider'
-import type { ApiFormat } from '@tuple-gpt/chat-core'
+import { ProviderType } from '@tuple-gpt/ai-core'
 import {
   Button,
   Dialog,
@@ -63,14 +63,14 @@ const emit = defineEmits<{
 
 const providerStore = useProviderStore()
 const name = ref('')
-const format = ref<ApiFormat>('openai')
+const format = ref<ProviderType>(ProviderType.OpenAI)
 
 watch(
   () => props.modelValue,
   v => {
     if (v) {
       name.value = ''
-      format.value = 'openai'
+      format.value = ProviderType.OpenAI
     }
   },
 )

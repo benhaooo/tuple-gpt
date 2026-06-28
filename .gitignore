@@ -52,3 +52,6 @@ Thumbs.db
 # Auto-generated
 auto-imports.d.ts
 components.d.ts
+
+# Docs
+docs/
