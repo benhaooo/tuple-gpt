@@ -87,11 +87,14 @@ export interface NativeToolContentPart {
   }
 }
 
+export type ReasoningStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
+
 export interface ReasoningContentPart {
   type: 'reasoning'
   reasoning: {
-    id?: string
+    id: string
     provider: string
+    status: ReasoningStatus
     summary?: string
     encryptedContent?: string
     raw?: unknown

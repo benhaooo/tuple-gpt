@@ -33,6 +33,14 @@ interface ResponsesNativeToolState {
   ended: boolean
 }
 
+interface ResponsesReasoningState {
+  id: string
+  status: ReasoningContentPart['reasoning']['status']
+  summary?: string
+  encryptedContent?: string
+  raw?: Record<string, unknown>
+}
+
 function formatInput(
   messages: Message[],
   previousOutputItems: ResponsesInputItem[] = [],
@@ -285,14 +293,17 @@ function mapAnnotationsToCitations(value: unknown): Citation[] {
 
 function mapReasoningItem(
   item: Record<string, unknown>,
+  status: ReasoningContentPart['reasoning']['status'],
+  id: string,
 ): ReasoningContentPart['reasoning'] | undefined {
   if (item.type !== 'reasoning') return undefined
 
   const summary = extractReasoningSummary(item.summary)
 
   return {
-    ...(asString(item.id) ? { id: asString(item.id) } : {}),
+    id,
     provider: 'openai-responses',
+    status,
     ...(summary ? { summary } : {}),
     ...(asString(item.encrypted_content)
       ? { encryptedContent: asString(item.encrypted_content) }
@@ -323,6 +334,17 @@ function fallbackToolCallId(outputIndex: unknown, itemId: unknown): string {
   return typeof outputIndex === 'number' ? `response_tool_${outputIndex}` : 'response_tool'
 }
 
+function responseReasoningId(
+  itemId: string | undefined,
+  outputIndex: unknown,
+  fallbackIndex: number,
+): string {
+  if (itemId) return `openai-responses:${itemId}`
+  return typeof outputIndex === 'number'
+    ? `openai-responses:output:${outputIndex}`
+    : `openai-responses:output:${fallbackIndex}`
+}
+
 function getResponseErrorMessage(response: Record<string, unknown> | undefined): string {
   const error = asRecord(response?.error)
   return asString(error?.message) ?? 'OpenAI Responses API error'
@@ -339,6 +361,8 @@ export function createOpenAIResponsesTransport(): Transport {
       const toolCallsByOutputIndex = new Map<number, ResponsesToolCallState>()
       const webSearchByItemId = new Map<string, ResponsesNativeToolState>()
       const webSearchByOutputIndex = new Map<number, ResponsesNativeToolState>()
+      const reasoningByItemId = new Map<string, ResponsesReasoningState>()
+      const reasoningByOutputIndex = new Map<number, ResponsesReasoningState>()
       const emittedCitationKeys = new Set<string>()
       const emittedReasoningItemIds = new Set<string>()
       let sawToolCall = false
@@ -352,6 +376,9 @@ export function createOpenAIResponsesTransport(): Transport {
         stream: true,
         store: false,
         include: ['reasoning.encrypted_content'],
+      }
+      if (provider.reasoning !== false) {
+        body.reasoning = { summary: 'auto' }
       }
       previousOutputItemsForNextRequest = []
 
@@ -408,6 +435,19 @@ export function createOpenAIResponsesTransport(): Transport {
         if (itemId && webSearchByItemId.has(itemId)) return webSearchByItemId.get(itemId)
         if (typeof outputIndex === 'number' && webSearchByOutputIndex.has(outputIndex)) {
           return webSearchByOutputIndex.get(outputIndex)
+        }
+        return undefined
+      }
+
+      const getReasoning = (
+        event: Record<string, unknown>,
+        item?: Record<string, unknown>,
+      ): ResponsesReasoningState | undefined => {
+        const itemId = asString(item?.id) ?? asString(event.item_id)
+        const outputIndex = event.output_index
+        if (itemId && reasoningByItemId.has(itemId)) return reasoningByItemId.get(itemId)
+        if (typeof outputIndex === 'number' && reasoningByOutputIndex.has(outputIndex)) {
+          return reasoningByOutputIndex.get(outputIndex)
         }
         return undefined
       }
@@ -634,6 +674,85 @@ export function createOpenAIResponsesTransport(): Transport {
         yield* emitWebSearchDelta(nativeTool)
       }
 
+      const emitReasoningState = function* (
+        reasoning: ResponsesReasoningState,
+      ): Generator<StreamEvent> {
+        sawReasoning = true
+        yield {
+          type: StreamEventType.ReasoningState,
+          reasoning: {
+            id: reasoning.id,
+            provider: 'openai-responses',
+            status: reasoning.status,
+            ...(reasoning.summary ? { summary: reasoning.summary } : {}),
+            ...(reasoning.encryptedContent ? { encryptedContent: reasoning.encryptedContent } : {}),
+            ...(reasoning.raw ? { raw: reasoning.raw } : {}),
+          },
+        }
+      }
+
+      const ensureReasoning = function* (
+        event: Record<string, unknown>,
+        item?: Record<string, unknown>,
+        status: ReasoningContentPart['reasoning']['status'] = 'in_progress',
+        emit = true,
+      ): Generator<StreamEvent, ResponsesReasoningState | undefined> {
+        if (item?.type && item.type !== 'reasoning') return undefined
+
+        const outputIndex = event.output_index
+        const itemId = asString(item?.id) ?? asString(event.item_id)
+        const id = responseReasoningId(
+          itemId,
+          outputIndex,
+          reasoningByItemId.size + reasoningByOutputIndex.size,
+        )
+        const existing = getReasoning(event, item)
+        const mapped = item
+          ? mapReasoningItem(item, status, id)
+          : {
+              id,
+              provider: 'openai-responses',
+              status,
+            }
+
+        if (!mapped) return undefined
+
+        const reasoning =
+          existing ??
+          ({
+            id: mapped.id,
+            status: mapped.status,
+          } satisfies ResponsesReasoningState)
+        reasoning.status = mapped.status
+        if (mapped.summary !== undefined) reasoning.summary = mapped.summary
+        if (mapped.encryptedContent !== undefined) {
+          reasoning.encryptedContent = mapped.encryptedContent
+        }
+        if (mapped.raw !== undefined) reasoning.raw = asRecord(mapped.raw)
+
+        if (itemId) reasoningByItemId.set(itemId, reasoning)
+        if (typeof outputIndex === 'number') reasoningByOutputIndex.set(outputIndex, reasoning)
+
+        if (emit) yield* emitReasoningState(reasoning)
+        return reasoning
+      }
+
+      const appendReasoningSummaryDelta = function* (
+        event: Record<string, unknown>,
+      ): Generator<StreamEvent> {
+        const reasoning = yield* ensureReasoning(event, undefined, 'in_progress', false)
+        if (!reasoning) return
+        const delta =
+          asString(event.delta) ??
+          asString(event.text) ??
+          asString(asRecord(event.summary)?.text) ??
+          ''
+        if (!delta) return
+        reasoning.summary = `${reasoning.summary ?? ''}${delta}`
+        reasoning.status = 'in_progress'
+        yield* emitReasoningState(reasoning)
+      }
+
       const emitCitations = function* (citations: Citation[]): Generator<StreamEvent> {
         const next = citations.filter(citation => {
           const key = `${citation.url}:${citation.startIndex ?? ''}:${citation.endIndex ?? ''}:${
@@ -649,16 +768,20 @@ export function createOpenAIResponsesTransport(): Transport {
         }
       }
 
-      const emitReasoning = function* (item: Record<string, unknown>): Generator<StreamEvent> {
-        const reasoning = mapReasoningItem(item)
-        if (!reasoning) return
+      const emitReasoning = function* (
+        event: Record<string, unknown>,
+        item: Record<string, unknown>,
+        status: ReasoningContentPart['reasoning']['status'] = 'completed',
+      ): Generator<StreamEvent> {
+        if (item.type !== 'reasoning') return
 
-        const id = reasoning.id ?? `reasoning_${emittedReasoningItemIds.size}`
-        if (emittedReasoningItemIds.has(id)) return
-        emittedReasoningItemIds.add(id)
-        sawReasoning = true
-
-        yield { type: StreamEventType.ReasoningState, reasoning }
+        const outputIndex = event.output_index
+        const id = responseReasoningId(asString(item.id), outputIndex, emittedReasoningItemIds.size)
+        if (status === 'completed') {
+          if (emittedReasoningItemIds.has(id)) return
+          emittedReasoningItemIds.add(id)
+        }
+        yield* ensureReasoning(event, item, status)
       }
 
       const handleCompletedResponse = function* (
@@ -680,7 +803,7 @@ export function createOpenAIResponsesTransport(): Transport {
           }
           yield* handleFunctionCallItem({ output_index: i }, item, true)
           yield* handleWebSearchItem({ output_index: i }, item, true)
-          yield* emitReasoning(item)
+          yield* emitReasoning({ output_index: i }, item)
 
           if (item.type === 'message' && Array.isArray(item.content)) {
             for (const part of item.content) {
@@ -732,7 +855,22 @@ export function createOpenAIResponsesTransport(): Transport {
             if (item) {
               yield* handleFunctionCallItem(event, item)
               yield* handleWebSearchItem(event, item)
+              yield* emitReasoning(event, item, 'in_progress')
             }
+            break
+          }
+          case 'response.reasoning_summary_text.delta':
+          case 'response.reasoning_summary.delta':
+            yield* appendReasoningSummaryDelta(event)
+            break
+          case 'response.reasoning_summary_text.done':
+          case 'response.reasoning_summary.done': {
+            const reasoning = yield* ensureReasoning(event, undefined, 'in_progress', false)
+            if (!reasoning) break
+            const text = asString(event.text) ?? extractReasoningSummary(event.summary)
+            if (text !== undefined) reasoning.summary = text
+            reasoning.status = 'in_progress'
+            yield* emitReasoningState(reasoning)
             break
           }
           case 'response.output_item.done': {
@@ -740,7 +878,7 @@ export function createOpenAIResponsesTransport(): Transport {
             if (item) {
               yield* handleFunctionCallItem(event, item, true)
               yield* handleWebSearchItem(event, item, true)
-              yield* emitReasoning(item)
+              yield* emitReasoning(event, item)
             }
             break
           }

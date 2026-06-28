@@ -3,6 +3,7 @@ import type {
   NativeToolAction,
   NativeToolStatus,
   PipelineOutput,
+  ReasoningContentPart,
   StreamEvent,
   Message,
   ToolDefinition,
@@ -116,12 +117,11 @@ interface AnthropicNativeToolState {
   action?: NativeToolAction
   sources?: Citation[]
   raw?: unknown
-  started: boolean
-  ended: boolean
 }
 
 interface AnthropicReasoningState {
-  id?: string
+  id: string
+  status: ReasoningContentPart['reasoning']['status']
   summary: string
   signature?: string
   raw?: Record<string, unknown>
@@ -234,6 +234,14 @@ function mapStopReason(stopReason: string): FinishReason {
   }
 }
 
+function anthropicReasoningId(messageId: string | undefined, index: number): string {
+  return `anthropic:${messageId ?? 'message'}:${index}`
+}
+
+function anthropicWebSearchId(index: number): string {
+  return `anthropic_web_search_${index}`
+}
+
 export function createAnthropicTransport(): Transport {
   return {
     async *stream(request: PipelineOutput): AsyncIterable<StreamEvent> {
@@ -286,6 +294,7 @@ export function createAnthropicTransport(): Transport {
       const blocks = new Map<number, AnthropicContentBlockState>()
       const nativeTools = new Map<string, AnthropicNativeToolState>()
       const reasoningByIndex = new Map<number, AnthropicReasoningState>()
+      let messageId: string | undefined
 
       for await (const sse of parseSSE(response.body, options?.signal)) {
         let data: Record<string, unknown>
@@ -299,33 +308,34 @@ export function createAnthropicTransport(): Transport {
 
         switch (eventType) {
           case 'content_block_start': {
-            const index = typeof data.index === 'number' ? data.index : blocks.size
-            const block = data.content_block as Record<string, unknown>
+            if (typeof data.index !== 'number') break
+            const index = data.index
+            const rawBlock = asRecord(data.content_block)
+            if (!rawBlock) break
             const blockState: AnthropicContentBlockState = {
               index,
-              id: asString(block?.id),
-              type: asString(block?.type),
-              name: asString(block?.name),
-              raw: block,
+              id: asString(rawBlock.id),
+              type: asString(rawBlock.type),
+              name: asString(rawBlock.name),
+              raw: rawBlock,
             }
             blocks.set(index, blockState)
 
-            if (block?.type === 'tool_use') {
-              currentToolId = block.id as string
+            if (blockState.type === 'tool_use' && blockState.id && blockState.name) {
+              currentToolId = blockState.id
               yield {
                 type: StreamEventType.ToolCallStart,
-                toolCall: { id: block.id as string, name: block.name as string },
+                toolCall: { id: blockState.id, name: blockState.name },
               }
-            } else if (block?.type === 'server_tool_use' && block.name === 'web_search') {
-              const id = asString(block.id) ?? `anthropic_web_search_${index}`
-              const action = mapNativeToolAction(block.input)
+            } else if (blockState.type === 'server_tool_use' && blockState.name === 'web_search') {
+              const id = blockState.id ?? anthropicWebSearchId(index)
+              blockState.id = id
+              const action = mapNativeToolAction(rawBlock.input)
               const nativeTool: AnthropicNativeToolState = {
                 id,
                 status: 'in_progress',
                 ...(action ? { action } : {}),
-                raw: block,
-                started: true,
-                ended: false,
+                raw: rawBlock,
               }
               nativeTools.set(id, nativeTool)
               yield {
@@ -337,48 +347,34 @@ export function createAnthropicTransport(): Transport {
                   name: 'web_search',
                   status: nativeTool.status,
                   ...(action ? { action } : {}),
-                  raw: block,
+                  raw: rawBlock,
                 },
               }
-            } else if (block?.type === 'thinking') {
+            } else if (blockState.type === 'thinking') {
               const reasoning: AnthropicReasoningState = {
-                ...(asString(block.id) ? { id: asString(block.id) } : {}),
-                summary: asString(block.thinking) ?? '',
-                raw: block,
+                id: anthropicReasoningId(messageId, index),
+                status: 'in_progress',
+                summary: asString(rawBlock.thinking) ?? '',
+                raw: rawBlock,
               }
               reasoningByIndex.set(index, reasoning)
-              if (reasoning.summary) {
-                yield {
-                  type: StreamEventType.ReasoningState,
-                  reasoning: {
-                    ...(reasoning.id ? { id: reasoning.id } : {}),
-                    provider: 'anthropic',
-                    summary: reasoning.summary,
-                    raw: reasoning.raw,
-                  },
-                }
+              yield {
+                type: StreamEventType.ReasoningState,
+                reasoning: {
+                  id: reasoning.id,
+                  provider: 'anthropic',
+                  status: reasoning.status,
+                  ...(reasoning.summary ? { summary: reasoning.summary } : {}),
+                  raw: reasoning.raw,
+                },
               }
-            } else if (block?.type === 'web_search_tool_result') {
-              const toolUseId = asString(block.tool_use_id) ?? asString(block.id)
-              const id = toolUseId ?? `anthropic_web_search_${index}`
-              const sources = mapWebSearchSources(block.content)
-              const status: NativeToolStatus = block.is_error ? 'failed' : 'completed'
-              const nativeTool =
-                nativeTools.get(id) ??
-                ({
-                  id,
-                  status,
-                  started: false,
-                  ended: false,
-                } satisfies AnthropicNativeToolState)
+            } else if (blockState.type === 'web_search_tool_result') {
+              const id = asString(rawBlock.tool_use_id) ?? anthropicWebSearchId(index)
+              const sources = mapWebSearchSources(rawBlock.content)
+              const status: NativeToolStatus = rawBlock.is_error ? 'failed' : 'completed'
+              const nativeTool = nativeTools.get(id)
 
-              nativeTool.status = status
-              nativeTool.sources = sources
-              nativeTool.raw = block
-              nativeTools.set(id, nativeTool)
-
-              if (!nativeTool.started) {
-                nativeTool.started = true
+              if (!nativeTool) {
                 yield {
                   type: StreamEventType.NativeToolStart,
                   nativeTool: {
@@ -386,32 +382,36 @@ export function createAnthropicTransport(): Transport {
                     provider: 'anthropic',
                     kind: 'web_search',
                     name: 'web_search',
-                    status: nativeTool.status,
+                    status,
                     ...(sources.length > 0 ? { sources } : {}),
-                    raw: block,
+                    raw: rawBlock,
                   },
                 }
+              } else {
+                nativeTool.status = status
+                nativeTool.sources = sources
+                nativeTool.raw = rawBlock
               }
 
-              if (!nativeTool.ended) {
-                nativeTool.ended = true
-                yield {
-                  type: StreamEventType.NativeToolEnd,
-                  nativeToolId: id,
-                  status: nativeTool.status,
-                  ...(nativeTool.action ? { action: nativeTool.action } : {}),
-                  ...(sources.length > 0 ? { sources } : {}),
-                  raw: block,
-                }
+              yield {
+                type: StreamEventType.NativeToolEnd,
+                nativeToolId: id,
+                status,
+                ...(nativeTool?.action ? { action: nativeTool.action } : {}),
+                ...(sources.length > 0 ? { sources } : {}),
+                raw: rawBlock,
               }
+              nativeTools.delete(id)
             }
             break
           }
 
           case 'content_block_delta': {
-            const index = typeof data.index === 'number' ? data.index : undefined
-            const block = typeof index === 'number' ? blocks.get(index) : undefined
-            const delta = data.delta as Record<string, unknown>
+            if (typeof data.index !== 'number') break
+            const index = data.index
+            const block = blocks.get(index)
+            const delta = asRecord(data.delta)
+            if (!delta) break
             if (delta?.type === 'text_delta') {
               yield { type: StreamEventType.TextDelta, text: delta.text as string }
               const citations = mapTextCitations(delta.citations)
@@ -450,21 +450,23 @@ export function createAnthropicTransport(): Transport {
                 }
               }
             } else if (delta?.type === 'thinking_delta') {
-              if (typeof index !== 'number') break
               const reasoning =
                 reasoningByIndex.get(index) ??
                 ({
-                  ...(block?.id ? { id: block.id } : {}),
+                  id: anthropicReasoningId(messageId, index),
+                  status: 'in_progress',
                   summary: '',
                   raw: block?.raw,
                 } satisfies AnthropicReasoningState)
+              reasoning.status = 'in_progress'
               reasoning.summary += asString(delta.thinking) ?? ''
               reasoningByIndex.set(index, reasoning)
               yield {
                 type: StreamEventType.ReasoningState,
                 reasoning: {
-                  ...(reasoning.id ? { id: reasoning.id } : {}),
+                  id: reasoning.id,
                   provider: 'anthropic',
+                  status: reasoning.status,
                   summary: reasoning.summary,
                   ...(reasoning.signature ? { encryptedContent: reasoning.signature } : {}),
                   raw: {
@@ -475,21 +477,23 @@ export function createAnthropicTransport(): Transport {
                 },
               }
             } else if (delta?.type === 'signature_delta') {
-              if (typeof index !== 'number') break
               const reasoning =
                 reasoningByIndex.get(index) ??
                 ({
-                  ...(block?.id ? { id: block.id } : {}),
+                  id: anthropicReasoningId(messageId, index),
+                  status: 'in_progress',
                   summary: '',
                   raw: block?.raw,
                 } satisfies AnthropicReasoningState)
+              reasoning.status = 'in_progress'
               reasoning.signature = asString(delta.signature)
               reasoningByIndex.set(index, reasoning)
               yield {
                 type: StreamEventType.ReasoningState,
                 reasoning: {
-                  ...(reasoning.id ? { id: reasoning.id } : {}),
+                  id: reasoning.id,
                   provider: 'anthropic',
+                  status: reasoning.status,
                   ...(reasoning.summary ? { summary: reasoning.summary } : {}),
                   ...(reasoning.signature ? { encryptedContent: reasoning.signature } : {}),
                   raw: {
@@ -504,14 +508,35 @@ export function createAnthropicTransport(): Transport {
           }
 
           case 'content_block_stop': {
-            const index = typeof data.index === 'number' ? data.index : undefined
-            const block = typeof index === 'number' ? blocks.get(index) : undefined
+            if (typeof data.index !== 'number') break
+            const index = data.index
+            const block = blocks.get(index)
             if (block?.type === 'tool_use' && currentToolId) {
               yield { type: StreamEventType.ToolCallEnd, toolCallId: currentToolId }
               currentToolId = ''
+            } else if (block?.type === 'thinking') {
+              const reasoning = reasoningByIndex.get(index)
+              if (reasoning) {
+                reasoning.status = 'completed'
+                yield {
+                  type: StreamEventType.ReasoningState,
+                  reasoning: {
+                    id: reasoning.id,
+                    provider: 'anthropic',
+                    status: reasoning.status,
+                    ...(reasoning.summary ? { summary: reasoning.summary } : {}),
+                    ...(reasoning.signature ? { encryptedContent: reasoning.signature } : {}),
+                    raw: {
+                      ...(reasoning.raw ?? {}),
+                      ...(reasoning.summary ? { thinking: reasoning.summary } : {}),
+                      ...(reasoning.signature ? { signature: reasoning.signature } : {}),
+                    },
+                  },
+                }
+              }
             } else if (block?.type === 'server_tool_use' && block.id) {
               const nativeTool = nativeTools.get(block.id)
-              if (nativeTool && !nativeTool.ended) {
+              if (nativeTool) {
                 nativeTool.status = 'searching'
                 yield {
                   type: StreamEventType.NativeToolDelta,
@@ -529,6 +554,8 @@ export function createAnthropicTransport(): Transport {
             break
 
           case 'message_start': {
+            const message = asRecord(data.message)
+            messageId = asString(message?.id) ?? messageId
             break
           }
 

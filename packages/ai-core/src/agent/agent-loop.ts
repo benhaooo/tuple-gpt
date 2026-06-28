@@ -14,6 +14,7 @@ import type {
   Citation,
   NativeToolContentPart,
   ToolCallContentPart,
+  ReasoningContentPart,
 } from '../types'
 import { Role, FinishReason, StreamEventType, toToolDefinition } from '../types'
 import type { Transport } from '../transport/transport'
@@ -232,7 +233,7 @@ export async function* runAgentLoop(opts: AgentLoopOptions): AsyncGenerator<Stre
           applyCitationsToLastText(assistantContent, event.citations)
           break
         case StreamEventType.ReasoningState:
-          assistantContent.push({ type: 'reasoning', reasoning: { ...event.reasoning } })
+          upsertReasoningPart(assistantContent, event.reasoning)
           break
         case StreamEventType.Finish:
           finishReason = event.finishReason
@@ -314,6 +315,37 @@ function applyCitationsToLastText(content: ContentPart[], citations: Citation[])
   if (lastText?.type !== 'text') return
 
   lastText.citations = [...(lastText.citations ?? []), ...citations]
+}
+
+function upsertReasoningPart(
+  content: ContentPart[],
+  reasoning: ReasoningContentPart['reasoning'],
+): void {
+  const index = content.findIndex(
+    part => part.type === 'reasoning' && part.reasoning.id === reasoning.id,
+  )
+  const existing = index === -1 ? undefined : content[index]
+  const part: ReasoningContentPart = {
+    type: 'reasoning',
+    reasoning:
+      existing?.type === 'reasoning'
+        ? {
+            ...existing.reasoning,
+            ...reasoning,
+            ...(reasoning.summary !== undefined ? { summary: reasoning.summary } : {}),
+            ...(reasoning.encryptedContent !== undefined
+              ? { encryptedContent: reasoning.encryptedContent }
+              : {}),
+            ...(reasoning.raw !== undefined ? { raw: reasoning.raw } : {}),
+          }
+        : { ...reasoning },
+  }
+
+  if (index === -1) {
+    content.push(part)
+  } else {
+    content[index] = part
+  }
 }
 
 async function runTool(

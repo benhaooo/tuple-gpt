@@ -3,6 +3,7 @@ import type {
   NativeToolAction,
   NativeToolKind,
   NativeToolStatus,
+  ReasoningStatus,
   ToolCallStatus,
 } from '@tuple-gpt/ai-core'
 
@@ -23,10 +24,23 @@ export interface NativeToolMessagePartModel {
   sources: Citation[]
 }
 
+export interface ReasoningMessagePartModel {
+  id: string
+  status: ReasoningStatus
+  summary?: string
+}
+
 export type AssistantStepItem =
   | { type: 'text'; text: string; citations: Citation[] }
   | { type: 'native_tool'; nativeTool: NativeToolMessagePartModel }
   | { type: 'tool_call'; toolCall: ToolCallMessagePartModel }
-  | { type: 'reasoning'; summary: string }
+  | { type: 'reasoning'; reasoning: ReasoningMessagePartModel }
 
-export type { Citation, NativeToolAction, NativeToolKind, NativeToolStatus, ToolCallStatus }
+export type {
+  Citation,
+  NativeToolAction,
+  NativeToolKind,
+  NativeToolStatus,
+  ReasoningStatus,
+  ToolCallStatus,
+}

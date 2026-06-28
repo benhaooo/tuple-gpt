@@ -10,6 +10,7 @@ export type {
   NativeToolKind,
   NativeToolStatus,
   ReasoningContentPart,
+  ReasoningStatus,
   Citation,
   Message,
 } from './message'

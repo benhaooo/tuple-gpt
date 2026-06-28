@@ -161,6 +161,16 @@ describe('streamAssistantReply', () => {
         reasoning: {
           id: 'rs1',
           provider: 'openai-responses',
+          status: 'in_progress',
+          summary: 'Checked',
+        },
+      }
+      yield {
+        type: StreamEventType.ReasoningState,
+        reasoning: {
+          id: 'rs1',
+          provider: 'openai-responses',
+          status: 'completed',
           summary: 'Checked one source.',
           encryptedContent: 'encrypted',
         },
@@ -188,10 +198,11 @@ describe('streamAssistantReply', () => {
       'assistant_delta',
       'assistant_delta',
       'assistant_delta',
+      'assistant_delta',
       'assistant_done',
       'turn_done',
     ])
-    expect(events[6]).toMatchObject({
+    expect(events[7]).toMatchObject({
       type: 'assistant_delta',
       content: [
         {
@@ -213,6 +224,7 @@ describe('streamAssistantReply', () => {
           reasoning: {
             id: 'rs1',
             provider: 'openai-responses',
+            status: 'completed',
             summary: 'Checked one source.',
             encryptedContent: 'encrypted',
           },

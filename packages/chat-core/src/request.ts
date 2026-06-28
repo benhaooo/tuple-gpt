@@ -62,6 +62,7 @@ export function toProviderConfig(provider: Provider, model: string): ProviderCon
     baseUrl: `${base}${prefix}`,
     model,
     webSearch: true,
+    reasoning: true,
   }
 }
 

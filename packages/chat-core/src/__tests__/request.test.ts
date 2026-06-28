@@ -89,6 +89,7 @@ describe('request helpers', () => {
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-4o',
       webSearch: true,
+      reasoning: true,
     })
   })
 
@@ -111,6 +112,7 @@ describe('request helpers', () => {
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-5.4',
       webSearch: true,
+      reasoning: true,
     })
   })
 
@@ -133,6 +135,7 @@ describe('request helpers', () => {
       baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
       model: 'gemini-2.5-pro',
       webSearch: true,
+      reasoning: true,
     })
   })
 
@@ -165,6 +168,7 @@ describe('request helpers', () => {
       baseUrl: 'https://api.openai.com/v1',
       model: 'gpt-5-search-api',
       webSearch: true,
+      reasoning: true,
     })
     expect(toProviderConfig(claudeProvider, 'claude-sonnet-4-20250514')).toEqual({
       type: ProviderType.Anthropic,
@@ -172,6 +176,7 @@ describe('request helpers', () => {
       baseUrl: 'https://api.anthropic.com/v1',
       model: 'claude-sonnet-4-20250514',
       webSearch: true,
+      reasoning: true,
     })
   })
 
@@ -194,6 +199,7 @@ describe('request helpers', () => {
       baseUrl: 'https://openrouter.ai/api/v1',
       model: 'some-model',
       webSearch: true,
+      reasoning: true,
     })
   })
 

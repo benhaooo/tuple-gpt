@@ -84,6 +84,7 @@ describe('createOpenAIResponsesTransport', () => {
       store: false,
       max_output_tokens: 20,
       temperature: 0,
+      reasoning: { summary: 'auto' },
     })
     expect(body.tools).toEqual([{ type: 'web_search' }])
     expect(events).toEqual([
@@ -283,6 +284,7 @@ describe('createOpenAIResponsesTransport', () => {
     )
 
     expect(getRequestBody(fetchMock).include).toEqual(['reasoning.encrypted_content'])
+    expect(getRequestBody(fetchMock).reasoning).toEqual({ summary: 'auto' })
     expect(events).toMatchObject([
       {
         type: StreamEventType.NativeToolStart,
@@ -324,13 +326,88 @@ describe('createOpenAIResponsesTransport', () => {
       {
         type: StreamEventType.ReasoningState,
         reasoning: {
-          id: 'rs_1',
+          id: 'openai-responses:rs_1',
           provider: 'openai-responses',
+          status: 'completed',
           summary: 'Checked sources.',
           encryptedContent: 'encrypted',
         },
       },
       { type: StreamEventType.Finish, finishReason: FinishReason.Stop },
+    ])
+  })
+
+  it('accumulates streamed reasoning summaries into one reasoning state', async () => {
+    mockFetch([
+      {
+        type: 'response.output_item.added',
+        output_index: 0,
+        item: { id: 'rs_1', type: 'reasoning' },
+        sequence_number: 1,
+      },
+      {
+        type: 'response.reasoning_summary_text.delta',
+        item_id: 'rs_1',
+        output_index: 0,
+        delta: 'Check',
+        sequence_number: 2,
+      },
+      {
+        type: 'response.reasoning_summary_text.delta',
+        item_id: 'rs_1',
+        output_index: 0,
+        delta: ' sources',
+        sequence_number: 3,
+      },
+      {
+        type: 'response.output_item.done',
+        output_index: 0,
+        item: {
+          id: 'rs_1',
+          type: 'reasoning',
+          encrypted_content: 'encrypted',
+          summary: [{ type: 'summary_text', text: 'Check sources' }],
+        },
+        sequence_number: 4,
+      },
+      {
+        type: 'response.completed',
+        response: { status: 'completed', output: [] },
+        sequence_number: 5,
+      },
+    ])
+    const transport = createOpenAIResponsesTransport()
+
+    const events = await collect(
+      transport.stream({
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Think' }] }],
+        provider,
+      }),
+    )
+    const reasoningEvents = events.filter(event => event.type === StreamEventType.ReasoningState)
+
+    expect(reasoningEvents).toMatchObject([
+      {
+        reasoning: { id: 'openai-responses:rs_1', status: 'in_progress' },
+      },
+      {
+        reasoning: { id: 'openai-responses:rs_1', status: 'in_progress', summary: 'Check' },
+      },
+      {
+        reasoning: {
+          id: 'openai-responses:rs_1',
+          status: 'in_progress',
+          summary: 'Check sources',
+        },
+      },
+      {
+        reasoning: {
+          id: 'openai-responses:rs_1',
+          status: 'completed',
+          summary: 'Check sources',
+          encryptedContent: 'encrypted',
+        },
+      },
     ])
   })
 
@@ -378,6 +455,7 @@ describe('createOpenAIResponsesTransport', () => {
                 reasoning: {
                   id: 'rs_1',
                   provider: 'openai-responses',
+                  status: 'completed',
                   encryptedContent: 'encrypted',
                   raw: reasoningItem,
                 },

@@ -150,7 +150,7 @@
                 />
                 <ReasoningMessagePart
                   v-else-if="item.type === 'reasoning'"
-                  :summary="item.summary"
+                  :reasoning="item.reasoning"
                 />
                 <ToolCallMessagePart
                   v-else-if="item.type === 'tool_call'"
@@ -374,8 +374,15 @@ const assistantSteps = computed<AssistantStep[]>(() => {
           toolCall,
         })
       }
-      if (part.type === 'reasoning' && part.reasoning.summary) {
-        items.push({ type: 'reasoning', summary: part.reasoning.summary })
+      if (part.type === 'reasoning') {
+        items.push({
+          type: 'reasoning',
+          reasoning: {
+            id: part.reasoning.id,
+            status: part.reasoning.status,
+            summary: part.reasoning.summary,
+          },
+        })
       }
     }
 
@@ -447,7 +454,7 @@ function copyAssistantContent() {
 function formatStepItemKey(item: AssistantStepItem, index: number) {
   if (item.type === 'native_tool') return `native_tool:${item.nativeTool.id}`
   if (item.type === 'tool_call') return `tool_call:${item.toolCall.id}`
-  if (item.type === 'reasoning') return `reasoning:${index}:${item.summary}`
+  if (item.type === 'reasoning') return `reasoning:${item.reasoning.id}`
   return `text:${index}:${item.text.length}`
 }
 

@@ -26,6 +26,14 @@ interface GeminiInteractionStepState {
   ended: boolean
 }
 
+interface GeminiReasoningState {
+  id: string
+  status: ReasoningContentPart['reasoning']['status']
+  summary?: string
+  encryptedContent?: string
+  raw?: Record<string, unknown>
+}
+
 function formatInput(messages: Message[]): InteractionInputItem[] {
   const input: InteractionInputItem[] = []
 
@@ -327,14 +335,18 @@ function extractText(value: unknown): string | undefined {
     .join('')
 }
 
-function mapReasoning(step: Record<string, unknown>): ReasoningContentPart['reasoning'] {
-  const id = asString(step.id) ?? asString(step.step_id)
+function mapReasoning(
+  step: Record<string, unknown>,
+  status: ReasoningContentPart['reasoning']['status'],
+  id: string,
+): ReasoningContentPart['reasoning'] {
   const summary = extractText(step.summary) ?? extractText(step.thought) ?? extractText(step)
   const signature = asString(step.signature) ?? asString(step.thought_signature)
 
   return {
-    ...(id ? { id } : {}),
+    id,
     provider: 'gemini-interactions',
+    status,
     ...(summary ? { summary } : {}),
     ...(signature ? { encryptedContent: signature } : {}),
     raw: step,
@@ -351,13 +363,20 @@ function eventPayload(data: Record<string, unknown>): Record<string, unknown> | 
   )
 }
 
+function geminiReasoningId(interactionId: string | undefined, index: number): string {
+  return `gemini-interactions:${interactionId ?? 'interaction'}:${index}`
+}
+
 export function createGeminiInteractionsTransport(): Transport {
   return {
     async *stream(request: PipelineOutput): AsyncIterable<StreamEvent> {
       const { messages, tools, provider, options } = request
       const baseUrl = provider.baseUrl ?? 'https://generativelanguage.googleapis.com/v1beta'
       const stepStates = new Map<string, GeminiInteractionStepState>()
+      const reasoningStates = new Map<string, GeminiReasoningState>()
+      const reasoningIdsByIndex = new Map<number, string>()
       const emittedSourceKeys = new Set<string>()
+      let interactionId: string | undefined
       let sawToolCall = false
       let emittedFinish = false
 
@@ -375,7 +394,8 @@ export function createGeminiInteractionsTransport(): Transport {
       if (options?.maxTokens !== undefined) generationConfig.maxOutputTokens = options.maxTokens
       if (options?.topP !== undefined) generationConfig.topP = options.topP
       if (options?.stop) generationConfig.stopSequences = options.stop
-      if (Object.keys(generationConfig).length > 0) body.generationConfig = generationConfig
+      if (provider.reasoning !== false) generationConfig.thinking_summaries = 'auto'
+      if (Object.keys(generationConfig).length > 0) body.generation_config = generationConfig
 
       const response = await fetch(`${baseUrl}/interactions?key=${provider.apiKey}&alt=sse`, {
         method: 'POST',
@@ -488,6 +508,102 @@ export function createGeminiInteractionsTransport(): Transport {
         }
       }
 
+      const emitReasoningState = function* (state: GeminiReasoningState): Generator<StreamEvent> {
+        yield {
+          type: StreamEventType.ReasoningState,
+          reasoning: {
+            id: state.id,
+            provider: 'gemini-interactions',
+            status: state.status,
+            ...(state.summary ? { summary: state.summary } : {}),
+            ...(state.encryptedContent ? { encryptedContent: state.encryptedContent } : {}),
+            ...(state.raw ? { raw: state.raw } : {}),
+          },
+        }
+      }
+
+      const ensureReasoning = function* (
+        step: Record<string, unknown>,
+        finish = false,
+      ): Generator<StreamEvent, GeminiReasoningState | undefined> {
+        const index = asNumber(step.index)
+        if (index === undefined) return undefined
+
+        const id = reasoningIdsByIndex.get(index) ?? geminiReasoningId(interactionId, index)
+        reasoningIdsByIndex.set(index, id)
+
+        const mapped = mapReasoning(step, finish ? 'completed' : 'in_progress', id)
+        const state =
+          reasoningStates.get(id) ??
+          ({
+            id,
+            status: mapped.status,
+          } satisfies GeminiReasoningState)
+        state.status = mapped.status
+        if (mapped.summary !== undefined) state.summary = mapped.summary
+        if (mapped.encryptedContent !== undefined) state.encryptedContent = mapped.encryptedContent
+        if (mapped.raw !== undefined) state.raw = asRecord(mapped.raw)
+        reasoningStates.set(id, state)
+
+        yield* emitReasoningState(state)
+        return state
+      }
+
+      const applyReasoningDelta = function* (
+        data: Record<string, unknown>,
+      ): Generator<StreamEvent, boolean> {
+        const delta = asRecord(data.delta)
+        const deltaType = stepType(delta ?? {})
+        if (deltaType !== 'thought_summary' && deltaType !== 'thought_signature') return false
+
+        const index = asNumber(data.index)
+        if (index === undefined) return false
+
+        const id = reasoningIdsByIndex.get(index) ?? geminiReasoningId(interactionId, index)
+        reasoningIdsByIndex.set(index, id)
+
+        const state =
+          reasoningStates.get(id) ??
+          ({
+            id,
+            status: 'in_progress',
+          } satisfies GeminiReasoningState)
+        state.status = 'in_progress'
+        state.raw = {
+          ...(state.raw ?? {}),
+          type: 'thought',
+          ...(delta ? { delta } : {}),
+        }
+
+        if (deltaType === 'thought_summary') {
+          const text = extractText(delta?.content) ?? extractText(delta) ?? ''
+          if (text) state.summary = `${state.summary ?? ''}${text}`
+        } else {
+          const signature = asString(delta?.signature) ?? asString(delta?.thought_signature)
+          if (signature) state.encryptedContent = signature
+          state.raw = {
+            ...(state.raw ?? {}),
+            ...(state.encryptedContent ? { signature: state.encryptedContent } : {}),
+          }
+        }
+
+        reasoningStates.set(id, state)
+        yield* emitReasoningState(state)
+        return true
+      }
+
+      const finishReasoningByIndex = function* (index: number): Generator<StreamEvent, boolean> {
+        const id = reasoningIdsByIndex.get(index)
+        if (!id) return false
+        const state = reasoningStates.get(id)
+        if (!state) return false
+
+        state.status = 'completed'
+        reasoningStates.set(id, state)
+        yield* emitReasoningState(state)
+        return true
+      }
+
       const handleStep = function* (
         step: Record<string, unknown>,
         finish = false,
@@ -507,10 +623,7 @@ export function createGeminiInteractionsTransport(): Transport {
         }
 
         if (isReasoningStep(step)) {
-          yield {
-            type: StreamEventType.ReasoningState,
-            reasoning: mapReasoning(step),
-          }
+          yield* ensureReasoning(step, finish)
           return
         }
 
@@ -550,12 +663,20 @@ export function createGeminiInteractionsTransport(): Transport {
         const eventType = sse.event ?? data.type
         const payload = eventPayload(data)
 
+        if (eventType === 'interaction.created') {
+          const interaction = asRecord(data.interaction) ?? data
+          interactionId = asString(interaction.id) ?? interactionId
+          continue
+        }
+
         if (eventType === 'interaction.completed' || eventType === 'interaction.complete') {
           const interaction = asRecord(data.interaction) ?? data
+          interactionId = asString(interaction.id) ?? interactionId
           const steps = Array.isArray(interaction.steps) ? interaction.steps : []
-          for (const item of steps) {
+          for (let index = 0; index < steps.length; index++) {
+            const item = steps[index]
             const step = asRecord(item)
-            if (step) yield* handleStep(step, true)
+            if (step) yield* handleStep({ ...step, index }, true)
           }
 
           emittedFinish = true
@@ -570,17 +691,45 @@ export function createGeminiInteractionsTransport(): Transport {
         }
 
         if (eventType === 'step.start' || eventType === 'step.started') {
-          if (payload) yield* handleStep(payload)
+          if (payload) {
+            const step =
+              isReasoningStep(payload) && typeof data.index === 'number'
+                ? { ...payload, index: data.index }
+                : payload
+            yield* handleStep(step)
+          }
           continue
         }
 
         if (eventType === 'step.delta' || eventType === 'step.updated') {
-          if (payload) yield* handleStep(payload)
+          if (yield* applyReasoningDelta(data)) continue
+          if (payload) {
+            const step =
+              isReasoningStep(payload) && typeof data.index === 'number'
+                ? { ...payload, index: data.index }
+                : payload
+            yield* handleStep(step)
+          }
           continue
         }
 
         if (eventType === 'step.stop' || eventType === 'step.completed') {
-          if (payload) yield* handleStep(payload, true)
+          if (payload) {
+            const step =
+              isReasoningStep(payload) && typeof data.index === 'number'
+                ? { ...payload, index: data.index }
+                : payload
+            if (isReasoningStep(step)) {
+              yield* handleStep(step, true)
+            } else if (
+              typeof data.index === 'number' &&
+              (yield* finishReasoningByIndex(data.index))
+            ) {
+              continue
+            } else {
+              yield* handleStep(step, true)
+            }
+          }
           continue
         }
 
@@ -588,7 +737,11 @@ export function createGeminiInteractionsTransport(): Transport {
           payload &&
           (isModelOutputStep(payload) || isReasoningStep(payload) || isGoogleSearchStep(payload))
         ) {
-          yield* handleStep(payload, eventType === 'step.completed')
+          const step =
+            isReasoningStep(payload) && typeof data.index === 'number'
+              ? { ...payload, index: data.index }
+              : payload
+          yield* handleStep(step, eventType === 'step.completed')
           continue
         }
 

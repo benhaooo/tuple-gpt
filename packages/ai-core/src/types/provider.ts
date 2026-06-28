@@ -17,4 +17,6 @@ export interface ProviderConfig {
   headers?: Record<string, string>
   /** Enable native web search when supported by the provider */
   webSearch?: boolean
+  /** Request provider-native reasoning summaries/state when supported */
+  reasoning?: boolean
 }

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createGeminiInteractionsTransport } from '../transport/providers/gemini-interactions'
+import { StreamEventType } from '../types'
 import type { ToolDefinition } from '../types'
 import { collect, createReadableStream } from './helpers'
 
@@ -74,6 +75,7 @@ describe('createGeminiInteractionsTransport', () => {
       'https://generativelanguage.googleapis.com/v1beta/interactions?key=key&alt=sse',
     )
     const body = getRequestBody(fetchMock)
+    expect(body.generation_config).toEqual({ thinking_summaries: 'auto' })
     expect(body.tools).toEqual(
       expect.arrayContaining([
         {
@@ -89,6 +91,10 @@ describe('createGeminiInteractionsTransport', () => {
 
   it('maps search steps, annotations, and thoughts to unified events', async () => {
     mockFetch([
+      {
+        event: 'interaction.created',
+        data: { interaction: { id: 'interaction_1' } },
+      },
       {
         event: 'step.start',
         data: {
@@ -122,6 +128,7 @@ describe('createGeminiInteractionsTransport', () => {
       {
         event: 'step.delta',
         data: {
+          index: 2,
           step: {
             id: 'thought_1',
             type: 'thought',
@@ -191,8 +198,9 @@ describe('createGeminiInteractionsTransport', () => {
         expect.objectContaining({
           type: 'reasoning_state',
           reasoning: expect.objectContaining({
-            id: 'thought_1',
+            id: 'gemini-interactions:interaction_1:2',
             provider: 'gemini-interactions',
+            status: 'in_progress',
             summary: 'Need to cite the result.',
             encryptedContent: 'sig_123',
           }),
@@ -209,5 +217,89 @@ describe('createGeminiInteractionsTransport', () => {
         }),
       ]),
     )
+  })
+
+  it('accumulates thought summary and signature deltas', async () => {
+    mockFetch([
+      {
+        event: 'step.start',
+        data: {
+          index: 0,
+          step: { type: 'thought', summary: [] },
+        },
+      },
+      {
+        event: 'step.delta',
+        data: {
+          index: 0,
+          delta: { type: 'thought_summary', content: { type: 'text', text: 'Check' } },
+        },
+      },
+      {
+        event: 'step.delta',
+        data: {
+          index: 0,
+          delta: { type: 'thought_summary', content: { type: 'text', text: ' sources' } },
+        },
+      },
+      {
+        event: 'step.delta',
+        data: {
+          index: 0,
+          delta: { type: 'thought_signature', signature: 'sig_123' },
+        },
+      },
+      {
+        event: 'step.stop',
+        data: { index: 0 },
+      },
+      {
+        event: 'interaction.completed',
+        data: { interaction: { steps: [] } },
+      },
+    ])
+
+    const transport = createGeminiInteractionsTransport()
+    const events = await collect(
+      transport.stream({
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Think' }] }],
+        provider,
+      }),
+    )
+    const reasoningEvents = events.filter(event => event.type === StreamEventType.ReasoningState)
+
+    expect(reasoningEvents).toMatchObject([
+      { reasoning: { id: 'gemini-interactions:interaction:0', status: 'in_progress' } },
+      {
+        reasoning: {
+          id: 'gemini-interactions:interaction:0',
+          status: 'in_progress',
+          summary: 'Check',
+        },
+      },
+      {
+        reasoning: {
+          id: 'gemini-interactions:interaction:0',
+          status: 'in_progress',
+          summary: 'Check sources',
+        },
+      },
+      {
+        reasoning: {
+          id: 'gemini-interactions:interaction:0',
+          status: 'in_progress',
+          summary: 'Check sources',
+          encryptedContent: 'sig_123',
+        },
+      },
+      {
+        reasoning: {
+          id: 'gemini-interactions:interaction:0',
+          status: 'completed',
+          summary: 'Check sources',
+          encryptedContent: 'sig_123',
+        },
+      },
+    ])
   })
 })

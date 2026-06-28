@@ -13,6 +13,7 @@ export type {
   NativeToolKind,
   NativeToolStatus,
   ReasoningContentPart,
+  ReasoningStatus,
   Message,
   ToolDefinition,
   ToolCall,

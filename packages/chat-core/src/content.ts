@@ -94,12 +94,16 @@ export function appendReasoningToContent(
   reasoning: ReasoningContentPart['reasoning'],
 ): MessageContent[] {
   const next = cloneContent(content)
-  const existingIndex = reasoning.id
-    ? next.findIndex(part => part.type === 'reasoning' && part.reasoning.id === reasoning.id)
-    : -1
+  const existingIndex = next.findIndex(
+    part => part.type === 'reasoning' && part.reasoning.id === reasoning.id,
+  )
+  const existing =
+    existingIndex === -1 || next[existingIndex]?.type !== 'reasoning'
+      ? undefined
+      : next[existingIndex].reasoning
   const part: MessageContent = {
     type: 'reasoning',
-    reasoning: cloneReasoning(reasoning),
+    reasoning: mergeReasoning(existing, reasoning),
   }
 
   if (existingIndex === -1) return [...next, part]
@@ -160,4 +164,17 @@ function cloneReasoning(
   reasoning: ReasoningContentPart['reasoning'],
 ): ReasoningContentPart['reasoning'] {
   return { ...reasoning }
+}
+
+function mergeReasoning(
+  current: ReasoningContentPart['reasoning'] | undefined,
+  patch: ReasoningContentPart['reasoning'],
+): ReasoningContentPart['reasoning'] {
+  return {
+    ...(current ?? {}),
+    ...patch,
+    ...(patch.summary !== undefined ? { summary: patch.summary } : {}),
+    ...(patch.encryptedContent !== undefined ? { encryptedContent: patch.encryptedContent } : {}),
+    ...(patch.raw !== undefined ? { raw: patch.raw } : {}),
+  }
 }

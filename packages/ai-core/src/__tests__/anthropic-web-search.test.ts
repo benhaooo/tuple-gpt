@@ -82,6 +82,10 @@ describe('createAnthropicTransport web search', () => {
   it('maps server web search, citations, and thinking blocks to native events', async () => {
     mockFetch([
       {
+        type: 'message_start',
+        message: { id: 'msg_1' },
+      },
+      {
         type: 'content_block_start',
         index: 0,
         content_block: {
@@ -182,7 +186,9 @@ describe('createAnthropicTransport web search', () => {
         expect.objectContaining({
           type: 'reasoning_state',
           reasoning: expect.objectContaining({
+            id: 'anthropic:msg_1:2',
             provider: 'anthropic',
+            status: 'in_progress',
             summary: 'I should verify this.',
             encryptedContent: 'sig_123',
           }),
@@ -200,5 +206,48 @@ describe('createAnthropicTransport web search', () => {
         }),
       ]),
     )
+  })
+
+  it('falls back to a synthetic id when web_search_tool_result.tool_use_id is absent', async () => {
+    mockFetch([
+      {
+        type: 'content_block_start',
+        index: 0,
+        content_block: {
+          type: 'web_search_tool_result',
+          id: 'not_documented_for_result_blocks',
+          content: [{ title: 'OpenAI', url: 'https://openai.com/news/' }],
+        },
+      },
+    ])
+
+    const transport = createAnthropicTransport()
+    const events = await collect(
+      transport.stream({
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Search for this' }] }],
+        provider,
+      }),
+    )
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        type: 'native_tool_start',
+        nativeTool: expect.objectContaining({
+          id: 'anthropic_web_search_0',
+          status: 'completed',
+          sources: expect.arrayContaining([
+            expect.objectContaining({
+              url: 'https://openai.com/news/',
+              title: 'OpenAI',
+            }),
+          ]),
+        }),
+      }),
+      expect.objectContaining({
+        type: 'native_tool_end',
+        nativeToolId: 'anthropic_web_search_0',
+        status: 'completed',
+      }),
+    ])
   })
 })
